@@ -38,27 +38,27 @@ class AchievementGameProgressTest {
     }
 
     @Test
-    fun `la barre suit les succès et non leur valeur en points`() {
+    fun `la barre suit les points et non le nombre de succès`() {
         val progress = AchievementGameProgress.fromSummary(
             summary(unlocked = "20", total = "25", points = "20", totalPoints = "200"),
         )!!
-        assertEquals(8000, progress.progressBasisPoints)
+        assertEquals(1000, progress.progressBasisPoints)
     }
 
     @Test
-    fun `le premier succès est visible même sur un jeu long`() {
+    fun `les petites progressions en points gardent leurs décimales`() {
         val first = AchievementGameProgress.fromSummary(
             summary(unlocked = "1", total = "197", points = "1", totalPoints = "2086"),
         )!!
         val second = AchievementGameProgress.fromSummary(
             summary(unlocked = "2", total = "197", points = "2", totalPoints = "2086"),
         )!!
-        assertEquals(51, first.progressBasisPoints)
-        assertEquals(102, second.progressBasisPoints)
+        assertEquals(5, first.progressBasisPoints)
+        assertEquals(10, second.progressBasisPoints)
     }
 
     @Test
-    fun `les deux jeux de référence avancent selon leurs succès`() {
+    fun `les deux jeux de référence avancent selon les points`() {
         val emerald = AchievementGameProgress.fromSummary(
             summary(unlocked = "7", total = "197", points = "20", totalPoints = "2086"),
         )!!
@@ -66,8 +66,8 @@ class AchievementGameProgressTest {
             summary(title = "Metal Gear Solid: Ghost Babel", unlocked = "5", total = "106",
                 points = "15", totalPoints = "1100"),
         )!!
-        assertEquals(355, emerald.progressBasisPoints)
-        assertEquals(472, ghostBabel.progressBasisPoints)
+        assertEquals(96, emerald.progressBasisPoints)
+        assertEquals(136, ghostBabel.progressBasisPoints)
     }
 
     @Test
@@ -98,7 +98,7 @@ class AchievementGameProgressTest {
             summary(unlocked = "200", total = "197", points = "3000", totalPoints = "2086"),
         )!!
         assertEquals(10_000, overflow.progressBasisPoints)
-        val negative = AchievementGameProgress.fromSummary(summary(unlocked = "-1"))!!
+        val negative = AchievementGameProgress.fromSummary(summary(points = "-1"))!!
         assertEquals(0, negative.progressBasisPoints)
     }
 
