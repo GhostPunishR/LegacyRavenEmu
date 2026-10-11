@@ -1,0 +1,120 @@
+package com.ravenemu.app.achievements
+
+import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.AtomicFile
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.io.FileNotFoundException
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+
+/**
+ * Durable journal of genuine SDK-generated Softcore award HTTP requests.
+ *
+ * The request contains an account token and is ALWAYS AES-GCM encrypted at rest
+ * using a non-exportable Android Keystore key. It is never backed up.
+ * This journal does not create awards: the native SDK generates every entry.
+ * Replay uses the identical authenticated request only after that account logs in.
+ */
+internal class AchievementOfflineQueue(context: Context) {
+    data class Award(val account: String, val url: String, val post: String, val contentType: String)
+    private val file = AtomicFile(File(context.noBackupFilesDir, "retroachievements.unsent-awards"))
+
+    @Synchronized
+    fun remember(account: String, url: String, post: String, contentType: String): Boolean {
+        if (account.isBlank() || !AchievementAwardPolicy.isSdkAward(url, post)) return false
+        if (contentType.length !in 1..128) return false
+        val entry = Award(account, url, post, contentType)
+        val entries = read()
+        if (entries.contains(entry)) return true
+        if (entries.size >= MAX_PENDING) return false
+        write(entries + entry)
+        return true
+    }
+
+    @Synchronized
+    fun forAccount(account: String): List<Award> =
+        read().filter { it.account.equals(account, ignoreCase = true) }
+
+    @Synchronized
+    fun acknowledge(entry: Award) {
+        val entries = read()
+        if (entry in entries) write(entries - entry)
+    }
+
+    @Synchronized
+    fun clear() = file.delete()
+
+    private fun read(): List<Award> {
+        val ciphertext = try {
+            file.readFully()
+        } catch (_: FileNotFoundException) {
+            return emptyList()
+        }
+        require(ciphertext.size in 13..MAX_FILE_SIZE) { "Invalid encrypted award queue" }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, ciphertext.copyOfRange(0, 12)))
+        cipher.updateAAD(AAD)
+        val json = String(cipher.doFinal(ciphertext, 12, ciphertext.size - 12), Charsets.UTF_8)
+        val array = JSONArray(json)
+        require(array.length() <= MAX_PENDING)
+        return (0 until array.length()).map { index ->
+            val item = array.getJSONObject(index)
+            Award(item.getString("account"), item.getString("url"), item.getString("post"), item.getString("type"))
+        }.onEach {
+            require(it.account.isNotBlank() && AchievementAwardPolicy.isSdkAward(it.url, it.post))
+        }
+    }
+
+    private fun write(entries: List<Award>) {
+        require(entries.size <= MAX_PENDING)
+        val json = JSONArray()
+        entries.forEach { entry ->
+            json.put(JSONObject().put("account", entry.account).put("url", entry.url)
+                .put("post", entry.post).put("type", entry.contentType))
+        }
+        val plain = json.toString().toByteArray(Charsets.UTF_8)
+        try {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key())
+            cipher.updateAAD(AAD)
+            val data = cipher.iv + cipher.doFinal(plain)
+            require(data.size <= MAX_FILE_SIZE)
+            val output = file.startWrite()
+            try {
+                output.write(data)
+                file.finishWrite(output)
+            } catch (error: Exception) {
+                file.failWrite(output)
+                throw error
+            }
+        } finally {
+            plain.fill(0)
+        }
+    }
+
+    private fun key(): SecretKey {
+        val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (store.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
+            init(KeyGenParameterSpec.Builder(KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .build())
+        }.generateKey()
+    }
+
+    private companion object {
+        const val KEY_ALIAS = "RavenEmu.RetroAchievements.PendingAwards.v1"
+        const val MAX_PENDING = 256
+        const val MAX_FILE_SIZE = 3 * 1024 * 1024
+        val AAD = "RavenEmu authenticated Softcore awards v1".toByteArray(Charsets.UTF_8)
+    }
+}
