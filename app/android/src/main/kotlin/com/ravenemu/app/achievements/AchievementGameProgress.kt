@@ -20,18 +20,16 @@ internal data class AchievementGameProgress(
     val totalPoints: Int,
 ) {
     /**
-     * Avancement en centièmes, pour la barre.
+     * Avancement de la barre en centièmes de pourcentage (0 à 10 000).
      *
-     * Compté en points et non en succès : vingt petits succès obtenus sur un
-     * jeu qui en garde cinq énormes ne valent pas quatre-vingts pour cent du
-     * chemin. Un jeu dont les succès ne valent aucun point retombe sur leur
-     * nombre, faute de mieux.
+     * Basé sur le nombre de succès débloqués, indépendamment de leur valeur
+     * en points. Les petites progressions ne sont plus arrondies à 0 %.
      */
-    val percent: Int
+    val progressBasisPoints: Int
         get() {
-            val (done, all) = if (totalPoints > 0) points to totalPoints else unlocked to total
-            if (all <= 0) return 0
-            return (done.coerceIn(0, all) * 100) / all
+            if (total <= 0) return 0
+            val done = unlocked.coerceIn(0, total)
+            return ((done.toLong() * BAR_MAX + total / 2L) / total).toInt()
         }
 
     /** `true` quand le jeu n'expose aucun succès : la barre n'a rien à montrer. */
@@ -42,6 +40,8 @@ internal data class AchievementGameProgress(
     fun pointsLabel(): String = "${count(points)} / ${count(totalPoints)}"
 
     internal companion object {
+        const val BAR_MAX = 10_000
+
         private val NUMBERS: NumberFormat = NumberFormat.getIntegerInstance()
         private fun count(value: Int) = NUMBERS.format(value.toLong())
 
