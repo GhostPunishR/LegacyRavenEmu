@@ -106,7 +106,7 @@ object AchievementLogin {
                 worker.execute {
                     runCatching {
                         client?.close()
-                        client = AchievementClient { event ->
+                        client = AchievementClient(activity) { event ->
                             if (dismissed.get()) return@AchievementClient
                             if (event.kind != "login") {
                                 val message = event.title
@@ -235,7 +235,7 @@ object AchievementLogin {
         }
         worker.execute {
             runCatching {
-                client = AchievementClient { event ->
+                client = AchievementClient(activity) { event ->
                     if (event.kind == "login_error" || event.kind == "offline") {
                         publish(null, R.string.retroachievements_profile_offline)
                     }
