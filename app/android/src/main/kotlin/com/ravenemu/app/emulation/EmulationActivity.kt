@@ -559,34 +559,30 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
             if (hasPerGameProfile()) R.string.emulation_per_game_profile_off
             else R.string.emulation_per_game_profile_on
         )
-        val items = arrayOf(
-            getString(R.string.emulation_resume),
-            getString(R.string.emulation_save_state),
-            getString(R.string.emulation_load_state),
-            getString(R.string.emulation_reset),
-            getString(R.string.emulation_edit_controls),
-            perGameLabel,
-            getString(R.string.emulation_quit),
-            getString(R.string.retroachievements_title),
+        // Keep each label with its action so reordering cannot dispatch the wrong command.
+        val items = listOf<Pair<String, () -> Unit>>(
+            getString(R.string.emulation_resume) to { currentSession.resume() },
+            getString(R.string.emulation_save_state) to { saveSnapshot() },
+            getString(R.string.emulation_load_state) to { loadSnapshot() },
+            getString(R.string.retroachievements_title) to {
+                com.ravenemu.app.achievements.AchievementLogin.show(this) {
+                    if (!controls.editMode && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                        currentSession.resume()
+                    }
+                }
+            },
+            getString(R.string.emulation_edit_controls) to { enterEditMode() },
+            perGameLabel to { togglePerGameProfile() },
+            getString(R.string.emulation_reset) to {
+                currentSession.post { it.reset(); achievements?.reset() }
+                currentSession.resume()
+            },
+            getString(R.string.emulation_quit) to { finish() },
         )
         AlertDialog.Builder(this)
             .setTitle(romTitle.ifBlank { romFileName })
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> currentSession.resume()
-                    1 -> saveSnapshot()
-                    2 -> loadSnapshot()
-                    3 -> {
-                        currentSession.post { it.reset(); achievements?.reset() }
-                        currentSession.resume()
-                    }
-                    4 -> enterEditMode()
-                    5 -> togglePerGameProfile()
-                    6 -> finish()
-                    7 -> com.ravenemu.app.achievements.AchievementLogin.show(this) {
-                        if (!controls.editMode && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) currentSession.resume()
-                    }
-                }
+            .setItems(items.map { it.first }.toTypedArray()) { _, which ->
+                items[which].second()
             }
             .setOnCancelListener { currentSession.resume() }
             .show()
@@ -913,4 +909,5 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
                 .putExtra(EXTRA_RESUME_SLOT, resumeSlot)
     }
 }
+
 
