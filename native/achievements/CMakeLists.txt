@@ -17,7 +17,8 @@ target_compile_definitions(ravenemu_rcheevos PUBLIC RC_DISABLE_LUA RC_CLIENT_SUP
 
 option(RAVENEMU_BUILD_ACHIEVEMENT_TESTS "Test the RetroAchievements adapter with synthetic data" OFF)
 if(RAVENEMU_BUILD_ACHIEVEMENT_TESTS)
+    find_package(JNI REQUIRED)
     add_executable(ravenemu_achievement_tests tests/achievements_test.cpp)
-    target_include_directories(ravenemu_achievement_tests PRIVATE ../../cores/common/tests/support)
+    target_include_directories(ravenemu_achievement_tests PRIVATE ../../cores/common/tests/support ${JNI_INCLUDE_DIRS})
     target_link_libraries(ravenemu_achievement_tests PRIVATE ravenemu_rcheevos ravenemu_cores)
 endif()

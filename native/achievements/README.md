@@ -6,7 +6,7 @@ Le SDK reconnaît les jeux par leur empreinte, interprète les conditions, gère
 
 ## Threads et durée de vie
 
-Chaque client appartient à un seul thread : celui de la session, ou le worker du dialogue de connexion. Le SDK produit des requêtes copiées dans une file ; deux workers HTTPS envoient les requêtes. Leurs réponses reviennent dans une file et les callbacks du SDK s’exécutent sur le thread propriétaire, avec accès à la mémoire courante. Une réponse HTTP tardive ne touche jamais un client natif détruit.
+Chaque client appartient à un seul thread : celui de la session, ou le worker du dialogue de connexion. Le SDK produit des requêtes copiées dans une file ; deux workers HTTPS envoient les requêtes. Leurs réponses reviennent dans une file et les callbacks du SDK s’exécutent sur le thread propriétaire, avec accès à la mémoire courante. Une réponse HTTP tardive ne touche jamais un client natif détruit. À la fermeture, les callbacks en attente reçoivent une réponse locale terminale et les tentatives différées sont vidées en avançant l’horloge du SDK de trois minutes ; aucun nouvel envoi réseau n’est lancé.
 
 `onEmulationTick` évalue chaque trame, même sans rendu vidéo. En pause, `rc_client_idle` traite les nouvelles tentatives sans avancer les conditions. Reset et restauration d’état réussie réinitialisent les conditions temporaires ; les états RavenEmu n’incorporent pas encore les compteurs du SDK. Les erreurs RA sont isolées de la partie.
 
@@ -29,6 +29,6 @@ cmake --build build/achievements-host --target ravenemu_achievement_tests --para
 build/achievements-host/achievements/ravenemu_achievement_tests
 ```
 
-Les tests n’utilisent ni compte ni ROM commerciale : ROMs synthétiques, serveur simulé, reconnaissance par hash, chargement des conditions et déblocage réel par le SDK en réponse à une écriture CPU. Ils vérifient le mode Softcore, l’unicité du déblocage après reset, les banques CGB fixes, les limites et l’absence d’effets de bord des lectures mémoire.
+Les tests n’utilisent ni compte ni ROM commerciale : ROMs synthétiques, serveur simulé, reconnaissance par hash, chargement des conditions et déblocage réel par le SDK en réponse à une écriture CPU. Ils vérifient le mode Softcore, l’unicité du déblocage après reset, les banques CGB fixes, les limites et l’absence d’effets de bord des lectures mémoire, ainsi que la fermeture pendant login, chargement, démarrage de session, envoi et nouvelle tentative différée.
 
 Avant validation sur appareil : connecter un compte de test, ouvrir une ROM reconnue, obtenir un succès, vérifier sa présence sur le site, essayer pause/reprise, restauration d’état, coupure puis retour du réseau, fermeture pendant une requête et déconnexion. Les envois en attente ne persistent pas après fermeture. Aucun résultat de test synthétique ne valide à lui seul le service en production ou la compatibilité d’un jeu commercial.

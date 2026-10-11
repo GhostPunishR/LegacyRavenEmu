@@ -682,7 +682,7 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
         currentSession.post { c ->
             try {
                 c.loadState(state)
-                        achievements?.reset()
+                achievements?.reset()
             } catch (_: SaveStateException) {
                 runOnUiThread {
                     Toast.makeText(

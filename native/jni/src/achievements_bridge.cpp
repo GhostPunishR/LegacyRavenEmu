@@ -3,12 +3,15 @@
 #include <rc_error.h>
 #include <algorithm>
 #include <cstdint>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 namespace {
+constexpr char closed_body[] = R"({"Success":false,"Error":"Session closed"})";
+const rc_api_server_response_t closed_response{closed_body, sizeof(closed_body) - 1, 400};
 struct Pending { rc_client_server_callback_t callback; void* data; };
 struct Client {
     rc_client_t* rc{};
@@ -18,13 +21,34 @@ struct Client {
     int next_id{};
     std::unordered_map<int, Pending> pending;
     std::vector<std::string> requests, events;
-    ~Client() { if (rc) rc_client_destroy(rc); }
+    bool closing{};
+    ~Client() {
+        if (!rc) return;
+        closing = true;
+        // SDK callbacks own allocations: settle them before destroying the client.
+        while (!pending.empty()) {
+            const auto entry = pending.begin();
+            const auto call = entry->second;
+            pending.erase(entry);
+            call.callback(&closed_response, call.data);
+        }
+        // The longest retry delay is 120 s. Advancing our host clock by 180 s
+        // drains scheduled retries with a terminal local response, without HTTP.
+        rc_client_idle(rc);
+        rc_client_destroy(rc);
+    }
     void event(const char* kind, const char* title, const char* detail = "", const char* extra = "") {
+        if (closing) return;
         for (const char* s : {kind, title, detail, extra}) events.emplace_back(s ? s : "");
     }
 };
 Client& client(jlong h) { return *reinterpret_cast<Client*>(static_cast<std::uintptr_t>(h)); }
-Client& client(rc_client_t* rc) { return *static_cast<Client*>(rc_client_get_userdata(rc)); }
+Client& client(const rc_client_t* rc) { return *static_cast<Client*>(rc_client_get_userdata(rc)); }
+rc_clock_t time_millis(const rc_client_t* rc) {
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+    return static_cast<rc_clock_t>(elapsed) + (client(rc).closing ? 180000 : 0);
+}
 struct MemoryScope {
     Client& c;
     MemoryScope(Client& c_, JNIEnv* env, jobject memory) : c(c_) {
@@ -50,6 +74,7 @@ uint32_t read_memory(uint32_t address, uint8_t* buffer, uint32_t count, rc_clien
 }
 void server_call(const rc_api_request_t* request, rc_client_server_callback_t callback, void* data, rc_client_t* rc) {
     auto& c = client(rc);
+    if (c.closing) { callback(&closed_response, data); return; }
     const int id = ++c.next_id;
     c.pending.emplace(id, Pending{callback, data});
     c.requests.push_back(std::to_string(id));
@@ -65,7 +90,13 @@ void logged_in(int result, const char*, rc_client_t* rc, void*) {
 void loaded(int result, const char*, rc_client_t* rc, void*) {
     auto& c = client(rc);
     const auto* game = rc_client_get_game_info(rc);
-    if (result == RC_OK && game) c.event("game", game->title, "Succès en mode normal (Softcore)");
+    if (result == RC_OK && game) {
+        rc_client_user_game_summary_t summary{};
+        rc_client_get_user_game_summary(rc, &summary);
+        auto detail = std::to_string(summary.num_core_achievements) + " succès • mode normal (Softcore)";
+        if (summary.num_unsupported_achievements) detail += " • " + std::to_string(summary.num_unsupported_achievements) + " non pris en charge";
+        c.event("game", game->title, detail.c_str());
+    }
     else c.event("game_error", "Succès indisponibles pour cette ROM, ou connexion impossible.");
 }
 void event_handler(const rc_client_event_t* event, rc_client_t* rc) {
@@ -132,6 +163,7 @@ JNIEXPORT jlong JNICALL JNI_RA(create)(JNIEnv* env, jclass) {
         c->rc = rc_client_create(read_memory, server_call);
         if (!c->rc) return jlong{0};
         rc_client_set_userdata(c->rc, c.get());
+        rc_client_set_get_time_millisecs_function(c->rc, time_millis);
         rc_client_set_host(c->rc, "https://retroachievements.org");
         rc_client_set_hardcore_enabled(c->rc, 0);
         rc_client_set_allow_background_memory_reads(c->rc, 0);

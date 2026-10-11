@@ -7,12 +7,14 @@
 #include <cstring>
 #include <string>
 #include <vector>
+// Exercise the actual JNI adapter lifetime without starting a JVM or HTTP.
+#include "../../jni/src/achievements_bridge.cpp"
 
 using ravenemu::testing::check;
 namespace {
 std::unique_ptr<ravenemu::Core> core;
 int awards{}, popups{};
-bool logged{}, loaded{};
+bool logged{}, game_loaded{};
 std::vector<std::string> calls;
 uint32_t memory(uint32_t address, uint8_t* buffer, uint32_t count, rc_client_t*) {
     return static_cast<uint32_t>(core->read_achievement_memory(address, {buffer, count}));
@@ -82,10 +84,10 @@ void sdk_unlock() {
     }, nullptr);
     check(logged,"login callback missing");
     rc_client_begin_identify_and_load_game(client,4,nullptr,rom.data(),rom.size(),[](int result,const char*,rc_client_t*,void*) {
-        check(result == RC_OK,"synthetic game failed"); loaded=true;
+        check(result == RC_OK,"synthetic game failed"); game_loaded=true;
     },nullptr);
     rc_client_do_frame(client);
-    check(loaded,"game callback missing");
+    check(game_loaded,"game callback missing");
     rc_client_do_frame(client); // condition false first, arm trigger
     check(awards == 0 && popups == 0,"premature unlock");
     std::vector<int32_t> frame(core->video_spec().pixel_count()); core->run_frame(frame,true);
@@ -95,5 +97,51 @@ void sdk_unlock() {
     check(awards == 1 && popups == 1,"reset must not duplicate unlocked achievements");
     rc_client_destroy(client);
 }
+void adapter_shutdown() {
+    // Close at each asynchronous stage, including an award scheduled for retry.
+    for (int stage = 0; stage < 5; ++stage) {
+        auto rom = ravenemu::testing::minimal_game_boy_rom();
+        const std::array<uint8_t,8> code{0x3e,0x5a,0xea,0x00,0xc0,0xc3,0x05,0x01};
+        std::copy(code.begin(), code.end(), rom.begin()+0x100);
+        core = ravenemu::make_game_boy_core(); core->load_rom(rom, {});
+        Client adapter;
+        adapter.rc = rc_client_create(memory, server_call);
+        rc_client_set_userdata(adapter.rc, &adapter);
+        rc_client_set_get_time_millisecs_function(adapter.rc, time_millis);
+        rc_client_set_hardcore_enabled(adapter.rc, 0);
+        rc_client_set_allow_background_memory_reads(adapter.rc, 0);
+        rc_client_set_event_handler(adapter.rc, event_handler);
+        auto answer = [&] {
+            auto records = std::move(adapter.requests); adapter.requests.clear();
+            for (std::size_t i=0; i<records.size(); i+=4) {
+                auto id = std::stoi(records[i]);
+                const auto pending = adapter.pending.at(id); adapter.pending.erase(id);
+                rc_api_request_t request{};
+                request.url=records[i+1].c_str(); request.post_data=records[i+2].c_str();
+                server(&request,pending.callback,pending.data,adapter.rc);
+            }
+        };
+        rc_client_begin_login_with_token(adapter.rc,"Synthetic","local-test-only",logged_in,nullptr);
+        if (stage == 0) continue; // pending login
+        answer();
+        rc_client_begin_identify_and_load_game(adapter.rc,4,nullptr,rom.data(),rom.size(),loaded,nullptr);
+        if (stage == 1) continue; // pending game metadata
+        answer();
+        if (stage == 2) continue; // pending session start
+        answer(); rc_client_do_frame(adapter.rc); rc_client_do_frame(adapter.rc);
+        std::vector<int32_t> frame(core->video_spec().pixel_count()); core->run_frame(frame,true);
+        rc_client_do_frame(adapter.rc);
+        check(!adapter.pending.empty(), "adapter must have a pending award");
+        if (stage == 3) continue; // pending award
+        const rc_api_server_response_t unavailable{"",0,-2};
+        for (int attempt=0; attempt<2; ++attempt) {
+            const auto entry=adapter.pending.begin(); const auto pending=entry->second;
+            adapter.pending.erase(entry); pending.callback(&unavailable,pending.data);
+        }
+        check(adapter.pending.empty(), "failed award should be scheduled for retry");
+        // Destructor advances the SDK timer and settles the retry locally.
+    }
 }
-int main() { memory_maps(); sdk_unlock(); }
+
+}
+int main() { memory_maps(); sdk_unlock(); adapter_shutdown(); }
