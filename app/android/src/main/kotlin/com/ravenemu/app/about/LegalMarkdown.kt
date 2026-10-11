@@ -9,11 +9,16 @@ package com.ravenemu.app.about
  * lisibles sans réseau : un texte légal qu'il faut aller chercher en ligne
  * n'est pas disponible au moment où on le cherche.
  *
- * Reste à les afficher. Plutôt qu'une bibliothèque de rendu complète pour six
- * constructions, cette conversion produit le HTML qu'Android sait déjà mettre
- * en forme. Elle traite les titres, les paragraphes, les listes à puces, le
- * gras, le code en ligne et les liens ; tout le reste est rendu tel quel,
- * plutôt que d'être avalé par une syntaxe qu'on n'aurait pas prévue.
+ * Reste à les afficher. Cette lecture découpe le document en blocs, et laisse
+ * l'écran décider de leur mise en page : c'est elle qui fait la différence
+ * entre un document et un pavé. Rendre le tout en un seul morceau de HTML
+ * revenait à confier l'espacement à `Html.fromHtml`, qui sépare les blocs
+ * d'une seule fin de ligne et ne distingue pas un titre d'un paragraphe.
+ *
+ * Chaque bloc porte son contenu en HTML **en ligne** seulement : gras, code et
+ * liens. Les titres, les paragraphes et les puces sont des blocs distincts ;
+ * tout le reste est rendu tel quel, plutôt que d'être avalé par une syntaxe
+ * qu'on n'aurait pas prévue.
  *
  * Le texte d'origine est échappé avant toute insertion : un document est une
  * donnée, et un chevron qui s'y trouve doit s'afficher, pas ouvrir une
@@ -23,38 +28,31 @@ package com.ravenemu.app.about
  */
 internal object LegalMarkdown {
 
-    /** Le document converti en HTML, prêt pour `HtmlCompat.fromHtml`. */
-    fun toHtml(markdown: String): String {
-        val html = StringBuilder()
-        var inList = false
-        fun closeList() {
-            if (inList) { html.append("</ul>"); inList = false }
-        }
+    /** Un morceau du document, avec son contenu en HTML en ligne. */
+    sealed interface Block {
+        /** Gras, code et liens uniquement : aucune balise de bloc. */
+        val html: String
+    }
+
+    /** [level] vaut 1 pour `#`, 2 pour `##`, et ainsi de suite. */
+    data class Heading(val level: Int, override val html: String) : Block
+    data class Paragraph(override val html: String) : Block
+    data class Bullet(override val html: String) : Block
+
+    /** Le document découpé, dans l'ordre. Les lignes vides ne donnent rien. */
+    fun parse(markdown: String): List<Block> {
+        val blocks = mutableListOf<Block>()
         for (raw in markdown.lineSequence()) {
             val line = raw.trimEnd()
             val heading = headingLevel(line)
             when {
-                line.isBlank() -> closeList()
-                heading > 0 -> {
-                    closeList()
-                    // Les titres de niveau 1 et 2 du document deviennent h2 et
-                    // h3 : l'écran porte déjà son propre titre, et un h1 de
-                    // plus en ferait deux.
-                    val tag = "h${minOf(heading + 1, 6)}"
-                    html.append("<$tag>").append(inline(line.substring(heading).trim())).append("</$tag>")
-                }
-                isBullet(line) -> {
-                    if (!inList) { html.append("<ul>"); inList = true }
-                    html.append("<li>").append(inline(line.trimStart().substring(2))).append("</li>")
-                }
-                else -> {
-                    closeList()
-                    html.append("<p>").append(inline(line)).append("</p>")
-                }
+                line.isBlank() -> Unit
+                heading > 0 -> blocks += Heading(heading, inline(line.substring(heading).trim()))
+                isBullet(line) -> blocks += Bullet(inline(line.trimStart().substring(2)))
+                else -> blocks += Paragraph(inline(line))
             }
         }
-        closeList()
-        return html.toString()
+        return blocks
     }
 
     /** Nombre de `#` ouvrant un titre, 0 si la ligne n'en est pas un. */
