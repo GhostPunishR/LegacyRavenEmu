@@ -27,7 +27,7 @@ Les adresses suivent `src/rcheevos/consoleinfo.c` du SDK :
 - GB/GBC : ROM bancarisée 0000–7FFF, VRAM banque 0, RAM cartouche physique banque 0, WRAM banques 0/1 fixes et miroir, OAM, HRAM, IE. GBC : banques WRAM 2–7 à 10000–15FFF ; RAM cartouche banques 1–15 à 16000–33FFF.
 - GBA : IWRAM à 00000–07FFF, EWRAM à 08000–47FFF, les premiers 64 Kio de mémoire de sauvegarde à 48000–57FFF (limités à la taille réelle).
 
-Les lectures consultent le stockage directement : aucun cycle CPU, effet de registre, commande Flash/EEPROM ou changement de banque. Les régions absentes, les registres GB et les mémoires spéciales non exposées renvoient une lecture incomplète. Le SDK peut désactiver les succès qui en dépendent ; l’intégration ne prétend pas prendre en charge ces conditions. Les lectures des cartouches MBC7 et des zones Flash MBC6 ne sont pas exposées au-delà de leur RAM commune.
+Les lectures consultent le stockage directement : aucun cycle CPU, effet de registre, commande Flash/EEPROM ou changement de banque. Les régions absentes, les registres GB et les mémoires spéciales non exposées renvoient une lecture incomplète. Le SDK peut désactiver les succès qui en dépendent ; l’intégration ne prétend pas prendre en charge ces conditions. Une cartouche MBC7 n’expose aucune mémoire de cartouche : ses sauvegardes vivent dans une EEPROM série et son espace 0xA000 répond à des registres, si bien que la lecture s’y arrête et se déclare incomplète plutôt que de rendre le tampon vierge que son en-tête fait allouer. Le MBC6 expose ses 32 Kio de SRAM, mais pas ses zones Flash.
 
 ## Vérification
 
