@@ -1,19 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Les réglages sont rangés en quatre écrans, et non déroulés en une seule
-  liste. Vingt-deux réglages à la file obligent à parcourir tout l'écran pour
-  savoir s'il existe, alors que quatre entrées tiennent d'un coup d'œil et
-  disent chacune ce qu'elles contiennent.
-
-  Les regroupements d'origine (Émulation, Fichiers, Débogage, Contrôles
-  tactiles, Bibliothèque) sont conservés à l'intérieur des écrans : ils
-  gardent leur valeur de repère une fois qu'on est au bon endroit.
--->
+<!-- Un écran par catégorie, avec RetroAchievements accessible à la racine. -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceScreen
+        android:key="screen_retroachievements"
+        android:icon="@drawable/ic_settings_achievements"
+        android:summary="@string/retroachievements_summary"
+        android:title="@string/retroachievements_title">
+        <Preference
+            android:key="retroachievements"
+            android:icon="@drawable/ic_settings_account"
+            android:title="@string/retroachievements_sign_in"
+            android:summary="@string/retroachievements_signed_out" />
+        <Preference
+            android:key="retroachievements_hardcore"
+            android:selectable="false"
+            android:title="@string/retroachievements_hardcore"
+            android:summary="@string/retroachievements_hardcore_summary" />
+        <Preference
+            android:key="retroachievements_mode"
+            android:selectable="false"
+            android:title="@string/retroachievements_mode"
+            android:summary="@string/retroachievements_mode_summary" />
+    </PreferenceScreen>
+
+    <PreferenceScreen
         android:key="screen_general"
+        android:icon="@drawable/ic_settings_general"
         android:summary="@string/settings_screen_general_summary"
         android:title="@string/settings_category_general">
 
@@ -54,6 +68,7 @@
 
     <PreferenceScreen
         android:key="screen_audio"
+        android:icon="@drawable/ic_settings_audio"
         android:summary="@string/settings_screen_audio_summary"
         android:title="@string/settings_category_audio">
 
@@ -74,6 +89,7 @@
 
     <PreferenceScreen
         android:key="screen_video"
+        android:icon="@drawable/ic_settings_video"
         android:summary="@string/settings_screen_video_summary"
         android:title="@string/settings_category_video">
 
@@ -141,6 +157,7 @@
 
     <PreferenceScreen
         android:key="screen_ui"
+        android:icon="@drawable/ic_settings_interface"
         android:summary="@string/settings_screen_ui_summary"
         android:title="@string/settings_category_ui">
 
@@ -169,4 +186,59 @@
                 android:title="@string/settings_clear_index" />
         </PreferenceCategory>
     </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="screen_about"
+        android:icon="@drawable/ic_settings_about"
+        android:summary="@string/about_summary"
+        android:title="@string/about_title">
+
+        <Preference
+            android:key="about_version"
+            android:selectable="false"
+            android:title="@string/about_version" />
+
+        <Preference
+            android:key="about_terms"
+            android:title="@string/about_terms"
+            android:summary="@string/about_terms_summary" />
+
+        <Preference
+            android:key="about_privacy"
+            android:title="@string/about_privacy"
+            android:summary="@string/about_privacy_summary" />
+
+        <PreferenceScreen
+            android:key="screen_about_licenses"
+            android:summary="@string/about_licenses_summary"
+            android:title="@string/about_licenses">
+
+            <Preference
+                android:key="about_license_project"
+                android:title="@string/about_license_project"
+                android:summary="@string/about_license_project_summary" />
+
+            <Preference
+                android:key="about_license_rcheevos"
+                android:title="@string/about_license_rcheevos"
+                android:summary="@string/about_license_rcheevos_summary" />
+
+            <Preference
+                android:key="about_license_apache"
+                android:title="@string/about_license_apache"
+                android:summary="@string/about_license_apache_summary" />
+        </PreferenceScreen>
+
+        <Preference
+            android:key="about_source"
+            android:title="@string/about_source"
+            android:summary="@string/about_source_summary" />
+
+        <Preference
+            android:key="about_trademarks"
+            android:selectable="false"
+            android:title="@string/about_trademarks"
+            android:summary="@string/about_trademarks_summary" />
+    </PreferenceScreen>
+
 </PreferenceScreen>

@@ -60,7 +60,7 @@ jobs:
         run: |
           sdkmanager_path="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
           test -x "$sdkmanager_path"
-          "$sdkmanager_path" "ndk;29.0.14206865" "cmake;3.22.1"
+          "$sdkmanager_path" "ndk;30.0.16248370" "cmake;3.22.1"
 
       - name: Tester les cœurs C++ sur l'hôte
         run: |
@@ -69,6 +69,14 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build/native-host --parallel
           ctest --test-dir build/native-host --output-on-failure
+
+      - name: Tester RetroAchievements sans compte ni ROM commerciale
+        run: |
+          cmake -S native -B build/achievements-host \
+            -DRAVENEMU_BUILD_ACHIEVEMENT_TESTS=ON \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/achievements-host --target ravenemu_achievement_tests --parallel
+          build/achievements-host/achievements/ravenemu_achievement_tests
 
       - name: Tests unitaires
         run: ./gradlew test

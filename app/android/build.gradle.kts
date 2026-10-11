@@ -12,7 +12,7 @@ val TEST_KEYSTORE_PATH_ENV = "RAVENEMU_TEST_KEYSTORE_PATH"
 android {
     namespace = "com.ravenemu.app"
     compileSdk = 37
-    ndkVersion = "29.0.14206865"
+    ndkVersion = "30.0.16248370"
 
     buildFeatures {
         // `BuildConfig.DEBUG` conditionne la surcouche de débogage GBA : elle ne
@@ -173,6 +173,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":native:jni"))
     implementation(project(":engine:api"))
     implementation(project(":engine:runtime"))
     implementation(project(":engine:session"))
@@ -210,3 +211,4 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.junit4)
 }
+

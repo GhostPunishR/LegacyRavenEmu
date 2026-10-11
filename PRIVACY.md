@@ -1,6 +1,6 @@
 # Politique de confidentialité de RavenEmu
 
-Date d’entrée en vigueur : 26 juillet 2026
+Date d’entrée en vigueur : 11 octobre 2026
 
 ## Champ d’application
 
@@ -8,7 +8,7 @@ Cette politique décrit le fonctionnement de l’application Android RavenEmu, d
 
 ## Application Android
 
-RavenEmu est conçu sans compte utilisateur, sans télémétrie, sans publicité et sans service réseau intégré. L’application ne téléverse pas les ROM, sauvegardes, états instantanés, pochettes, empreintes ou réglages.
+RavenEmu fonctionne sans compte, sans télémétrie et sans publicité. Il propose une connexion facultative au service tiers RetroAchievements. Sans connexion, aucun échange avec ce service n’est effectué. L’application ne téléverse jamais les ROM, sauvegardes, états instantanés ni pochettes.
 
 Les données suivantes peuvent être créées ou analysées localement sur l’appareil :
 
@@ -20,6 +20,16 @@ Les données suivantes peuvent être créées ou analysées localement sur l’a
 - mesures de performance affichées dans l’APK Debug.
 
 Ces données restent sous le contrôle de l’utilisateur et peuvent être supprimées en retirant les fichiers concernés, en effaçant les données de l’application ou en désinstallant RavenEmu.
+
+## RetroAchievements (facultatif)
+
+Lors de la connexion choisie par l’utilisateur, le nom de compte et le mot de passe sont envoyés à `https://retroachievements.org` via HTTPS. Le mot de passe n’est pas conservé. Le jeton retourné est chiffré avec Android Keystore dans un fichier exclu des sauvegardes Android. La déconnexion efface ce fichier ; depuis le menu en jeu, elle ferme le client de la partie en cours dès la fermeture du dialogue du compte. Les succès déjà transmis ne sont pas supprimés.
+
+Pendant une partie connectée, le SDK officiel transmet l’empreinte du jeu, les identifiants de jeu et de succès, les informations de session et de présence prévues par le jeu, ainsi que le nom/jeton du compte. Le service reçoit aussi les informations techniques d’une connexion HTTPS, dont l’adresse IP et la version du client. Les échanges servent à reconnaître la ROM, télécharger les conditions des succès et enregistrer leur obtention. La mémoire et les fichiers du jeu ne sont pas téléversés.
+
+Les badges des succès et le portrait du compte sont des images publiques, téléchargées en HTTPS depuis `https://media.retroachievements.org`. C’est le seul autre hôte contacté, aucune donnée n’y est envoyée au-delà de ce que comporte une requête HTTPS, et les images sont conservées dans le cache de l’application, que le système peut vider et qu’effacer les données supprime.
+
+Les informations enregistrées par RetroAchievements relèvent de sa [politique de confidentialité](https://retroachievements.org/privacy.php). RavenEmu ne stocke pas ces informations sur un serveur du projet. Les envois de succès en échec sont retentés pendant la session ; leur file d’attente n’est pas conservée après la fermeture du jeu.
 
 ## Accès aux fichiers
 
@@ -41,7 +51,7 @@ Ne publiez jamais de chemin personnel, ROM, BIOS, sauvegarde, clé, secret ou je
 
 ## Enfants
 
-RavenEmu ne cherche pas à collecter de données relatives aux enfants et ne propose aucun compte utilisateur.
+RavenEmu ne cherche pas à collecter de données relatives aux enfants et ne crée aucun compte propre au projet. La connexion facultative RetroAchievements utilise un compte tiers existant.
 
 ## Évolution de cette politique
 
@@ -52,3 +62,4 @@ Cette politique peut être mise à jour si les fonctions de l’application, le 
 Pour une question générale, utilisez les issues sans publier de donnée sensible.
 
 Pour un problème de confidentialité nécessitant un échange privé, utilisez [un avis de sécurité privé](https://github.com/GhostPunishR/RavenEmu/security/advisories/new) et précisez qu’il s’agit d’une demande de confidentialité.
+

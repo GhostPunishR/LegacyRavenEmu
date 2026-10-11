@@ -2,9 +2,10 @@ if(NOT ANDROID)
     find_package(JNI REQUIRED)
 endif()
 
-add_library(ravenemu_native SHARED src/jni_bridge.cpp)
+add_library(ravenemu_native SHARED src/jni_bridge.cpp src/achievements_bridge.cpp)
 target_include_directories(ravenemu_native PRIVATE include)
-target_link_libraries(ravenemu_native PRIVATE ravenemu_native_api ravenemu_options)
+target_link_libraries(ravenemu_native PRIVATE ravenemu_native_api ravenemu_options ravenemu_rcheevos)
 if(NOT ANDROID)
     target_include_directories(ravenemu_native PRIVATE ${JNI_INCLUDE_DIRS})
 endif()
+

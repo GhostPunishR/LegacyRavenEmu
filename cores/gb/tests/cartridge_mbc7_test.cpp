@@ -191,10 +191,39 @@ void save_state_mid_command_test() {
     }, "layout MBC7 incompatible accepté");
 }
 
+/**
+ * Une cartouche MBC7 n'a pas de RAM d'octets.
+ *
+ * Son en-tête en annonce pourtant, et la classe de base alloue ce tampon pour
+ * tous les mappeurs. Le MBC7 ne l'écrit jamais : ses sauvegardes vivent dans
+ * une EEPROM série, et son espace 0xA000 répond à des registres, pas à de la
+ * mémoire. Un tampon de zéros servi comme s'il était de la mémoire de
+ * cartouche est pire qu'une absence : le lecteur qui s'en sert ne peut plus
+ * distinguer une région qu'il ne sait pas lire d'une région pleine de zéros,
+ * et une condition « cet octet vaut zéro » y est vraie en permanence.
+ *
+ * La fenêtre des succès doit donc être vide ici, pour que la lecture s'arrête
+ * et se déclare incomplète.
+ */
+void achievement_memory_is_not_invented_test() {
+    auto cartridge = create_mbc7();
+    check(cartridge->achievement_ram().empty(),
+          "MBC7 expose une RAM de cartouche que le mappeur n'écrit jamais");
+
+    // Le contraste : le MBC6 porte réellement 32 Kio de SRAM dans ce même
+    // tampon, et la restreindre pour tout le monde le priverait de la sienne.
+    std::vector<std::uint8_t> rom(2U * 1024U * 1024U);
+    rom[0x143] = 0xc0; rom[0x147] = 0x20;
+    auto mbc6 = Cartridge::create(
+        std::make_shared<const std::vector<std::uint8_t>>(std::move(rom)), [] { return std::int64_t{}; });
+    check(mbc6->achievement_ram().size() == 32U * 1024U, "MBC6 a perdu la SRAM qu'il porte vraiment");
+}
+
 } // namespace ravenemu::cgb::testing
 
 int main() {
     ravenemu::cgb::testing::mapping_and_sensor_test();
     ravenemu::cgb::testing::eeprom_commands_and_persistence_test();
     ravenemu::cgb::testing::save_state_mid_command_test();
+    ravenemu::cgb::testing::achievement_memory_is_not_invented_test();
 }

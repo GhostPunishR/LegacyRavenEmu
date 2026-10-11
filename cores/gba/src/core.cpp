@@ -42,6 +42,20 @@ public:
     std::size_t read_audio(std::span<std::int16_t> destination) override {
         return machine_ ? machine_->apu.read_samples(destination) : 0;
     }
+    std::size_t read_achievement_memory(std::uint32_t address, std::span<std::uint8_t> out) const override {
+        if (!machine_) return 0;
+        const auto* save = machine_->cartridge.save();
+        std::size_t count = 0;
+        for (auto& value : out) {
+            const auto a = static_cast<std::uint64_t>(address) + count;
+            if (a < 0x8000) value = machine_->bus.iwram[a];
+            else if (a < 0x48000) value = machine_->bus.ewram[a - 0x8000];
+            else if (a < 0x58000 && save && a - 0x48000 < save->data().size()) value = save->data()[a - 0x48000];
+            else break;
+            ++count;
+        }
+        return count;
+    }
     [[nodiscard]] bool has_battery_ram() const noexcept override {
         return machine_ && machine_->cartridge.save();
     }
@@ -213,3 +227,4 @@ std::unique_ptr<Core> make_gba_core(std::optional<GbaSaveType> forced_save_type)
     return std::make_unique<gba::GbaCore>(forced_save_type);
 }
 } // namespace ravenemu
+

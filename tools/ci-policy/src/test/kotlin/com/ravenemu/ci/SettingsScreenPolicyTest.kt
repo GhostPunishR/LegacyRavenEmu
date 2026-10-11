@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
  * lancement, ni aucun test : le bouton concerné cesse simplement de répondre.
  * Rien ne le dirait avant qu'un joueur appuie dessus.
  *
- * La première règle, elle, fixe le rangement demandé : quatre écrans au premier
+ * La première règle, elle, fixe le rangement demandé : six écrans au premier
  * niveau, et aucun réglage laissé à la racine où il échapperait au classement.
  */
 class SettingsScreenPolicyTest {
@@ -62,9 +62,12 @@ class SettingsScreenPolicyTest {
             "Un réglage est resté à la racine : il échappe au rangement par catégorie",
         )
         assertEquals(
-            listOf("screen_general", "screen_audio", "screen_video", "screen_ui"),
+            listOf(
+                "screen_retroachievements", "screen_general", "screen_audio",
+                "screen_video", "screen_ui", "screen_about",
+            ),
             enfants.map { it.key() },
-            "Les quatre catégories attendues, dans cet ordre",
+            "Les six catégories attendues, dans cet ordre",
         )
         for (ecran in enfants) {
             assertTrue(
@@ -74,7 +77,7 @@ class SettingsScreenPolicyTest {
             assertTrue(
                 ecran.getAttribute("android:summary").isNotEmpty(),
                 "L'écran ${ecran.key()} doit porter un résumé : c'est lui qui évite " +
-                    "d'ouvrir les quatre pour retrouver un réglage",
+                    "d'ouvrir les six pour retrouver un réglage",
             )
         }
     }
@@ -107,3 +110,4 @@ class SettingsScreenPolicyTest {
         )
     }
 }
+

@@ -83,6 +83,11 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
 
     private var core: EmulatorCore? = null
     private var session: EmulationSession? = null
+    // Accessed only by the emulation thread after setup.
+    private var achievements: com.ravenemu.app.achievements.AchievementClient? = null
+    private var achievementRom: ByteArray? = null
+    private var achievementDialogOpen = false
+    private val achievementPopup by lazy { com.ravenemu.app.achievements.AchievementPopup(this) }
     private var deltaSkinLoadGeneration = 0L
     private var customSkinActive = false
     private var restoreCustomSkinAfterEditing = false
@@ -450,6 +455,7 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
                 newSession.post { c ->
                     try {
                         c.loadState(state)
+                        achievements?.reset()
                     } catch (_: SaveStateException) {
                         // État d'une autre version : on démarre à froid.
                     }
@@ -462,10 +468,60 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
                 !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))) {
             newSession.pause()
         }
+        achievementRom = rom
+        reconnectAchievements()
         newSession.start()
     }
 
+    private fun reconnectAchievements() {
+        val rom = achievementRom ?: return
+        val account = com.ravenemu.app.achievements.AchievementAccount(this).read()
+        session?.post { target ->
+            achievements?.close()
+            achievements = null
+            if (account != null) runCatching {
+                val consoleId = when (console) {
+                    ConsoleType.GAME_BOY -> if ((rom[0x143].toInt() and 0x80) != 0) 6 else 4
+                    ConsoleType.GAME_BOY_ADVANCE -> 5
+                }
+                achievements = com.ravenemu.app.achievements.AchievementClient(target) { event ->
+                    if (event.kind == "login") achievements?.load(consoleId, rom)
+                    else showAchievementMessage(event)
+                }.also { it.login(account.username, account.token, true) }
+            }.onFailure { achievements?.close(); achievements = null }
+        }
+    }
+
     // ---- Callbacks de session (thread d'émulation) ----
+
+    override fun onEmulationTick(core: EmulatorCore, frame: Boolean) {
+        runCatching { achievements?.tick(frame) }.onFailure {
+            achievements?.close()
+            achievements = null
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) achievementPopup.show("RetroAchievements indisponible pour cette session")
+            }
+        }
+    }
+
+    override fun onSessionStopped() {
+        achievements?.close()
+        achievements = null
+    }
+
+    private fun showAchievementMessage(event: com.ravenemu.app.achievements.AchievementClient.Event) {
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed) {
+                val unlocked = event.kind == "achievement"
+                val title = if (unlocked) "Succès débloqué • ${event.extra} points\n${event.title}" else event.title
+                achievementPopup.show(com.ravenemu.app.achievements.AchievementPopup.Notice(
+                    listOf(title, event.detail).filter { it.isNotBlank() }.joinToString("\n"),
+                    // Seul un succès a un badge ; les autres avis n'en portent pas.
+                    event.image.takeIf { unlocked && it.isNotBlank() },
+                ))
+            }
+        }
+    }
 
     override fun onFrame(framebuffer: IntArray) {
         surface.presentFrame(framebuffer)
@@ -512,30 +568,41 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
             if (hasPerGameProfile()) R.string.emulation_per_game_profile_off
             else R.string.emulation_per_game_profile_on
         )
-        val items = arrayOf(
-            getString(R.string.emulation_resume),
-            getString(R.string.emulation_save_state),
-            getString(R.string.emulation_load_state),
-            getString(R.string.emulation_reset),
-            getString(R.string.emulation_edit_controls),
-            perGameLabel,
-            getString(R.string.emulation_quit),
+        // Keep each label with its action so reordering cannot dispatch the wrong command.
+        val items = listOf<Pair<String, () -> Unit>>(
+            getString(R.string.emulation_resume) to { currentSession.resume() },
+            getString(R.string.emulation_save_state) to { saveSnapshot() },
+            getString(R.string.emulation_load_state) to { loadSnapshot() },
+            getString(R.string.retroachievements_title) to {
+                achievementDialogOpen = true
+                com.ravenemu.app.achievements.AchievementDashboard.show(this,
+                    request = { callback ->
+                        currentSession.post {
+                            val snapshot = runCatching { achievements?.snapshot() }.getOrNull()
+                            runOnUiThread { callback(snapshot) }
+                        }
+                    },
+                    reconnect = { reconnectAchievements() },
+                    onDismiss = {
+                        achievementDialogOpen = false
+                        if (!controls.editMode && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                            currentSession.resume()
+                        }
+                    },
+                )
+            },
+            getString(R.string.emulation_edit_controls) to { enterEditMode() },
+            perGameLabel to { togglePerGameProfile() },
+            getString(R.string.emulation_reset) to {
+                currentSession.post { it.reset(); achievements?.reset() }
+                currentSession.resume()
+            },
+            getString(R.string.emulation_quit) to { finish() },
         )
         AlertDialog.Builder(this)
             .setTitle(romTitle.ifBlank { romFileName })
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> currentSession.resume()
-                    1 -> saveSnapshot()
-                    2 -> loadSnapshot()
-                    3 -> {
-                        currentSession.post { it.reset() }
-                        currentSession.resume()
-                    }
-                    4 -> enterEditMode()
-                    5 -> togglePerGameProfile()
-                    6 -> finish()
-                }
+            .setItems(items.map { it.first }.toTypedArray()) { _, which ->
+                items[which].second()
             }
             .setOnCancelListener { currentSession.resume() }
             .show()
@@ -631,6 +698,7 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
         currentSession.post { c ->
             try {
                 c.loadState(state)
+                achievements?.reset()
             } catch (_: SaveStateException) {
                 runOnUiThread {
                     Toast.makeText(
@@ -771,7 +839,7 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
             s.audioEnabled = settings.audioEnabled
             s.setAudioVolume(settings.audioVolume / 100f)
         }
-        if (!controls.editMode) session?.resume()
+        if (!controls.editMode && !achievementDialogOpen) session?.resume()
     }
 
     override fun onPause() {
@@ -790,6 +858,8 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
     }
 
     override fun onDestroy() {
+        achievementRom = null
+        achievementPopup.close()
         super.onDestroy()
         val currentCore = core
         // Un thread qui ne rend pas la main laisse la sortie audio en vie :
@@ -860,3 +930,5 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
                 .putExtra(EXTRA_RESUME_SLOT, resumeSlot)
     }
 }
+
+

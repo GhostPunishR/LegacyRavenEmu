@@ -51,6 +51,28 @@ public:
     std::size_t read_audio(std::span<std::int16_t> destination) override {
         return machine_ ? machine_->apu.read_samples(destination) : 0;
     }
+    std::size_t read_achievement_memory(std::uint32_t address, std::span<std::uint8_t> out) const override {
+        if (!machine_) return 0;
+        const auto& m = *machine_;
+        const auto ram = m.cartridge->achievement_ram();
+        std::size_t count = 0;
+        for (auto& value : out) {
+            const auto a = static_cast<std::uint64_t>(address) + count;
+            if (a < 0x8000) value = static_cast<std::uint8_t>(m.cartridge->read_rom(static_cast<int>(a)));
+            else if (a < 0xa000) value = m.ppu.vram[a - 0x8000];
+            else if (a < 0xc000 && a - 0xa000 < ram.size()) value = ram[a - 0xa000];
+            else if (a >= 0xc000 && a < 0xe000) value = m.bus.wram[a - 0xc000];
+            else if (a >= 0xe000 && a < 0xfe00) value = m.bus.wram[a - 0xe000];
+            else if (a >= 0xfe00 && a < 0xfea0) value = m.ppu.oam[a - 0xfe00];
+            else if (a >= 0xff80 && a < 0xffff) value = m.bus.hram[a - 0xff80];
+            else if (a == 0xffff) value = static_cast<std::uint8_t>(m.interrupts.enable);
+            else if (a >= 0x10000 && a < 0x16000 && gb::is_cgb_hardware(m.hardware_mode)) value = m.bus.wram[a - 0x10000 + 0x2000];
+            else if (a >= 0x16000 && a < 0x34000 && a - 0x14000 < ram.size()) value = ram[a - 0x14000];
+            else break; // Unsupported IO/mapper memory invalidates dependent achievements.
+            ++count;
+        }
+        return count;
+    }
     [[nodiscard]] bool connect_link_endpoint(LinkEndpoint* endpoint) noexcept override {
         if (machine_ != nullptr && !machine_->serial.connect(endpoint)) return false;
         link_endpoint_ = endpoint;
@@ -202,3 +224,4 @@ std::unique_ptr<Core> make_core(HardwareModel model, std::span<const std::uint8_
 } // namespace gb
 
 } // namespace ravenemu
+

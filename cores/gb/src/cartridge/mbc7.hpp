@@ -25,6 +25,14 @@ public:
         else if (address <= 0x5fff) enabled_2_ = byte(value) == 0x40;
     }
 
+    /**
+     * Le MBC7 n'a pas de RAM d'octets : ses sauvegardes sont dans une EEPROM
+     * série, et son espace 0xA000 répond à des registres. Le tampon que
+     * l'en-tête fait allouer reste vierge, et le publier le ferait lire comme
+     * de la mémoire de jeu.
+     */
+    [[nodiscard]] std::span<const std::uint8_t> achievement_ram() const noexcept override { return {}; }
+
     int read_ram(int address) const override {
         if (!registers_enabled() || address >= 0xb000) return 0xff;
         switch ((address >> 4) & 0x0f) {

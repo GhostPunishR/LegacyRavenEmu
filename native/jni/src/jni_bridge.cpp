@@ -674,3 +674,17 @@ Java_com_ravenemu_nativebridge_NativeCoreBridge_drainDiagnostics(
         return result;
     });
 }
+
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_ravenemu_nativebridge_NativeCoreBridge_readAchievementMemory(
+    JNIEnv* env, jclass, jlong handle, jint address, jbyteArray destination
+) {
+    return guarded<jint>(env, 0, [&] {
+        if (!destination) throw std::invalid_argument("Tampon absent");
+        std::vector<std::uint8_t> bytes(static_cast<std::size_t>(env->GetArrayLength(destination)));
+        const auto count = core_from(handle).read_achievement_memory(static_cast<std::uint32_t>(address), bytes);
+        env->SetByteArrayRegion(destination, 0, static_cast<jsize>(count), reinterpret_cast<const jbyte*>(bytes.data()));
+        return static_cast<jint>(count);
+    });
+}

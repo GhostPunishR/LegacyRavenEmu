@@ -20,6 +20,9 @@ public final class NativeCoreBridge {
         }
     }
 
+    public static void ensureLoaded() {}
+    public static native int readAchievementMemory(long handle, int address, byte[] destination);
+
     public static native long create(int consoleStorageId, int forcedSaveType);
     public static native void destroy(long handle);
     public static native void loadRom(long handle, byte[] rom, byte[] batteryRam);
@@ -54,3 +57,4 @@ public final class NativeCoreBridge {
     public static native NativeGbaDebugSnapshot debugSnapshot(long handle);
     public static native NativeDiagnosticBatch drainDiagnostics(long handle);
 }
+

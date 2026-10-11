@@ -4,7 +4,7 @@
 [![Wiki](https://img.shields.io/badge/Documentation-Wiki-5b21b6.svg?logo=github&logoColor=white)](https://github.com/GhostPunishR/RavenEmu/wiki)
 [![Site officiel](https://img.shields.io/badge/Site-RavenEmu-7c3aed.svg?logo=githubpages&logoColor=white)](https://ghostpunishr.github.io/RavenEmu/)
 [![APK Test](https://img.shields.io/badge/APK-Test-a855f7.svg?logo=android&logoColor=white)](https://github.com/GhostPunishR/RavenEmu/releases/download/test-latest/RavenEmu-test.apk)
-[![Licence MIT](https://img.shields.io/badge/Licence-MIT-22c55e.svg?logo=opensourceinitiative&logoColor=white)](LICENSE)
+[![Licence AGPL-3.0](https://img.shields.io/badge/Licence-AGPL--3.0-22c55e.svg?logo=gnu&logoColor=white)](LICENSE)
 
 **RavenEmu** est un émulateur Game Boy, Game Boy Color et Game Boy Advance pour Android.
 
@@ -54,6 +54,14 @@ versionné contrôle leur SHA-256 et leur provenance déclarée, orchestre le ru
 natif et produit un rapport JSON ; son usage est documenté dans
 [`cores/gb/tests/README.md`](cores/gb/tests/README.md).
 
+## RetroAchievements
+
+Dans **Paramètres → RetroAchievements**, connectez un compte existant. Le profil reste mémorisé sur cet appareil après fermeture de l’application grâce au jeton chiffré ; le même dialogue est accessible depuis le menu en jeu. La catégorie RetroAchievements est la première des paramètres. En jeu, le tableau de bord affiche les points du profil, le jeu reconnu, les totaux, les succès obtenus ou verrouillés et leur progression. Chaque succès donne accès à sa description, sa date et sa page officielle. Une bannière apparaît lorsqu’un succès est détecté. Le jeu continue pendant les échanges réseau. Depuis le menu en jeu, la connexion et la déconnexion prennent effet en fermant le dialogue du compte. « Réessayer » relance la connexion et l’identification de la ROM.
+
+L’intégration utilise le SDK officiel **rcheevos 12.5.0**, en mode **normal (Softcore)** pour GB, GBC et GBA. Hardcore et classements ne sont pas activés ; la préparation et les critères nécessaires sont décrits dans [le plan Hardcore](native/achievements/HARDCORE.md). La ROM doit être reconnue par RetroAchievements ; une ROM modifiée ou d’une autre édition peut ne pas avoir de succès. Les lectures de registres GB et certaines mémoires de cartouches spéciales ne sont pas encore exposées : les conditions qui en dépendent peuvent être désactivées par le SDK. Les restaurations d’état remettent à zéro la progression temporaire des conditions. Les succès déjà acquis restent acquis.
+
+Le mot de passe n’est pas conservé ; le jeton de connexion est chiffré sur l’appareil. Voir [la politique de confidentialité](PRIVACY.md) et [les détails techniques et tests](native/achievements/README.md).
+
 ## Architecture
 
 ```text
@@ -72,7 +80,7 @@ Voir [ARCHITECTURE.md](ARCHITECTURE.md) et le [wiki Architecture](https://github
 
 ## Compiler
 
-Prérequis principaux : JDK, Android SDK avec `compileSdk 37`, NDK `29.0.14206865` et CMake `3.22.1`.
+Prérequis principaux : JDK, Android SDK avec `compileSdk 37`, NDK `30.0.16248370` et CMake `3.22.1`.
 
 ```bash
 git clone https://github.com/GhostPunishR/RavenEmu.git
@@ -112,6 +120,19 @@ Le code d'un autre émulateur ne doit pas être copié, traduit ou adapté dans 
 
 ## Licence et marques
 
-RavenEmu est distribué sous [licence MIT](LICENSE). Copyright 2026 GhostPunishR.
+RavenEmu est distribué sous [GNU Affero General Public License version 3](LICENSE). Copyright 2026 GhostPunishR.
+
+Concrètement : vous pouvez utiliser, étudier, modifier et redistribuer RavenEmu, y compris à titre commercial. En contrepartie, toute version redistribuée, modifiée ou non, doit l'être sous la même licence et avec son code source. L'article 13 ajoute le cas du réseau : un utilisateur qui se servirait à distance d'une version modifiée doit pouvoir en obtenir la source. RavenEmu étant une application locale, qui se connecte à des services tiers sans en rendre aucun, cet article ne change rien à son usage habituel.
+
+Les versions publiées jusqu'au passage à l'AGPL restaient sous licence MIT : qui les a reçues sous ces termes les conserve. Le changement vaut pour la suite.
+
+### Composants tiers
+
+- [rcheevos](https://github.com/RetroAchievements/rcheevos), SDK officiel RetroAchievements, sous licence MIT conservée dans [`native/achievements/LICENSE.rcheevos`](native/achievements/LICENSE.rcheevos).
+- Les bibliothèques AndroidX, Material Components et Kotlin, sous licence Apache 2.0, récupérées à la construction et non versionnées ici.
+
+Ces licences permissives autorisent l'inclusion dans une œuvre sous AGPL ; leurs avis respectifs sont conservés et ne sont pas remplacés par celle-ci.
 
 Game Boy, Game Boy Color et Game Boy Advance sont des marques de Nintendo. RavenEmu n'est ni affilié à Nintendo, ni approuvé par Nintendo.
+
+
