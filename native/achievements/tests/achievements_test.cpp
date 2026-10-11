@@ -57,6 +57,17 @@ void memory_maps() {
     check(core->read_achievement_memory(0xff00, bytes) == 0, "unavailable IO must not invent values");
     check(before == core->save_state(), "achievement reads mutated GB state");
 
+    // Une cartouche MBC7 n'a pas de RAM d'octets : ses sauvegardes sont dans
+    // une EEPROM série et son espace 0xA000 répond à des registres. Servir le
+    // tampon vierge que l'en-tête fait allouer rendrait des zéros inventés, et
+    // le SDK ne pourrait plus désactiver les succès qui en dépendent : une
+    // condition « cet octet vaut zéro » y serait vraie en permanence.
+    auto tilt = ravenemu::testing::minimal_game_boy_rom();
+    tilt[0x143] = 0xc0; tilt[0x147] = 0x22; // MBC7 + capteur + EEPROM
+    core = ravenemu::make_game_boy_core(); core->load_rom(tilt, {});
+    check(core->read_achievement_memory(0xa000, bytes) == 0,
+          "MBC7 must report cartridge memory as unreadable, not invent zeros");
+
     core = ravenemu::make_gba_core(ravenemu::GbaSaveType::flash_64k);
     auto gba = ravenemu::testing::minimal_gba_rom();
     gba[19] = 0x03; // same synthetic program writes IWRAM

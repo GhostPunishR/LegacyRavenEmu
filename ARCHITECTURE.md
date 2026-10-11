@@ -337,12 +337,12 @@ bibliothèque vivent encore dans `app/android` et pourront être extraits sépar
 
 ## Chaîne de build
 
-- Android Gradle Plugin : 9.3.1
+- Android Gradle Plugin : 9.3.3
 - Gradle : 9.5.0
-- Kotlin : 2.4.10
+- Kotlin : 2.4.21
 - compileSdk : 37
 - targetSdk : 35
-- NDK : 29.0.14206865
+- NDK : 30.0.16248370
 - Java/JVM : 17
 - C++ : C++20
 - CMake : 3.22.1
