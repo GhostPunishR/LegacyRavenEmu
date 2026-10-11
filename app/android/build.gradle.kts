@@ -35,7 +35,7 @@ android {
         // le Play Store. Le relever demande une validation sur appareil, hors
         // de portée de la CI actuelle qui construit sans exécuter.
         targetSdk = 35
-        // Version 0.8.0, et non 0.1.0.
+        // Version 0.8.x, et non 0.1.0.
         //
         // 0.1.0 datait du premier jet et ne disait plus rien de juste. Ce que
         // la feuille de route range aujourd'hui dans « Réalisé » : les moteurs
@@ -58,8 +58,8 @@ android {
         // + CORRECTIF`, pour que la prochaine numérotation n'ait pas à être
         // devinée. Il doit croître à chaque publication : 1 était la seule
         // valeur jamais publiée.
-        versionCode = 800
-        versionName = "0.8.0"
+        versionCode = 801
+        versionName = "0.8.1"
 
         externalNativeBuild {
             cmake {
