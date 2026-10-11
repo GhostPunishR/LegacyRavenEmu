@@ -53,3 +53,33 @@ internal data class AchievementProfile(
         }
     }
 }
+
+/**
+ * Attend que la session soit ouverte, puis rend le profil une seule fois.
+ *
+ * Le pont natif répond à chaque tour de boucle, bien avant que le serveur ait
+ * répondu : les colonnes sont alors vides, et lire les points à ce moment
+ * afficherait zéro sans plus jamais les corriger. Tant que la colonne du nom
+ * de compte est vide, la réponse n'est pas arrivée.
+ *
+ * Une fois le profil rendu, les appels suivants ne rendent plus rien : le
+ * rafraîchissement n'a lieu qu'à l'ouverture du panneau, et republier à chaque
+ * tour referait clignoter le portrait trente fois par seconde.
+ *
+ * Aucune dépendance Android : cette décision se vérifie sur la JVM seule.
+ */
+internal class AchievementProfileReader(
+    private val fallbackName: String = "",
+    private val fallbackUser: String = "",
+) {
+    private var delivered = false
+
+    /** Le profil au premier tour où il est lisible, puis `null` pour toujours. */
+    fun read(summary: List<String>?): AchievementProfile? {
+        if (delivered) return null
+        if (summary == null || summary.size < 11 || summary[9].isBlank()) return null
+        val profile = AchievementProfile.fromSummary(summary, fallbackName, fallbackUser) ?: return null
+        delivered = true
+        return profile
+    }
+}

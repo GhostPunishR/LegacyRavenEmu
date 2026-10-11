@@ -207,6 +207,7 @@
       laisser chercher pourquoi la carte est plus courte que la page du site.
     -->
     <string name="retroachievements_profile_note">Connexion mémorisée sur cet appareil. Le rang, la date d\'inscription et la dernière activité ne sont visibles que sur le site.</string>
+    <string name="retroachievements_signed_in_note">Connexion mémorisée sur cet appareil. Fermez ce panneau pour activer les succès dans la partie en cours.</string>
     <string name="retroachievements_profile_offline">Hors ligne : points non actualisés. L\'identité affichée est celle de la dernière connexion.</string>
 </resources>
 

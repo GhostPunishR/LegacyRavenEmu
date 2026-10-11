@@ -73,3 +73,59 @@ class AchievementProfileTest {
         assertEquals(true, formatted.length > 6)
     }
 }
+
+/**
+ * Le lecteur décide *quand* le profil est lisible.
+ *
+ * Le pont natif répond à chaque tour de boucle, trente fois par seconde, bien
+ * avant que le serveur ait répondu. Lire trop tôt affiche zéro point sans plus
+ * jamais le corriger ; relire sans fin fait clignoter le portrait.
+ */
+class AchievementProfileReaderTest {
+
+    private fun ready(points: String = "483") = listOf(
+        "GhostPunishR", points, "0", "", "0", "0", "0", "0", "0", "GhostPunishR",
+        "https://media.retroachievements.org/UserPic/GhostPunishR.png",
+    )
+
+    /** Ce que rend le pont tant que la connexion n'a pas abouti. */
+    private val pending = List(11) { "" }
+
+    @Test
+    fun `rien tant que la session n'est pas ouverte`() {
+        val reader = AchievementProfileReader()
+        assertNull(reader.read(null))
+        assertNull(reader.read(emptyList()))
+        assertNull(reader.read(pending))
+        // Les neuf colonnes d'avant l'ajout du compte et du portrait.
+        assertNull(reader.read(ready().take(9)))
+    }
+
+    @Test
+    fun `le profil est rendu une seule fois`() {
+        val reader = AchievementProfileReader()
+        assertNull(reader.read(pending))
+        val profile = reader.read(ready())!!
+        assertEquals(483, profile.softcorePoints)
+        // Les tours suivants ne rendent plus rien, même si les points changent.
+        assertNull(reader.read(ready()))
+        assertNull(reader.read(ready(points = "999")))
+    }
+
+    @Test
+    fun `une attente prolongée ne consomme pas la lecture`() {
+        val reader = AchievementProfileReader()
+        repeat(100) { assertNull(reader.read(pending)) }
+        assertEquals(483, reader.read(ready())!!.softcorePoints)
+    }
+
+    @Test
+    fun `l'identité mémorisée sert de repli quand le serveur n'en donne pas`() {
+        val reader = AchievementProfileReader("Nom affiché", "compte")
+        // Le nom de compte est la colonne qui ouvre la lecture : sans lui,
+        // aucun repli ne s'applique, car la réponse n'est pas arrivée.
+        assertNull(reader.read(pending))
+        val summary = ready().toMutableList().apply { this[0] = "" }
+        assertEquals("GhostPunishR", reader.read(summary)!!.displayName)
+    }
+}

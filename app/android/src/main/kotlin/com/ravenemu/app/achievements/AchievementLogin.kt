@@ -54,6 +54,32 @@ object AchievementLogin {
         val worker = Executors.newSingleThreadScheduledExecutor { Thread(it, "RavenEmu-RA-Login").apply { isDaemon = true } }
         val dismissed = AtomicBoolean(false)
         var client: AchievementClient? = null // worker only
+        val reader = AchievementProfileReader() // worker only
+        val card = AchievementProfileCard(activity)
+        var connected = false // UI thread only
+        /**
+         * Une fois connecté, le formulaire n'a plus de raison d'être : laisser
+         * ses deux champs et son bouton « Se connecter » à l'écran fait croire
+         * que la connexion a échoué. Le panneau devient la carte du compte, la
+         * même qu'à sa réouverture depuis les paramètres.
+         */
+        fun showConnected(displayName: String, accountName: String, avatarUrl: String) {
+            if (connected || activity.isFinishing || activity.isDestroyed) return
+            connected = true
+            content.removeAllViews()
+            // La carte porte déjà ses marges : les cumuler la décalerait.
+            content.setPadding(0, 0, 0, 0)
+            content.addView(card.view)
+            card.identity(displayName, accountName, avatarUrl)
+            card.points(null)
+            card.showNote(activity.getString(R.string.retroachievements_signed_in_note))
+            dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).visibility = View.GONE
+            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).apply {
+                text = activity.getString(R.string.retroachievements_close)
+                isEnabled = true
+                setOnClickListener { dialog.dismiss() }
+            }
+        }
         val observer = object : DefaultLifecycleObserver {
             override fun onDestroy(owner: LifecycleOwner) { dialog.dismiss() }
         }
@@ -82,17 +108,35 @@ object AchievementLogin {
                         client?.close()
                         client = AchievementClient { event ->
                             if (dismissed.get()) return@AchievementClient
-                            var saved = false
-                            val message = if (event.kind == "login") {
-                                runCatching { account.save(event.title, event.extra, event.detail, event.image) }
-                                    .fold({ saved = true; "Connecté : ${event.detail.ifBlank { event.title }}. Connexion mémorisée sur cet appareil. Fermez ce dialogue pour activer les succès dans la partie en cours." },
-                                        { "Impossible de conserver la connexion sur cet appareil." })
-                            } else event.title
+                            if (event.kind != "login") {
+                                val message = event.title
+                                activity.runOnUiThread {
+                                    if (dismissed.get() || activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                                    // Le formulaire a cédé la place : son texte
+                                    // d'information n'est plus à l'écran, et un
+                                    // avis écrit dedans serait perdu.
+                                    if (connected) card.showNote(message)
+                                    else {
+                                        info.text = message
+                                        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                                    }
+                                }
+                                return@AchievementClient
+                            }
+                            // Le compte n'est connecté pour de bon que s'il a pu
+                            // être écrit : sans cela, la prochaine ouverture
+                            // redemanderait le mot de passe, et annoncer une
+                            // connexion mémorisée serait faux.
+                            val stored = runCatching {
+                                account.save(event.title, event.extra, event.detail, event.image)
+                            }.isSuccess
+                            val name = event.detail.ifBlank { event.title }
                             activity.runOnUiThread {
-                                if (!dismissed.get() && !activity.isFinishing && !activity.isDestroyed) {
-                                    info.text = message
-                                    dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled = !saved
-                                    if (saved) dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).text = "Fermer"
+                                if (dismissed.get() || activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                                if (stored) showConnected(name, event.title, event.image)
+                                else {
+                                    info.text = "Impossible de conserver la connexion sur cet appareil."
+                                    dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled = true
                                 }
                             }
                         }.also { it.login(user, secret, false) }
@@ -108,7 +152,20 @@ object AchievementLogin {
             }
         }
         worker.scheduleWithFixedDelay({
-            if (!dismissed.get()) runCatching { client?.tick(false) }
+            runCatching {
+                val active = client
+                if (dismissed.get() || active == null) return@runCatching
+                active.tick(false)
+                // Le client vient de se connecter : ses points sont lisibles
+                // sans repasser par le serveur une seconde fois.
+                val profile = reader.read(active.snapshot().summary) ?: return@runCatching
+                activity.runOnUiThread {
+                    if (dismissed.get() || activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                    showConnected(profile.displayName, profile.username, profile.avatarUrl.orEmpty())
+                    card.identity(profile.displayName, profile.username, profile.avatarUrl)
+                    card.points(profile)
+                }
+            }
         }, 0, 30, TimeUnit.MILLISECONDS)
         dialog.show()
     }
@@ -154,7 +211,7 @@ object AchievementLogin {
         }
         val dismissed = AtomicBoolean(false)
         var client: AchievementClient? = null // worker only
-        var refreshed = false // worker only
+        val reader = AchievementProfileReader(existing.displayName, existing.username) // worker only
         val observer = object : DefaultLifecycleObserver {
             override fun onDestroy(owner: LifecycleOwner) { dialog.dismiss() }
         }
@@ -190,17 +247,7 @@ object AchievementLogin {
                 val active = client
                 if (dismissed.get() || active == null) return@runCatching
                 active.tick(false)
-                if (refreshed) return@runCatching
-                // Le profil n'est lisible qu'une fois la session ouverte. Tant
-                // que la colonne du nom de compte est vide, le serveur n'a pas
-                // répondu : lire les points maintenant afficherait zéro et ne
-                // les rafraîchirait plus jamais.
-                val summary = active.snapshot().summary
-                if (summary.size < 11 || summary[9].isBlank()) return@runCatching
-                val profile = AchievementProfile.fromSummary(
-                    summary, existing.displayName, existing.username,
-                ) ?: return@runCatching
-                refreshed = true
+                val profile = reader.read(active.snapshot().summary) ?: return@runCatching
                 // Le nom affiché et le portrait peuvent avoir changé sur le
                 // site : les réécrire évite que la prochaine ouverture reparte
                 // d'une identité périmée. Le jeton, lui, ne bouge pas.
