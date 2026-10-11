@@ -226,10 +226,7 @@ class SettingsActivity :
          * source part vers le navigateur, n'ayant pas sa place dans un APK.
          */
         private fun wireAboutScreen() {
-            findPreference<Preference>("about_version")?.summary = buildString {
-                append(BuildConfig.VERSION_NAME)
-                append(" (").append(BuildConfig.VERSION_CODE).append(')')
-            }
+            findPreference<Preference>("about_version")?.summary = BuildConfig.VERSION_NAME
             fun document(key: String, intent: () -> android.content.Intent) {
                 findPreference<Preference>(key)?.setOnPreferenceClickListener {
                     startActivity(intent())
