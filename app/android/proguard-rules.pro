@@ -12,3 +12,11 @@
 # Les erreurs natives sont matérialisées directement sous leurs types publics.
 -keep class com.ravenemu.emulation.api.RomLoadException { *; }
 -keep class com.ravenemu.emulation.api.SaveStateException { *; }
+
+
+# RetroAchievements callbacks are invoked by name from the official SDK bridge.
+-keep class com.ravenemu.nativebridge.NativeAchievementsBridge { *; }
+-keep interface com.ravenemu.nativebridge.NativeAchievementsBridge$Memory { *; }
+-keepclassmembers class * implements com.ravenemu.nativebridge.NativeAchievementsBridge$Memory {
+    public byte[] read(int, int);
+}

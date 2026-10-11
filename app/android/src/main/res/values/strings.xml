@@ -184,4 +184,7 @@
     <string name="delta_skins_error_identifier">Un skin portant cet identifiant existe déjà</string>
     <string name="delta_skins_error_storage">Le stockage disponible est insuffisant ou inaccessible</string>
     <string name="delta_skins_runtime_fallback">Skin invalide : commandes classiques restaurées</string>
+    <string name="retroachievements_title">RetroAchievements</string>
+    <string name="retroachievements_summary">Connexion au compte et succès en jeu (mode normal)</string>
 </resources>
+

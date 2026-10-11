@@ -2,11 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- L'application ne demande ni accès global au stockage ni réseau. Le
-         module vibration ajoute uniquement VIBRATE pour les cartouches rumble. -->
+    <!-- Réseau utilisé uniquement lorsque RetroAchievements est connecté. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
+        android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -45,3 +46,4 @@
             android:label="@string/states_title" />
     </application>
 </manifest>
+

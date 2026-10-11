@@ -106,6 +106,9 @@ class GbaCore(
         NativeCoreBridge.setButton(handle(), button.ordinal, pressed)
     }
 
+    override fun readAchievementMemory(address: Int, buffer: ByteArray): Int =
+        NativeCoreBridge.readAchievementMemory(handle(), address, buffer)
+
     override fun readAudio(buffer: ShortArray): Int =
         NativeCoreBridge.readAudio(handle(), buffer)
 
@@ -234,3 +237,4 @@ class GbaCore(
         }
     }
 }
+

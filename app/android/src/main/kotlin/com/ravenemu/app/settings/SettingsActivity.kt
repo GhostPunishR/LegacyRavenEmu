@@ -104,6 +104,10 @@ class SettingsActivity :
             preferenceManager.sharedPreferencesName = "ravenemu_settings"
             setPreferencesFromResource(R.xml.preferences, rootKey)
             settings = AppSettings(requireContext())
+            findPreference<Preference>("retroachievements")?.setOnPreferenceClickListener {
+                com.ravenemu.app.achievements.AchievementLogin.show(requireActivity())
+                true
+            }
             // Le câblage qui suit vaut pour l'arborescence entière. Monté sur
             // un écran donné, `findPreference` ne trouve que ce qu'il contient
             // et les autres appels ne font rien : c'est voulu, et c'est ce qui
@@ -199,3 +203,4 @@ class SettingsActivity :
         }
     }
 }
+

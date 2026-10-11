@@ -160,6 +160,8 @@ public:
     virtual void reset() = 0;
     virtual void run_frame(std::span<std::int32_t> framebuffer, bool render_video) = 0;
     virtual void set_button(Button button, bool pressed) = 0;
+    // RetroAchievements address space; observational reads, never clock the bus.
+    virtual std::size_t read_achievement_memory(std::uint32_t, std::span<std::uint8_t>) const { return 0; }
     virtual std::size_t read_audio(std::span<std::int16_t> destination) = 0;
     [[nodiscard]] virtual bool connect_link_endpoint(LinkEndpoint*) noexcept { return false; }
     [[nodiscard]] virtual bool connect_infrared_endpoint(InfraredEndpoint*) noexcept { return false; }
@@ -196,3 +198,4 @@ public:
 [[nodiscard]] std::unique_ptr<Core> make_gba_core(std::optional<GbaSaveType> forced_save_type);
 
 } // namespace ravenemu
+

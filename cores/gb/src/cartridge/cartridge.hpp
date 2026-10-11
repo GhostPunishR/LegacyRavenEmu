@@ -29,6 +29,7 @@ public:
     virtual void save_state(BinaryWriter& out) const = 0;
     virtual void load_state(BinaryReader& in) = 0;
 
+    [[nodiscard]] std::span<const std::uint8_t> achievement_ram() const noexcept { return ram_; }
     [[nodiscard]] const CartridgeHeader& header() const noexcept { return header_; }
     [[nodiscard]] bool dirty() const noexcept { return generation_ != saved_generation_; }
     [[nodiscard]] std::uint64_t generation() const noexcept { return generation_; }
@@ -81,3 +82,4 @@ private:
 };
 
 } // namespace ravenemu::cgb
+

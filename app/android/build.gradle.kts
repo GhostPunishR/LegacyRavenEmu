@@ -173,6 +173,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":native:jni"))
     implementation(project(":engine:api"))
     implementation(project(":engine:runtime"))
     implementation(project(":engine:session"))
@@ -210,3 +211,4 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.junit4)
 }
+

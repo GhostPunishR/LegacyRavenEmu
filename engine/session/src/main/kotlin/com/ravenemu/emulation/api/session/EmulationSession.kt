@@ -105,6 +105,11 @@ class EmulationSession(
          * désagréable, perdre la partie ne l'est pas du tout.
          */
         fun onAudioFailure(error: Exception) {}
+
+        /** Every emulated frame, including skipped video frames; false while paused. */
+        fun onEmulationTick(core: EmulatorCore, frame: Boolean) {}
+        /** Called on the owning thread after the final commands and saves. */
+        fun onSessionStopped() {}
     }
 
     /**
@@ -284,6 +289,14 @@ class EmulationSession(
     }
 
     private fun loop() {
+        try {
+            runLoop()
+        } finally {
+            callbacks.onSessionStopped()
+        }
+    }
+
+    private fun runLoop() {
         // `Thread.priority` ne fait que positionner une valeur de politesse
         // Unix ; le groupe d'ordonnancement, lui, est propre à la plateforme.
         onThreadStart()
@@ -301,6 +314,7 @@ class EmulationSession(
             drainCommands()
 
             if (paused) {
+                callbacks.onEmulationTick(core, false)
                 LockSupport.parkNanos(20_000_000)
                 nextFrameAt = System.nanoTime()
                 fpsWindowStart = System.nanoTime()
@@ -316,6 +330,7 @@ class EmulationSession(
                 !core.supportsVideoFrameSkipping || frameSkipper.shouldRender()
             val workStart = System.nanoTime()
             core.runFrame(framebuffer, renderVideo)
+            callbacks.onEmulationTick(core, true)
             val rumbleActive = core.rumbleActive
             if (rumbleActive != lastRumbleActive) {
                 rumbleSink?.setActive(rumbleActive)
@@ -528,3 +543,4 @@ class EmulationSession(
         private const val MAX_LAG_NANOS = 100_000_000L
     }
 }
+

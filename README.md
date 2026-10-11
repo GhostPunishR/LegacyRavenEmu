@@ -54,6 +54,14 @@ versionné contrôle leur SHA-256 et leur provenance déclarée, orchestre le ru
 natif et produit un rapport JSON ; son usage est documenté dans
 [`cores/gb/tests/README.md`](cores/gb/tests/README.md).
 
+## RetroAchievements
+
+Dans **Paramètres → Général → RetroAchievements**, connectez un compte existant ; le même dialogue est accessible depuis le menu en jeu. Lancez ensuite une partie pour activer les succès. Une bannière apparaît lorsqu’un succès est détecté. Le jeu continue pendant les échanges réseau. La déconnexion prend effet à la prochaine partie.
+
+L’intégration utilise le SDK officiel **rcheevos 12.5.0**, en mode **normal (Softcore)** pour GB, GBC et GBA. Hardcore et classements ne sont pas activés. La ROM doit être reconnue par RetroAchievements ; une ROM modifiée ou d’une autre édition peut ne pas avoir de succès. Les lectures de registres GB et certaines mémoires de cartouches spéciales ne sont pas encore exposées : les conditions qui en dépendent peuvent être désactivées par le SDK. Les restaurations d’état remettent à zéro la progression temporaire des conditions. Les succès déjà acquis restent acquis.
+
+Le mot de passe n’est pas conservé ; le jeton de connexion est chiffré sur l’appareil. Voir [la politique de confidentialité](PRIVACY.md) et [les détails techniques et tests](native/achievements/README.md).
+
 ## Architecture
 
 ```text
@@ -115,3 +123,4 @@ Le code d'un autre émulateur ne doit pas être copié, traduit ou adapté dans 
 RavenEmu est distribué sous [licence MIT](LICENSE). Copyright 2026 GhostPunishR.
 
 Game Boy, Game Boy Color et Game Boy Advance sont des marques de Nintendo. RavenEmu n'est ni affilié à Nintendo, ni approuvé par Nintendo.
+

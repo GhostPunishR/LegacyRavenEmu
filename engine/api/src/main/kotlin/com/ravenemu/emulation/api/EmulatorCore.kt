@@ -14,6 +14,9 @@ package com.ravenemu.emulation.api
  * stratégie de synchronisation.
  */
 interface EmulatorCore {
+    /** Read the RetroAchievements memory map on the emulation thread only. */
+    fun readAchievementMemory(address: Int, buffer: ByteArray): Int = 0
+
     /** Console émulée par ce moteur. */
     val console: ConsoleType
 
@@ -139,3 +142,4 @@ interface EmulatorCore {
      */
     fun loadState(state: ByteArray)
 }
+

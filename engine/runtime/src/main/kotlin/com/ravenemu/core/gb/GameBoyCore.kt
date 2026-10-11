@@ -60,6 +60,9 @@ class GameBoyCore(
         NativeCoreBridge.setButton(handle(), button.ordinal, pressed)
     }
 
+    override fun readAchievementMemory(address: Int, buffer: ByteArray): Int =
+        NativeCoreBridge.readAchievementMemory(handle(), address, buffer)
+
     override fun readAudio(buffer: ShortArray): Int =
         NativeCoreBridge.readAudio(handle(), buffer)
 
@@ -129,3 +132,4 @@ class GameBoyCore(
         private val SYSTEM_CLOCK: () -> Long = { System.currentTimeMillis() / 1_000 }
     }
 }
+

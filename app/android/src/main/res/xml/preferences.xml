@@ -18,6 +18,10 @@
         android:title="@string/settings_category_general">
 
         <PreferenceCategory android:title="@string/settings_category_emulation">
+            <Preference
+                android:key="retroachievements"
+                android:title="@string/retroachievements_title"
+                android:summary="@string/retroachievements_summary" />
             <SwitchPreferenceCompat
                 android:defaultValue="true"
                 android:key="emu_pause_background"
@@ -170,3 +174,4 @@
         </PreferenceCategory>
     </PreferenceScreen>
 </PreferenceScreen>
+
