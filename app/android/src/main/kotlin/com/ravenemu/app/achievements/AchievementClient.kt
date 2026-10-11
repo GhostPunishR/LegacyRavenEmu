@@ -36,10 +36,13 @@ internal class AchievementClient(
     }
 
     private var status = "Connexion en cours…"
+    @Volatile var hardcoreEnabled: Boolean = false
+        private set
+    fun canPause(): Boolean = !hardcoreEnabled || Native.canPause(handle)
     fun snapshot(): AchievementSnapshot = AchievementSnapshot(
         status, Native.summary(handle).toList(), Native.achievements(handle).asList().chunked(9).map {
             AchievementEntry(it[0], it[1], it[2], it[3], it[4].toInt(), it[5], it[6].toLong(), it[7].toInt(), it[8])
-        },
+        }, Native.richPresence(handle),
     )
 
     fun login(username: String, secret: String, token: Boolean) {
@@ -56,6 +59,7 @@ internal class AchievementClient(
             Native.respond(handle, response.id, response.body, response.status, memory)
         }
         Native.tick(handle, memory, frame)
+        hardcoreEnabled = Native.hardcore(handle)
         Native.events(handle).asList().chunked(5).forEach {
             when (it[0]) {
                 "login" -> {
