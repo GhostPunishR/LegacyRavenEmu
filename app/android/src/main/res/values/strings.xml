@@ -186,5 +186,13 @@
     <string name="delta_skins_runtime_fallback">Skin invalide : commandes classiques restaurées</string>
     <string name="retroachievements_title">RetroAchievements</string>
     <string name="retroachievements_summary">Connexion au compte et succès en jeu (mode normal)</string>
+    <string name="retroachievements_sign_in">Se connecter</string>
+    <string name="retroachievements_signed_out">Connectez votre compte pour obtenir des succès en jeu.</string>
+    <string name="retroachievements_profile">Profil : %1$s</string>
+    <string name="retroachievements_connected">Connecté : %1$s</string>
+    <string name="retroachievements_session_saved">Connexion mémorisée sur cet appareil. Touchez pour gérer votre compte.</string>
+    <string name="retroachievements_mode">Mode normal (Softcore)</string>
+    <string name="retroachievements_mode_summary">Succès GB, GBC et GBA. Le mode Hardcore et les classements ne sont pas activés.</string>
 </resources>
+
 

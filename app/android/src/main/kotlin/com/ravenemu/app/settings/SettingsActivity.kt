@@ -16,9 +16,9 @@ import com.ravenemu.emulation.api.display.MonochromeDisplayProfiles
 import com.ravenemu.storage.RomIndexStore
 
 /**
- * Onglet Paramètres, rangé en quatre écrans : Général, Audio, Vidéo, Interface.
+ * Onglet Paramètres, rangé en cinq catégories : Général, Audio, Vidéo, Interface, RetroAchievements.
  *
- * Le premier niveau ne contient que ces quatre entrées ; tous les réglages
+ * Le premier niveau ne contient que ces cinq entrées ; tous les réglages
  * vivent dans l'un d'eux. Déroulés à la file, ils obligeaient à parcourir tout
  * l'écran pour savoir si un réglage existait.
  *
@@ -105,7 +105,9 @@ class SettingsActivity :
             setPreferencesFromResource(R.xml.preferences, rootKey)
             settings = AppSettings(requireContext())
             findPreference<Preference>("retroachievements")?.setOnPreferenceClickListener {
-                com.ravenemu.app.achievements.AchievementLogin.show(requireActivity())
+                com.ravenemu.app.achievements.AchievementLogin.show(requireActivity()) {
+                    if (isAdded) updateAchievementAccount()
+                }
                 true
             }
             // Le câblage qui suit vaut pour l'arborescence entière. Monté sur
@@ -183,13 +185,31 @@ class SettingsActivity :
              * Fragment monté sur un écran imbriqué.
              *
              * `PreferenceFragmentCompat` lit lui-même cet argument et le rend
-             * dans `rootKey` : le même fragment sert donc les cinq écrans, et
+             * dans `rootKey` : le même fragment sert donc la racine et les cinq catégories, et
              * le câblage ci-dessus n'est écrit qu'une fois.
              */
             fun forScreen(key: String): SettingsFragment = SettingsFragment().apply {
                 arguments = Bundle().apply {
                     putString(PreferenceFragmentCompat.ARG_PREFERENCE_ROOT, key)
                 }
+            }
+        }
+
+        override fun onResume() {
+            super.onResume()
+            updateAchievementAccount()
+        }
+
+        private fun updateAchievementAccount() {
+            val account = com.ravenemu.app.achievements.AchievementAccount(requireContext()).read()
+            findPreference<Preference>("screen_retroachievements")?.summary =
+                account?.let { getString(R.string.retroachievements_connected, it.displayName) }
+                    ?: getString(R.string.retroachievements_summary)
+            findPreference<Preference>("retroachievements")?.let { preference ->
+                preference.title = account?.let { getString(R.string.retroachievements_profile, it.displayName) }
+                    ?: getString(R.string.retroachievements_sign_in)
+                preference.summary = getString(if (account != null) R.string.retroachievements_session_saved
+                    else R.string.retroachievements_signed_out)
             }
         }
 
@@ -203,4 +223,5 @@ class SettingsActivity :
         }
     }
 }
+
 

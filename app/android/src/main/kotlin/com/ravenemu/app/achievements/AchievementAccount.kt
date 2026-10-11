@@ -14,7 +14,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 /** Token only; encrypted with an Android Keystore key and excluded from backups. */
 class AchievementAccount(context: Context) {
-    data class Credentials(val username: String, val token: String)
+    data class Credentials(val username: String, val token: String, val displayName: String = username)
     private val file = AtomicFile(File(context.noBackupFilesDir, "retroachievements.account"))
 
     fun read(): Credentials? = runCatching {
@@ -23,13 +23,14 @@ class AchievementAccount(context: Context) {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
         val json = JSONObject(String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8))
-        Credentials(json.getString("username"), json.getString("token"))
+        val username = json.getString("username")
+        Credentials(username, json.getString("token"), json.optString("displayName").ifBlank { username })
     }.getOrNull()
 
-    fun save(username: String, token: String) {
+    fun save(username: String, token: String, displayName: String = username) {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
-        val plain = JSONObject().put("username", username).put("token", token).toString().toByteArray(Charsets.UTF_8)
+        val plain = JSONObject().put("username", username).put("token", token).put("displayName", displayName.ifBlank { username }).toString().toByteArray(Charsets.UTF_8)
         val encrypted = cipher.iv + cipher.doFinal(plain)
         plain.fill(0)
         val stream = file.startWrite()
@@ -57,3 +58,4 @@ class AchievementAccount(context: Context) {
 
     private companion object { const val KEY = "RavenEmu.RetroAchievements.v1" }
 }
+

@@ -20,7 +20,7 @@ object AchievementLogin {
         val existing = account.read()
         if (existing != null) {
             MaterialAlertDialogBuilder(activity).setTitle("RetroAchievements")
-                .setMessage("Connecté : ${existing.username}\nMode normal (Softcore).\nLes changements prennent effet à la prochaine partie.")
+                .setMessage("Connecté : ${existing.displayName}\nConnexion mémorisée sur cet appareil, même après fermeture de l’application.\nMode normal (Softcore).\nLes changements prennent effet à la prochaine partie.")
                 .setNegativeButton("Fermer", null)
                 .setPositiveButton("Se déconnecter") { _, _ -> account.clear() }
                 .setOnDismissListener { onDismiss() }.show()
@@ -36,13 +36,18 @@ object AchievementLogin {
         }
         val username = EditText(activity).apply {
             hint = "Nom d’utilisateur"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             setSingleLine()
         }
         val password = EditText(activity).apply {
             hint = "Mot de passe"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             setSingleLine()
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD or
+                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            transformationMethod = HiddenPasswordTransformation
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE or
+                android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or
+                android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI
             isSaveEnabled = false
             importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
         }
@@ -80,16 +85,17 @@ object AchievementLogin {
                         client?.close()
                         client = AchievementClient { event ->
                             if (dismissed.get()) return@AchievementClient
+                            var saved = false
                             val message = if (event.kind == "login") {
-                                runCatching { account.save(event.title, event.extra) }
-                                    .fold({ "Connecté : ${event.title}. Relancez la partie pour activer les succès." },
+                                runCatching { account.save(event.title, event.extra, event.detail) }
+                                    .fold({ saved = true; "Connecté : ${event.detail.ifBlank { event.title }}. Connexion mémorisée sur cet appareil. Relancez la partie pour activer les succès." },
                                         { "Impossible de conserver la connexion sur cet appareil." })
                             } else event.title
                             activity.runOnUiThread {
                                 if (!dismissed.get() && !activity.isFinishing && !activity.isDestroyed) {
                                     info.text = message
-                                    dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled = event.kind != "login"
-                                    if (event.kind == "login") dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).text = "Fermer"
+                                    dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled = !saved
+                                    if (saved) dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).text = "Fermer"
                                 }
                             }
                         }.also { it.login(user, secret, false) }
@@ -110,3 +116,4 @@ object AchievementLogin {
         dialog.show()
     }
 }
+
