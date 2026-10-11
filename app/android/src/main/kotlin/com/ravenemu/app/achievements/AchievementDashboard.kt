@@ -68,7 +68,7 @@ internal object AchievementDashboard {
         fun render() {
             val snapshot = latest
             val s = snapshot?.summary
-            header.text = if (s == null) "Connectez votre compte pour afficher les succès."
+            header.text = if (snapshot == null || s == null) "Connectez votre compte pour afficher les succès."
             else "${s[0]} • ${s[1]} points Softcore • ${s[2]} points Hardcore\n${snapshot.status}\n" +
                 if (s[3].isBlank()) "Aucun jeu identifié pour le moment."
                 else "${s[3]}\n${s[5]} / ${s[6]} succès • ${s[7]} / ${s[8]} points" +
@@ -104,6 +104,8 @@ internal object AchievementDashboard {
                     if (active && !activity.isDestroyed && !activity.isFinishing) {
                         latest = snapshot
                         render()
+                        dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).isEnabled =
+                            snapshot == null || snapshot.summary[3].isBlank()
                         handler.postDelayed(this, 1000)
                     }
                 }

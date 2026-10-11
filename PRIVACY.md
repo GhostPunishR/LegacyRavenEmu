@@ -23,7 +23,7 @@ Ces données restent sous le contrôle de l’utilisateur et peuvent être suppr
 
 ## RetroAchievements (facultatif)
 
-Lors de la connexion choisie par l’utilisateur, le nom de compte et le mot de passe sont envoyés à `https://retroachievements.org` via HTTPS. Le mot de passe n’est pas conservé. Le jeton retourné est chiffré avec Android Keystore dans un fichier exclu des sauvegardes Android. La déconnexion efface ce fichier ; elle prend effet à la prochaine partie pour une session déjà ouverte.
+Lors de la connexion choisie par l’utilisateur, le nom de compte et le mot de passe sont envoyés à `https://retroachievements.org` via HTTPS. Le mot de passe n’est pas conservé. Le jeton retourné est chiffré avec Android Keystore dans un fichier exclu des sauvegardes Android. La déconnexion efface ce fichier ; depuis le menu en jeu, elle ferme le client de la partie en cours dès la fermeture du dialogue du compte. Les succès déjà transmis ne sont pas supprimés.
 
 Pendant une partie connectée, le SDK officiel transmet l’empreinte du jeu, les identifiants de jeu et de succès, les informations de session et de présence prévues par le jeu, ainsi que le nom/jeton du compte. Le service reçoit aussi les informations techniques d’une connexion HTTPS, dont l’adresse IP et la version du client. Les échanges servent à reconnaître la ROM, télécharger les conditions des succès et enregistrer leur obtention. La mémoire et les fichiers du jeu ne sont pas téléversés.
 

@@ -10,7 +10,7 @@ Chaque client appartient à un seul thread : celui de la session, ou le worker d
 
 `onEmulationTick` évalue chaque trame, même sans rendu vidéo. En pause, `rc_client_idle` traite les nouvelles tentatives sans avancer les conditions. Reset et restauration d’état réussie réinitialisent les conditions temporaires ; les états RavenEmu n’incorporent pas encore les compteurs du SDK. Les erreurs RA sont isolées de la partie.
 
-Le transport impose HTTPS vers `retroachievements.org`, sans redirection, avec des délais bornés, une limite de réponse et un User-Agent RavenEmu. Ni identifiants ni corps de requête ne sont journalisés. Le jeton est chiffré avec AES-GCM/Android Keystore dans `noBackupFilesDir`. La déconnexion et un changement de compte prennent effet au prochain lancement du jeu.
+Le transport impose HTTPS vers `retroachievements.org`, sans redirection, avec des délais bornés, une limite de réponse et un User-Agent RavenEmu. Ni identifiants ni corps de requête ne sont journalisés. Le jeton est chiffré avec AES-GCM/Android Keystore dans `noBackupFilesDir`. Depuis le tableau de bord en jeu, la déconnexion et un changement de compte ferment puis remplacent le client sur le thread de session. La ROM est conservée en mémoire pendant la partie pour permettre une nouvelle identification sans relancer le cœur. Les instantanés du tableau de bord copient les données SDK sur ce même thread, sans jeton, puis les affichent sur le thread UI.
 
 ## Mémoire exposée
 
@@ -32,3 +32,5 @@ build/achievements-host/achievements/ravenemu_achievement_tests
 Les tests n’utilisent ni compte ni ROM commerciale : ROMs synthétiques, serveur simulé, reconnaissance par hash, chargement des conditions et déblocage réel par le SDK en réponse à une écriture CPU. Ils vérifient le mode Softcore, l’unicité du déblocage après reset, les banques CGB fixes, les limites et l’absence d’effets de bord des lectures mémoire, ainsi que la fermeture pendant login, chargement, démarrage de session, envoi et nouvelle tentative différée.
 
 Avant validation sur appareil : connecter un compte de test, ouvrir une ROM reconnue, obtenir un succès, vérifier sa présence sur le site, essayer pause/reprise, restauration d’état, coupure puis retour du réseau, fermeture pendant une requête et déconnexion. Les envois en attente ne persistent pas après fermeture. Aucun résultat de test synthétique ne valide à lui seul le service en production ou la compatibilité d’un jeu commercial.
+
+Le [plan Hardcore](HARDCORE.md) décrit les protections et la validation restantes ; le mode reste désactivé.

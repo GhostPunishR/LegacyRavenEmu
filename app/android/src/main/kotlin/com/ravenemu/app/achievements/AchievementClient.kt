@@ -46,13 +46,14 @@ internal class AchievementClient(
             Native.respond(handle, response.id, response.body, response.status, memory)
         }
         Native.tick(handle, memory, frame)
-        Native.events(handle).asList().chunked(4).forEach { 
+        Native.events(handle).asList().chunked(4).forEach {
             when (it[0]) {
                 "login" -> status = "Chargement des succès…"
                 "game", "online" -> status = "Connecté • Mode normal (Softcore)"
                 "login_error", "game_error", "offline" -> status = it[1]
             }
-            onEvent(Event(it[0], it[1], it[2], it[3])) }
+            onEvent(Event(it[0], it[1], it[2], it[3]))
+        }
         Native.requests(handle).asList().chunked(4).forEach { record ->
             http.execute {
                 val response = request(record)
