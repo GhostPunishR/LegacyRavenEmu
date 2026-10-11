@@ -2,7 +2,13 @@
 
 ## Licence
 
-Le code de RavenEmu est distribué sous [licence MIT](https://github.com/GhostPunishR/RavenEmu/blob/main/LICENSE).
+Le code de RavenEmu est distribué sous [GNU Affero General Public License version 3](https://github.com/GhostPunishR/RavenEmu/blob/main/LICENSE).
+
+Vous pouvez l'utiliser, l'étudier, le modifier et le redistribuer, y compris à titre commercial. Toute version redistribuée doit l'être sous la même licence, avec son code source. L'article 13 ajoute le cas du réseau: un utilisateur qui se servirait à distance d'une version modifiée doit pouvoir en obtenir la source. RavenEmu étant une application locale, cet article ne change rien à son usage habituel.
+
+Les versions publiées avant ce changement restaient sous licence MIT: qui les a reçues sous ces termes les conserve.
+
+Le SDK RetroAchievements [rcheevos](https://github.com/RetroAchievements/rcheevos) reste sous sa licence MIT, et les bibliothèques AndroidX, Material et Kotlin sous Apache 2.0. Ces licences permissives autorisent l'inclusion dans une oeuvre sous AGPL, et leurs avis sont conservés.
 
 ## Marques
 

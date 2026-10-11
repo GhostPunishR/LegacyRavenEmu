@@ -4,7 +4,7 @@
 [![Wiki](https://img.shields.io/badge/Documentation-Wiki-5b21b6.svg?logo=github&logoColor=white)](https://github.com/GhostPunishR/RavenEmu/wiki)
 [![Site officiel](https://img.shields.io/badge/Site-RavenEmu-7c3aed.svg?logo=githubpages&logoColor=white)](https://ghostpunishr.github.io/RavenEmu/)
 [![APK Test](https://img.shields.io/badge/APK-Test-a855f7.svg?logo=android&logoColor=white)](https://github.com/GhostPunishR/RavenEmu/releases/download/test-latest/RavenEmu-test.apk)
-[![Licence MIT](https://img.shields.io/badge/Licence-MIT-22c55e.svg?logo=opensourceinitiative&logoColor=white)](LICENSE)
+[![Licence AGPL-3.0](https://img.shields.io/badge/Licence-AGPL--3.0-22c55e.svg?logo=gnu&logoColor=white)](LICENSE)
 
 **RavenEmu** est un émulateur Game Boy, Game Boy Color et Game Boy Advance pour Android.
 
@@ -120,7 +120,18 @@ Le code d'un autre émulateur ne doit pas être copié, traduit ou adapté dans 
 
 ## Licence et marques
 
-RavenEmu est distribué sous [licence MIT](LICENSE). Copyright 2026 GhostPunishR.
+RavenEmu est distribué sous [GNU Affero General Public License version 3](LICENSE). Copyright 2026 GhostPunishR.
+
+Concrètement : vous pouvez utiliser, étudier, modifier et redistribuer RavenEmu, y compris à titre commercial. En contrepartie, toute version redistribuée, modifiée ou non, doit l'être sous la même licence et avec son code source. L'article 13 ajoute le cas du réseau : un utilisateur qui se servirait à distance d'une version modifiée doit pouvoir en obtenir la source. RavenEmu étant une application locale, qui se connecte à des services tiers sans en rendre aucun, cet article ne change rien à son usage habituel.
+
+Les versions publiées jusqu'au passage à l'AGPL restaient sous licence MIT : qui les a reçues sous ces termes les conserve. Le changement vaut pour la suite.
+
+### Composants tiers
+
+- [rcheevos](https://github.com/RetroAchievements/rcheevos), SDK officiel RetroAchievements, sous licence MIT conservée dans [`native/achievements/LICENSE.rcheevos`](native/achievements/LICENSE.rcheevos).
+- Les bibliothèques AndroidX, Material Components et Kotlin, sous licence Apache 2.0, récupérées à la construction et non versionnées ici.
+
+Ces licences permissives autorisent l'inclusion dans une œuvre sous AGPL ; leurs avis respectifs sont conservés et ne sont pas remplacés par celle-ci.
 
 Game Boy, Game Boy Color et Game Boy Advance sont des marques de Nintendo. RavenEmu n'est ni affilié à Nintendo, ni approuvé par Nintendo.
 

@@ -12,7 +12,7 @@ Toute contribution doit respecter les règles suivantes :
 - ne jamais ajouter de ROM commerciale, de BIOS protégé, de clé, de firmware ou de contenu soumis au droit d'auteur ;
 - conserver une architecture modulaire et extensible ;
 - documenter honnêtement les limites et les comportements encore incomplets ;
-- accepter que la contribution soit distribuée sous la licence MIT du dépôt.
+- accepter que la contribution soit distribuée sous la licence AGPL-3.0 du dépôt, en conservant la paternité de son auteur.
 
 Les homebrews et les données de test peuvent être utilisés uniquement si leur licence autorise clairement leur redistribution.
 
