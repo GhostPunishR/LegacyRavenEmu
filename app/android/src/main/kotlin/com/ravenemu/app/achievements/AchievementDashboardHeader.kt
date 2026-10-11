@@ -182,8 +182,9 @@ internal class AchievementDashboardHeader(private val context: Context) {
             return
         }
         game.text = current.title
-        richPresence.text = snapshot.richPresence
-        richPresence.visibility = if (snapshot.richPresence.isBlank()) View.GONE else View.VISIBLE
+        val presence = snapshot?.richPresence.orEmpty()
+        richPresence.text = presence
+        richPresence.visibility = if (presence.isBlank()) View.GONE else View.VISIBLE
         if (current.empty) {
             bar.visibility = View.GONE
             progress.text = context.getString(R.string.retroachievements_dashboard_no_achievement)
