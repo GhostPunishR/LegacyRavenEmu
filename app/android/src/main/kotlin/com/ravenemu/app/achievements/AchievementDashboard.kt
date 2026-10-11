@@ -137,7 +137,7 @@ internal object AchievementDashboard {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding / 2, padding, 0)
         }
-        val header = TextView(activity)
+        val header = AchievementDashboardHeader(activity)
         val filters = Spinner(activity).apply {
             contentDescription = "Filtrer les succès"
             adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item,
@@ -148,17 +148,12 @@ internal object AchievementDashboard {
             this.adapter = adapter
             divider = null
         }
-        content.addView(header)
+        content.addView(header.view)
         content.addView(filters)
         content.addView(list, LinearLayout.LayoutParams(-1, (activity.resources.displayMetrics.heightPixels * 0.32).toInt()))
         fun render() {
             val snapshot = latest
-            val s = snapshot?.summary
-            header.text = if (snapshot == null || s == null) "Connectez votre compte pour afficher les succès."
-            else "${s[0]} • ${s[1]} points Softcore • ${s[2]} points Hardcore\n${snapshot.status}\n" +
-                if (s[3].isBlank()) "Aucun jeu identifié pour le moment."
-                else "${s[3]}\n${s[5]} / ${s[6]} succès • ${s[7]} / ${s[8]} points" +
-                    if (snapshot.entries.isEmpty()) "\nAucun succès disponible pour ce jeu." else ""
+            header.bind(snapshot)
             val entries = snapshot?.entries.orEmpty().filter { filter == 0 || (filter == 2) == it.unlocked }
             if (entries != visible) {
                 visible = entries
