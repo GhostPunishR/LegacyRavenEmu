@@ -37,25 +37,45 @@ class AchievementGameProgressTest {
         assertNull(AchievementGameProgress.fromSummary(summary().take(8)))
     }
 
-    /**
-     * La barre compte en points, pas en succès. Vingt petits succès obtenus
-     * sur un jeu qui en garde cinq énormes ne sont pas quatre-vingts pour cent
-     * du chemin, et une barre qui le dirait mentirait sur ce qui reste.
-     */
     @Test
-    fun `la barre suit les points et non le nombre de succès`() {
+    fun `la barre suit les succès et non leur valeur en points`() {
         val progress = AchievementGameProgress.fromSummary(
             summary(unlocked = "20", total = "25", points = "20", totalPoints = "200"),
         )!!
-        assertEquals(10, progress.percent)
+        assertEquals(8000, progress.progressBasisPoints)
     }
 
     @Test
-    fun `un jeu sans points retombe sur le nombre de succès`() {
+    fun `le premier succès est visible même sur un jeu long`() {
+        val first = AchievementGameProgress.fromSummary(
+            summary(unlocked = "1", total = "197", points = "1", totalPoints = "2086"),
+        )!!
+        val second = AchievementGameProgress.fromSummary(
+            summary(unlocked = "2", total = "197", points = "2", totalPoints = "2086"),
+        )!!
+        assertEquals(51, first.progressBasisPoints)
+        assertEquals(102, second.progressBasisPoints)
+    }
+
+    @Test
+    fun `les deux jeux de référence avancent selon leurs succès`() {
+        val emerald = AchievementGameProgress.fromSummary(
+            summary(unlocked = "7", total = "197", points = "20", totalPoints = "2086"),
+        )!!
+        val ghostBabel = AchievementGameProgress.fromSummary(
+            summary(title = "Metal Gear Solid: Ghost Babel", unlocked = "5", total = "106",
+                points = "15", totalPoints = "1100"),
+        )!!
+        assertEquals(355, emerald.progressBasisPoints)
+        assertEquals(472, ghostBabel.progressBasisPoints)
+    }
+
+    @Test
+    fun `un jeu sans points suit quand même le nombre de succès`() {
         val progress = AchievementGameProgress.fromSummary(
             summary(unlocked = "1", total = "4", points = "0", totalPoints = "0"),
         )!!
-        assertEquals(25, progress.percent)
+        assertEquals(2500, progress.progressBasisPoints)
     }
 
     @Test
@@ -64,7 +84,7 @@ class AchievementGameProgressTest {
             summary(unlocked = "0", total = "0", points = "0", totalPoints = "0"),
         )!!
         assertTrue(progress.empty)
-        assertEquals(0, progress.percent)
+        assertEquals(0, progress.progressBasisPoints)
     }
 
     @Test
@@ -72,13 +92,14 @@ class AchievementGameProgressTest {
         val done = AchievementGameProgress.fromSummary(
             summary(unlocked = "197", total = "197", points = "2086", totalPoints = "2086"),
         )!!
-        assertEquals(100, done.percent)
-        // Le serveur peut compter des points d'un lot que le total ignore :
-        // la barre se borne au lieu de déborder.
+        assertEquals(10_000, done.progressBasisPoints)
+        // Des compteurs incohérents ne doivent pas faire dépasser la barre.
         val overflow = AchievementGameProgress.fromSummary(
-            summary(points = "3000", totalPoints = "2086"),
+            summary(unlocked = "200", total = "197", points = "3000", totalPoints = "2086"),
         )!!
-        assertEquals(100, overflow.percent)
+        assertEquals(10_000, overflow.progressBasisPoints)
+        val negative = AchievementGameProgress.fromSummary(summary(unlocked = "-1"))!!
+        assertEquals(0, negative.progressBasisPoints)
     }
 
     @Test
@@ -87,7 +108,7 @@ class AchievementGameProgressTest {
             summary(unlocked = "", total = "non", points = "?", totalPoints = ""),
         )!!
         assertEquals(0, progress.unlocked)
-        assertEquals(0, progress.percent)
+        assertEquals(0, progress.progressBasisPoints)
         assertTrue(progress.empty)
     }
 
