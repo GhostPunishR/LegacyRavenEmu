@@ -20,16 +20,18 @@ internal data class AchievementGameProgress(
     val totalPoints: Int,
 ) {
     /**
-     * Avancement de la barre en centièmes de pourcentage (0 à 10 000).
+     * Avancement en centièmes de pourcentage (0 à 10 000) pour la barre.
      *
-     * Basé sur le nombre de succès débloqués, indépendamment de leur valeur
-     * en points. Les petites progressions ne sont plus arrondies à 0 %.
+     * Le taux suit les points obtenus sur le total des points disponibles.
+     * Si le jeu ne propose aucun point, on utilise le nombre de succès.
+     * Le calcul en Long conserve la précision et évite les débordements.
      */
     val progressBasisPoints: Int
         get() {
-            if (total <= 0) return 0
-            val done = unlocked.coerceIn(0, total)
-            return ((done.toLong() * BAR_MAX + total / 2L) / total).toInt()
+            val (done, all) = if (totalPoints > 0) points to totalPoints else unlocked to total
+            if (all <= 0) return 0
+            val earned = done.coerceIn(0, all)
+            return ((earned.toLong() * BAR_MAX + all / 2L) / all).toInt()
         }
 
     /** `true` quand le jeu n'expose aucun succès : la barre n'a rien à montrer. */
