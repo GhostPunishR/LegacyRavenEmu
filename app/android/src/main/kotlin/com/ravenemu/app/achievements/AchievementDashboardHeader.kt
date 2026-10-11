@@ -111,7 +111,7 @@ internal class AchievementDashboardHeader(private val context: Context) {
     }
 
     private val bar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-        max = 100
+        max = AchievementGameProgress.BAR_MAX
         progressTintList = android.content.res.ColorStateList.valueOf(color(R.color.raven_accent))
         progressBackgroundTintList = android.content.res.ColorStateList.valueOf(color(R.color.raven_outline))
     }
@@ -180,7 +180,7 @@ internal class AchievementDashboardHeader(private val context: Context) {
             return
         }
         bar.visibility = View.VISIBLE
-        bar.progress = current.percent
+        bar.progress = current.progressBasisPoints
         progress.text = context.getString(
             R.string.retroachievements_dashboard_progress,
             current.achievementsLabel(), current.pointsLabel(),
