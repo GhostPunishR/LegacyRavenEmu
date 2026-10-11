@@ -91,15 +91,29 @@ void sdk_unlock() {
     rc_client_do_frame(client); // condition false first, arm trigger
     check(awards == 0 && popups == 0,"premature unlock");
     const auto before = achievement_records(client);
-    check(before.size() == 8 && before[4] == "1", "dashboard must expose locked achievement");
+    check(before.size() == 9 && before[4] == "1", "dashboard must expose locked achievement");
+    // A locked achievement still carries a badge: the card shows the greyed
+    // artwork rather than an empty square while the achievement is pending.
+    check(before[8] == "https://media.retroachievements.org/Badge/00001_lock.png",
+          "locked achievement must expose its greyed badge");
     const auto profile = summary_records(client);
-    check(profile.size() == 9 && profile[6] == "1", "dashboard game totals missing");
+    check(profile.size() == 11 && profile[6] == "1", "dashboard game totals missing");
+    check(profile[9] == "Synthetic", "profile must expose the account name");
+    // The synthetic server answers the login without an avatar field, which is
+    // what the real one does for an account that never uploaded a picture. The
+    // SDK composes the address from the name, and the card must still get one.
+    check(profile[10] == "https://media.retroachievements.org/UserPic/Synthetic.png",
+          "profile must expose an avatar even when the server names none");
     check(std::find(profile.begin(), profile.end(), "local-test-only") == profile.end(), "snapshot leaked token");
     std::vector<int32_t> frame(core->video_spec().pixel_count()); core->run_frame(frame,true);
     rc_client_do_frame(client);
     check(awards == 1 && popups == 1,"memory change must emit one award and one popup");
     const auto after = achievement_records(client);
-    check(after.size() == 8 && after[4] == "2" && after[6] != "0", "dashboard must expose dated unlock");
+    check(after.size() == 9 && after[4] == "2" && after[6] != "0", "dashboard must expose dated unlock");
+    // Unlocking swaps the greyed badge for the full-colour one. Reusing the
+    // locked address would leave a trophy that still looks unearned.
+    check(after[8] == "https://media.retroachievements.org/Badge/00001.png",
+          "unlocked achievement must expose its full-colour badge");
     check(summary_records(client)[5] == "1", "dashboard completion total not updated");
     rc_client_reset(client); rc_client_do_frame(client); rc_client_idle(client);
     check(awards == 1 && popups == 1,"reset must not duplicate unlocked achievements");
@@ -140,6 +154,19 @@ void adapter_shutdown() {
         std::vector<int32_t> frame(core->video_spec().pixel_count()); core->run_frame(frame,true);
         rc_client_do_frame(adapter.rc);
         check(!adapter.pending.empty(), "adapter must have a pending award");
+        // The banner shown in game is built from this record. Five columns, the
+        // last one the badge: without it the player is told a trophy was earned
+        // and shown nothing of it. The login record carries the avatar the same
+        // way, and neither may ever carry the token.
+        check(adapter.events.size() % 5 == 0, "every event must carry its five columns");
+        const auto unlocked = std::find(adapter.events.begin(), adapter.events.end(), "achievement");
+        check(unlocked != adapter.events.end(), "unlocking must emit an achievement event");
+        check(*(unlocked + 4) == "https://media.retroachievements.org/Badge/00001.png",
+              "the achievement event must carry the badge of the trophy earned");
+        const auto signed_in = std::find(adapter.events.begin(), adapter.events.end(), "login");
+        check(signed_in != adapter.events.end() &&
+              *(signed_in + 4) == "https://media.retroachievements.org/UserPic/Synthetic.png",
+              "the login event must carry the avatar of the account");
         if (stage == 3) continue; // pending award
         const rc_api_server_response_t unavailable{"",0,-2};
         for (int attempt=0; attempt<2; ++attempt) {

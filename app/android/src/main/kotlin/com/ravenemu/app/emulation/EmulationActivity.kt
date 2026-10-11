@@ -512,8 +512,13 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
     private fun showAchievementMessage(event: com.ravenemu.app.achievements.AchievementClient.Event) {
         runOnUiThread {
             if (!isFinishing && !isDestroyed) {
-                val title = if (event.kind == "achievement") "Succès débloqué • ${event.extra} points\n${event.title}" else event.title
-                achievementPopup.show(listOf(title, event.detail).filter { it.isNotBlank() }.joinToString("\n"))
+                val unlocked = event.kind == "achievement"
+                val title = if (unlocked) "Succès débloqué • ${event.extra} points\n${event.title}" else event.title
+                achievementPopup.show(com.ravenemu.app.achievements.AchievementPopup.Notice(
+                    listOf(title, event.detail).filter { it.isNotBlank() }.joinToString("\n"),
+                    // Seul un succès a un badge ; les autres avis n'en portent pas.
+                    event.image.takeIf { unlocked && it.isNotBlank() },
+                ))
             }
         }
     }

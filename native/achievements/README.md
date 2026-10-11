@@ -12,6 +12,14 @@ Chaque client appartient à un seul thread : celui de la session, ou le worker d
 
 Le transport impose HTTPS vers `retroachievements.org`, sans redirection, avec des délais bornés, une limite de réponse et un User-Agent RavenEmu. Ni identifiants ni corps de requête ne sont journalisés. Le jeton est chiffré avec AES-GCM/Android Keystore dans `noBackupFilesDir`. Depuis le tableau de bord en jeu, la déconnexion et un changement de compte ferment puis remplacent le client sur le thread de session. La ROM est conservée en mémoire pendant la partie pour permettre une nouvelle identification sans relancer le cœur. Les instantanés du tableau de bord copient les données SDK sur ce même thread, sans jeton, puis les affichent sur le thread UI.
 
+## Profil et badges
+
+Le SDK publie le portrait du compte et le badge de chaque succès, en couleur une fois obtenu et grisé avant. Quand le serveur ne les nomme pas, le SDK compose l'adresse à partir du nom ; l'adaptateur s'appuie sur ce calcul plutôt que d'écrire un hôte en dur. Ces adresses traversent le pont avec le reste : onzième colonne du profil, neuvième de chaque succès, cinquième de chaque événement.
+
+Une adresse venue d'une réponse serveur décide de l'hôte que l'application ira contacter. Le filtre `AchievementImageUrl` n'accepte que HTTPS vers `retroachievements.org` et ses sous-domaines, sans identifiant, sans port inhabituel, sans paramètre ni fragment. Le téléchargement est borné en octets et le décodage en pixels ; une réponse qui n'est pas une image ne donne rien. Deux caches évitent de redemander la même image, l'un en mémoire pour la session, l'autre dans le cache de l'application.
+
+La carte de profil montre le nom affiché, le nom de compte, le portrait et les points des deux modes. Le **rang**, la **date d'inscription** et la **dernière activité** que porte la page du site n'y sont pas : ils ne sont pas dans l'API client, seulement dans l'API Web, qui demande une clé de développeur distincte du compte joueur. RavenEmu ne s'en sert pas, et la carte renvoie au site plutôt que d'approcher ces valeurs. Ouverte depuis les paramètres, elle réutilise le jeton mémorisé pour demander les points au serveur, sur un client qui vit le temps du dialogue.
+
 ## Mémoire exposée
 
 Les adresses suivent `src/rcheevos/consoleinfo.c` du SDK :

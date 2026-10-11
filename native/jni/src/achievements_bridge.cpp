@@ -37,12 +37,34 @@ struct Client {
         rc_client_idle(rc);
         rc_client_destroy(rc);
     }
-    void event(const char* kind, const char* title, const char* detail = "", const char* extra = "") {
+    // Cinq colonnes : genre, titre, détail, extra, image. L'image est l'URL du
+    // badge du succès ou de l'avatar du compte ; vide quand il n'y en a pas.
+    void event(const char* kind, const char* title, const char* detail = "", const char* extra = "",
+               const char* image = "") {
         if (closing) return;
-        for (const char* s : {kind, title, detail, extra}) events.emplace_back(s ? s : "");
+        for (const char* s : {kind, title, detail, extra, image}) events.emplace_back(s ? s : "");
     }
 };
 Client& client(jlong h) { return *reinterpret_cast<Client*>(static_cast<std::uintptr_t>(h)); }
+// Le SDK publie `avatar_url` et `badge_url` depuis la version 12.0, mais les
+// laisse nuls tant que la réponse du serveur n'a rien donné. Les reconstruire
+// depuis le nom évite une carte de profil sans portrait et un succès sans
+// badge, sans jamais inventer d'hôte : c'est le SDK qui compose l'adresse.
+template<typename Build> std::string image_url(const char* ready, Build build) {
+    if (ready && *ready) return ready;
+    char buffer[256]{};
+    return build(buffer, sizeof(buffer)) == RC_OK ? std::string(buffer) : std::string();
+}
+std::string user_image(const rc_client_user_t* user) {
+    if (!user) return {};
+    return image_url(user->avatar_url, [&](char* b, std::size_t n) { return rc_client_user_get_image_url(user, b, n); });
+}
+std::string achievement_image(const rc_client_achievement_t& a) {
+    const auto* ready = a.state == RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED ? a.badge_url : a.badge_locked_url;
+    return image_url(ready, [&](char* b, std::size_t n) {
+        return rc_client_achievement_get_image_url(&a, a.state, b, n);
+    });
+}
 Client& client(const rc_client_t* rc) { return *static_cast<Client*>(rc_client_get_userdata(rc)); }
 rc_clock_t time_millis(const rc_client_t* rc) {
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -84,7 +106,7 @@ void logged_in(int result, const char*, rc_client_t* rc, void*) {
     auto& c = client(rc);
     if (result == RC_OK) {
         const auto* user = rc_client_get_user_info(rc);
-        c.event("login", user->username, user->display_name, user->token);
+        c.event("login", user->username, user->display_name, user->token, user_image(user).c_str());
     } else c.event("login_error", "Connexion RetroAchievements impossible. Vérifiez vos identifiants et le réseau.");
 }
 void loaded(int result, const char*, rc_client_t* rc, void*) {
@@ -104,7 +126,7 @@ void event_handler(const rc_client_event_t* event, rc_client_t* rc) {
     if (event->type == RC_CLIENT_EVENT_ACHIEVEMENT_TRIGGERED && event->achievement) {
         const auto& a = *event->achievement;
         const auto points = std::to_string(a.points);
-        c.event("achievement", a.title, a.description, points.c_str());
+        c.event("achievement", a.title, a.description, points.c_str(), achievement_image(a).c_str());
     } else if (event->type == RC_CLIENT_EVENT_DISCONNECTED) c.event("offline", "RetroAchievements hors ligne", "Les succès en attente seront renvoyés pendant cette session.");
     else if (event->type == RC_CLIENT_EVENT_RECONNECTED) c.event("online", "RetroAchievements reconnecté");
     else if (event->type == RC_CLIENT_EVENT_SERVER_ERROR) c.event("notice", "Erreur RetroAchievements", "Un succès peut ne pas avoir été enregistré sur le serveur.");
@@ -121,7 +143,8 @@ std::vector<std::string> summary_records(rc_client_t* rc) {
         std::to_string(user ? user->score : 0),
         game && game->title ? game->title : "", std::to_string(game ? game->id : 0),
         std::to_string(summary.num_unlocked_achievements), std::to_string(summary.num_core_achievements),
-        std::to_string(summary.points_unlocked), std::to_string(summary.points_core)};
+        std::to_string(summary.points_unlocked), std::to_string(summary.points_core),
+        user && user->username ? user->username : "", user_image(user)};
 }
 std::vector<std::string> achievement_records(rc_client_t* rc) {
     std::vector<std::string> result;
@@ -136,7 +159,8 @@ std::vector<std::string> achievement_records(rc_client_t* rc) {
             for (auto value : {std::to_string(a.id), std::string(a.title ? a.title : ""),
                 std::string(a.description ? a.description : ""), std::to_string(a.points),
                 std::to_string(a.state), std::string(a.measured_progress),
-                std::to_string(a.unlock_time), std::to_string(bucket.bucket_type)}) result.push_back(value);
+                std::to_string(a.unlock_time), std::to_string(bucket.bucket_type),
+                achievement_image(a)}) result.push_back(value);
         }
     }
     return result;

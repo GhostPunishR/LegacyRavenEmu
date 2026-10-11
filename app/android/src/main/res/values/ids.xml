@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Étiquette posée sur une vue image pour y retenir l'adresse demandée.
+      `setTag(int, Object)` exige une clé déclarée : sans elle, deux
+      bibliothèques qui étiquettent la même vue s'écraseraient l'une l'autre.
+    -->
+    <item name="retroachievements_image_url" type="id" />
+</resources>

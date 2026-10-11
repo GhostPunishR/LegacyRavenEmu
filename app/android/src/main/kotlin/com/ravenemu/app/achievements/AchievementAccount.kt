@@ -14,7 +14,17 @@ import javax.crypto.spec.GCMParameterSpec
 
 /** Token only; encrypted with an Android Keystore key and excluded from backups. */
 class AchievementAccount(context: Context) {
-    data class Credentials(val username: String, val token: String, val displayName: String = username)
+    /**
+     * [avatarUrl] n'est pas un secret : il est conservé avec le reste pour que
+     * la carte de profil montre le portrait sans attendre le réseau. Un fichier
+     * écrit avant son arrivée se relit sans lui.
+     */
+    data class Credentials(
+        val username: String,
+        val token: String,
+        val displayName: String = username,
+        val avatarUrl: String = "",
+    )
     private val file = AtomicFile(File(context.noBackupFilesDir, "retroachievements.account"))
 
     fun read(): Credentials? = runCatching {
@@ -24,13 +34,16 @@ class AchievementAccount(context: Context) {
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
         val json = JSONObject(String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8))
         val username = json.getString("username")
-        Credentials(username, json.getString("token"), json.optString("displayName").ifBlank { username })
+        Credentials(username, json.getString("token"), json.optString("displayName").ifBlank { username },
+            json.optString("avatarUrl"))
     }.getOrNull()
 
-    fun save(username: String, token: String, displayName: String = username) {
+    fun save(username: String, token: String, displayName: String = username, avatarUrl: String = "") {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
-        val plain = JSONObject().put("username", username).put("token", token).put("displayName", displayName.ifBlank { username }).toString().toByteArray(Charsets.UTF_8)
+        val plain = JSONObject().put("username", username).put("token", token)
+            .put("displayName", displayName.ifBlank { username }).put("avatarUrl", avatarUrl)
+            .toString().toByteArray(Charsets.UTF_8)
         val encrypted = cipher.iv + cipher.doFinal(plain)
         plain.fill(0)
         val stream = file.startWrite()

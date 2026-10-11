@@ -27,6 +27,8 @@ Lors de la connexion choisie par l’utilisateur, le nom de compte et le mot de 
 
 Pendant une partie connectée, le SDK officiel transmet l’empreinte du jeu, les identifiants de jeu et de succès, les informations de session et de présence prévues par le jeu, ainsi que le nom/jeton du compte. Le service reçoit aussi les informations techniques d’une connexion HTTPS, dont l’adresse IP et la version du client. Les échanges servent à reconnaître la ROM, télécharger les conditions des succès et enregistrer leur obtention. La mémoire et les fichiers du jeu ne sont pas téléversés.
 
+Les badges des succès et le portrait du compte sont des images publiques, téléchargées en HTTPS depuis `https://media.retroachievements.org`. C’est le seul autre hôte contacté, aucune donnée n’y est envoyée au-delà de ce que comporte une requête HTTPS, et les images sont conservées dans le cache de l’application, que le système peut vider et qu’effacer les données supprime.
+
 Les informations enregistrées par RetroAchievements relèvent de sa [politique de confidentialité](https://retroachievements.org/privacy.php). RavenEmu ne stocke pas ces informations sur un serveur du projet. Les envois de succès en échec sont retentés pendant la session ; leur file d’attente n’est pas conservée après la fermeture du jeu.
 
 ## Accès aux fichiers

@@ -195,6 +195,19 @@
     <string name="retroachievements_mode_summary">Succès GB, GBC et GBA. Le mode Hardcore et les classements ne sont pas activés.</string>
     <string name="retroachievements_hardcore">Mode Hardcore</string>
     <string name="retroachievements_hardcore_summary">Indisponible : protections et validation RetroAchievements requises. Aucun succès Hardcore envoyé.</string>
+    <string name="retroachievements_close">Fermer</string>
+    <string name="retroachievements_sign_out">Se déconnecter</string>
+    <string name="retroachievements_open_site">Voir sur le site</string>
+    <string name="retroachievements_points_softcore">Points (mode normal)</string>
+    <string name="retroachievements_points_hardcore">Points (Hardcore)</string>
+    <!--
+      Le rang, la date d\'inscription et la dernière activité ne sont pas dans
+      l\'API client du SDK : seule l\'API Web les donne, et elle demande une clé
+      de développeur que RavenEmu n\'utilise pas. Le dire vaut mieux que de
+      laisser chercher pourquoi la carte est plus courte que la page du site.
+    -->
+    <string name="retroachievements_profile_note">Connexion mémorisée sur cet appareil. Le rang, la date d\'inscription et la dernière activité ne sont visibles que sur le site.</string>
+    <string name="retroachievements_profile_offline">Hors ligne : points non actualisés. L\'identité affichée est celle de la dernière connexion.</string>
 </resources>
 
 

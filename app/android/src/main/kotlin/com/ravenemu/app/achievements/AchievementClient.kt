@@ -14,7 +14,7 @@ internal class AchievementClient(
     core: EmulatorCore? = null,
     private val onEvent: (Event) -> Unit,
 ) : AutoCloseable {
-    data class Event(val kind: String, val title: String, val detail: String, val extra: String)
+    data class Event(val kind: String, val title: String, val detail: String, val extra: String, val image: String)
     private data class Response(val id: Int, val body: ByteArray, val status: Int)
     private val handle = Native.create().also { check(it != 0L) }
     private val closed = AtomicBoolean(false)
@@ -30,8 +30,8 @@ internal class AchievementClient(
 
     private var status = "Connexion en cours…"
     fun snapshot(): AchievementSnapshot = AchievementSnapshot(
-        status, Native.summary(handle).toList(), Native.achievements(handle).asList().chunked(8).map {
-            AchievementEntry(it[0], it[1], it[2], it[3], it[4].toInt(), it[5], it[6].toLong(), it[7].toInt())
+        status, Native.summary(handle).toList(), Native.achievements(handle).asList().chunked(9).map {
+            AchievementEntry(it[0], it[1], it[2], it[3], it[4].toInt(), it[5], it[6].toLong(), it[7].toInt(), it[8])
         },
     )
 
@@ -46,13 +46,13 @@ internal class AchievementClient(
             Native.respond(handle, response.id, response.body, response.status, memory)
         }
         Native.tick(handle, memory, frame)
-        Native.events(handle).asList().chunked(4).forEach {
+        Native.events(handle).asList().chunked(5).forEach {
             when (it[0]) {
                 "login" -> status = "Chargement des succès…"
                 "game", "online" -> status = "Connecté • Mode normal (Softcore)"
                 "login_error", "game_error", "offline" -> status = it[1]
             }
-            onEvent(Event(it[0], it[1], it[2], it[3]))
+            onEvent(Event(it[0], it[1], it[2], it[3], it[4]))
         }
         Native.requests(handle).asList().chunked(4).forEach { record ->
             http.execute {
