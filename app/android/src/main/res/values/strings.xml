@@ -214,6 +214,26 @@
     <string name="retroachievements_dashboard_progress">%1$s succès • %2$s points</string>
     <string name="retroachievements_signed_in_note">Connexion mémorisée sur cet appareil. Fermez ce panneau pour activer les succès dans la partie en cours.</string>
     <string name="retroachievements_profile_offline">Hors ligne : points non actualisés. L\'identité affichée est celle de la dernière connexion.</string>
+    <string name="about_title">À propos</string>
+    <string name="about_summary">Conditions, confidentialité, licences et version</string>
+    <string name="about_version">Version</string>
+    <string name="about_terms">Conditions d\'utilisation</string>
+    <string name="about_terms_summary">Ce que RavenEmu fournit, ce qu\'il ne fournit pas, et votre responsabilité</string>
+    <string name="about_privacy">Politique de confidentialité</string>
+    <string name="about_privacy_summary">Ce qui reste sur l\'appareil, et ce qui part vers RetroAchievements si vous le connectez</string>
+    <string name="about_licenses">Licences et crédits</string>
+    <string name="about_licenses_summary">RavenEmu et les composants tiers qu\'il embarque</string>
+    <string name="about_license_project">RavenEmu</string>
+    <string name="about_license_project_summary">GNU Affero General Public License version 3. Copyright 2026 GhostPunishR.</string>
+    <string name="about_license_rcheevos">rcheevos</string>
+    <string name="about_license_rcheevos_summary">SDK officiel RetroAchievements, licence MIT. Copyright 2018 RetroAchievements.org.</string>
+    <string name="about_license_apache">AndroidX, Material Components et Kotlin</string>
+    <string name="about_license_apache_summary">Bibliothèques sous licence Apache 2.0, de Google et de JetBrains.</string>
+    <string name="about_source">Code source</string>
+    <string name="about_source_summary">L\'AGPL donne le droit d\'obtenir la source de cette version. Elle est publiée en entier.</string>
+    <string name="about_document_unavailable">Ce document n\'a pas pu être lu.</string>
+    <string name="about_trademarks">Marques</string>
+    <string name="about_trademarks_summary">Game Boy, Game Boy Color et Game Boy Advance sont des marques de Nintendo. RavenEmu n\'est ni affilié à Nintendo, ni approuvé par Nintendo. RavenEmu n\'est affilié ni à Delta, ni à RetroAchievements.</string>
 </resources>
 
 

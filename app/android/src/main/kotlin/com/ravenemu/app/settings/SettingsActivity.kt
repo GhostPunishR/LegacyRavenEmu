@@ -9,8 +9,10 @@ import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
+import com.ravenemu.app.BuildConfig
 import com.ravenemu.app.R
 import com.ravenemu.app.RavenActivity
+import com.ravenemu.app.about.LegalDocumentActivity
 import com.ravenemu.settings.AppSettings
 import com.ravenemu.emulation.api.display.MonochromeDisplayProfiles
 import com.ravenemu.storage.RomIndexStore
@@ -110,6 +112,7 @@ class SettingsActivity :
                 }
                 true
             }
+            wireAboutScreen()
             // Le câblage qui suit vaut pour l'arborescence entière. Monté sur
             // un écran donné, `findPreference` ne trouve que ce qu'il contient
             // et les autres appels ne font rien : c'est voulu, et c'est ce qui
@@ -210,6 +213,54 @@ class SettingsActivity :
                     ?: getString(R.string.retroachievements_sign_in)
                 preference.summary = getString(if (account != null) R.string.retroachievements_session_saved
                     else R.string.retroachievements_signed_out)
+            }
+        }
+
+        /**
+         * Catégorie « À propos ».
+         *
+         * Les documents voyagent avec l'application plutôt que derrière un
+         * lien : des conditions et une politique de confidentialité qu'il faut
+         * aller chercher en ligne manquent précisément quand on les cherche, et
+         * l'AGPL demande que la licence accompagne le programme. Seul le code
+         * source part vers le navigateur, n'ayant pas sa place dans un APK.
+         */
+        private fun wireAboutScreen() {
+            findPreference<Preference>("about_version")?.summary = buildString {
+                append(BuildConfig.VERSION_NAME)
+                append(" (").append(BuildConfig.VERSION_CODE).append(')')
+            }
+            fun document(key: String, intent: () -> android.content.Intent) {
+                findPreference<Preference>(key)?.setOnPreferenceClickListener {
+                    startActivity(intent())
+                    true
+                }
+            }
+            document("about_terms") {
+                LegalDocumentActivity.markdown(requireContext(), R.string.about_terms, R.raw.terms)
+            }
+            document("about_privacy") {
+                LegalDocumentActivity.markdown(requireContext(), R.string.about_privacy, R.raw.privacy)
+            }
+            document("about_license_project") {
+                LegalDocumentActivity.plainText(
+                    requireContext(), R.string.about_license_project, R.raw.license_agpl_3_0,
+                )
+            }
+            document("about_license_rcheevos") {
+                LegalDocumentActivity.plainText(
+                    requireContext(), R.string.about_license_rcheevos, R.raw.license_mit_rcheevos,
+                )
+            }
+            document("about_license_apache") {
+                LegalDocumentActivity.plainText(
+                    requireContext(), R.string.about_license_apache, R.raw.license_apache_2_0,
+                )
+            }
+            findPreference<Preference>("about_source")?.setOnPreferenceClickListener {
+                val uri = android.net.Uri.parse("https://github.com/GhostPunishR/RavenEmu")
+                runCatching { startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri)) }
+                true
             }
         }
 

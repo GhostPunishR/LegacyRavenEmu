@@ -187,6 +187,58 @@
         </PreferenceCategory>
     </PreferenceScreen>
 
+    <PreferenceScreen
+        android:key="screen_about"
+        android:icon="@drawable/ic_settings_about"
+        android:summary="@string/about_summary"
+        android:title="@string/about_title">
+
+        <Preference
+            android:key="about_version"
+            android:selectable="false"
+            android:title="@string/about_version" />
+
+        <Preference
+            android:key="about_terms"
+            android:title="@string/about_terms"
+            android:summary="@string/about_terms_summary" />
+
+        <Preference
+            android:key="about_privacy"
+            android:title="@string/about_privacy"
+            android:summary="@string/about_privacy_summary" />
+
+        <PreferenceScreen
+            android:key="screen_about_licenses"
+            android:summary="@string/about_licenses_summary"
+            android:title="@string/about_licenses">
+
+            <Preference
+                android:key="about_license_project"
+                android:title="@string/about_license_project"
+                android:summary="@string/about_license_project_summary" />
+
+            <Preference
+                android:key="about_license_rcheevos"
+                android:title="@string/about_license_rcheevos"
+                android:summary="@string/about_license_rcheevos_summary" />
+
+            <Preference
+                android:key="about_license_apache"
+                android:title="@string/about_license_apache"
+                android:summary="@string/about_license_apache_summary" />
+        </PreferenceScreen>
+
+        <Preference
+            android:key="about_source"
+            android:title="@string/about_source"
+            android:summary="@string/about_source_summary" />
+
+        <Preference
+            android:key="about_trademarks"
+            android:selectable="false"
+            android:title="@string/about_trademarks"
+            android:summary="@string/about_trademarks_summary" />
+    </PreferenceScreen>
+
 </PreferenceScreen>
-
-

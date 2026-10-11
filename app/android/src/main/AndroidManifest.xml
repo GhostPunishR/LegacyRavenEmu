@@ -41,6 +41,11 @@
             android:label="@string/delta_skins_title" />
 
         <activity
+            android:name=".about.LegalDocumentActivity"
+            android:exported="false"
+            android:label="@string/about_title" />
+
+        <activity
             android:name=".library.SnapshotsActivity"
             android:exported="false"
             android:label="@string/states_title" />
