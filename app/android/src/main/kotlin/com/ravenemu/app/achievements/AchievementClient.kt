@@ -26,6 +26,7 @@ internal class AchievementClient(
     private val responses = ConcurrentLinkedQueue<Response>()
     private val offlineAwards = if (core != null) AchievementOfflineQueue(context.applicationContext) else null
     private var username: String? = null
+    private var warnedAboutOfflineStorage = false
     private val http = Executors.newFixedThreadPool(2) { Thread(it, "RavenEmu-RA-HTTP").apply { isDaemon = true } }
     private val memory = core?.let { target ->
         Native.Memory { address, count ->
@@ -79,12 +80,15 @@ internal class AchievementClient(
                 AchievementOfflineQueue.Award(account, record[1], record[2], record[3])
             } else null
             if (stored != null) {
-                runCatching { offlineAwards?.remember(stored.account, stored.url, stored.post, stored.contentType) }
-                    .onFailure {
-                        onEvent(Event("notice", "Succès hors ligne",
-                            "Le stockage sécurisé est indisponible : ne fermez pas le jeu avant la synchronisation.",
-                            "", ""))
-                    }
+                val persisted = runCatching {
+                    offlineAwards?.remember(stored.account, stored.url, stored.post, stored.contentType) == true
+                }.getOrDefault(false)
+                if (!persisted && !warnedAboutOfflineStorage) {
+                    warnedAboutOfflineStorage = true
+                    onEvent(Event("notice", "Succès hors ligne",
+                        "Le stockage sécurisé est indisponible ou plein : gardez le jeu ouvert jusqu'à la synchronisation.",
+                        "", ""))
+                }
             }
             http.execute {
                 val response = request(record)
