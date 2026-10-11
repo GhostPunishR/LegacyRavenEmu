@@ -89,6 +89,7 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
     private var achievementDialogOpen = false
     @Volatile private var hardcoreSessionActive = false
     private val achievementPopup by lazy { com.ravenemu.app.achievements.AchievementPopup(this) }
+    private val achievementIndicators by lazy { com.ravenemu.app.achievements.AchievementIndicators(this) }
     private var deltaSkinLoadGeneration = 0L
     private var customSkinActive = false
     private var restoreCustomSkinAfterEditing = false
@@ -502,9 +503,17 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
     // ---- Callbacks de session (thread d'émulation) ----
 
     override fun onEmulationTick(core: EmulatorCore, frame: Boolean) {
-        runCatching { achievements?.tick(frame) }.onFailure {
+        runCatching {
+            achievements?.tick(frame)
+            val nowHardcore = achievements?.hardcoreEnabled == true
+            if (nowHardcore && !hardcoreSessionActive) {
+                GbaDebugOverlay.attachLogging(core, measuring = false)
+            }
+            hardcoreSessionActive = nowHardcore
+        }.onFailure {
             achievements?.close()
             achievements = null
+            hardcoreSessionActive = false
             runOnUiThread {
                 if (!isFinishing && !isDestroyed) achievementPopup.show("RetroAchievements indisponible pour cette session")
             }
@@ -514,18 +523,36 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
     override fun onSessionStopped() {
         achievements?.close()
         achievements = null
+        hardcoreSessionActive = false
     }
 
     private fun showAchievementMessage(event: com.ravenemu.app.achievements.AchievementClient.Event) {
+        if (event.kind == "hardcore_reset") {
+            // Required by rcheevos before Hardcore processing can resume.
+            session?.post { core -> core.reset(); achievements?.reset() }
+            return
+        }
         runOnUiThread {
-            if (!isFinishing && !isDestroyed) {
-                val unlocked = event.kind == "achievement"
-                val title = if (unlocked) "Succès débloqué • ${event.extra} points\n${event.title}" else event.title
-                achievementPopup.show(com.ravenemu.app.achievements.AchievementPopup.Notice(
-                    listOf(title, event.detail).filter { it.isNotBlank() }.joinToString("\n"),
-                    // Seul un succès a un badge ; les autres avis n'en portent pas.
-                    event.image.takeIf { unlocked && it.isNotBlank() },
-                ))
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            when (event.kind) {
+                "challenge_show", "challenge_hide",
+                "progress_show", "progress_hide",
+                "tracker_show", "tracker_hide" ->
+                    achievementIndicators.update(event.kind, event.extra, event.title, event.detail)
+                else -> {
+                    val unlocked = event.kind == "achievement"
+                    val title = when (event.kind) {
+                        "leaderboard_started" -> "Classement commencé • ${event.title}"
+                        "leaderboard_failed" -> "Classement annulé • ${event.title}"
+                        "leaderboard_submitted" -> "Classement soumis • ${event.title}"
+                        "leaderboard_scoreboard" -> "Classement terminé • ${event.title}"
+                        else -> if (unlocked) "Succès débloqué • ${event.extra} points\n${event.title}" else event.title
+                    }
+                    achievementPopup.show(com.ravenemu.app.achievements.AchievementPopup.Notice(
+                        listOf(title, event.detail).filter { it.isNotBlank() }.joinToString("\n"),
+                        event.image.takeIf { unlocked && it.isNotBlank() },
+                    ))
+                }
             }
         }
     }
@@ -568,8 +595,19 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
 
     // ---- Menu de l'émulateur ----
 
-    private fun showEmulatorMenu() {
+    private fun showEmulatorMenu(hardcorePauseApproved: Boolean = false) {
         val currentSession = session ?: return
+        if (hardcoreSessionActive && !hardcorePauseApproved) {
+            // rc_client_can_pause must only be called on an actual pause request.
+            currentSession.post {
+                val allowed = achievements?.canPause() == true
+                runOnUiThread {
+                    if (allowed) showEmulatorMenu(hardcorePauseApproved = true)
+                    else achievementPopup.show("Pause temporairement indisponible en Hardcore")
+                }
+            }
+            return
+        }
         currentSession.pause()
         val perGameLabel = getString(
             if (hasPerGameProfile()) R.string.emulation_per_game_profile_off
@@ -880,6 +918,7 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
     override fun onDestroy() {
         achievementRom = null
         achievementPopup.close()
+        achievementIndicators.close()
         super.onDestroy()
         val currentCore = core
         // Un thread qui ne rend pas la main laisse la sortie audio en vie :
