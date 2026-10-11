@@ -127,10 +127,51 @@ void event_handler(const rc_client_event_t* event, rc_client_t* rc) {
         const auto& a = *event->achievement;
         const auto points = std::to_string(a.points);
         c.event("achievement", a.title, a.description, points.c_str(), achievement_image(a).c_str());
-    } else if (event->type == RC_CLIENT_EVENT_DISCONNECTED) c.event("offline", "RetroAchievements hors ligne", "Les succès en attente seront renvoyés pendant cette session.");
-    else if (event->type == RC_CLIENT_EVENT_RECONNECTED) c.event("online", "RetroAchievements reconnecté");
-    else if (event->type == RC_CLIENT_EVENT_SERVER_ERROR) c.event("notice", "Erreur RetroAchievements", "Un succès peut ne pas avoir été enregistré sur le serveur.");
-    else if (event->type == RC_CLIENT_EVENT_GAME_COMPLETED) c.event("notice", "Tous les succès obtenus !");
+    } else if (event->type == RC_CLIENT_EVENT_DISCONNECTED)
+        c.event("offline", "RetroAchievements hors ligne", "Déblocages en attente : synchronisation à la reconnexion.");
+    else if (event->type == RC_CLIENT_EVENT_RECONNECTED)
+        c.event("online", "RetroAchievements reconnecté");
+    else if (event->type == RC_CLIENT_EVENT_SERVER_ERROR)
+        c.event("notice", "Erreur RetroAchievements",
+            event->server_error && event->server_error->error_message ?
+                event->server_error->error_message : "Le serveur a refusé une requête.");
+    else if (event->type == RC_CLIENT_EVENT_GAME_COMPLETED)
+        c.event("notice", "Tous les succès obtenus !");
+    else if (event->type == RC_CLIENT_EVENT_RESET)
+        c.event("hardcore_reset", "Redémarrage requis pour le mode Hardcore");
+    else if (event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_SHOW ||
+             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_HIDE ||
+             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_SHOW ||
+             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_UPDATE ||
+             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_HIDE) {
+        if (!event->achievement) return;
+        const auto& a = *event->achievement;
+        const char* kind =
+            event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_SHOW ? "challenge_show" :
+            event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_HIDE ? "challenge_hide" :
+            event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_HIDE ? "progress_hide" :
+            "progress_show";
+        c.event(kind, a.title, a.measured_progress, std::to_string(a.id).c_str(), achievement_image(a).c_str());
+    } else if (event->type == RC_CLIENT_EVENT_LEADERBOARD_TRACKER_SHOW ||
+               event->type == RC_CLIENT_EVENT_LEADERBOARD_TRACKER_UPDATE ||
+               event->type == RC_CLIENT_EVENT_LEADERBOARD_TRACKER_HIDE) {
+        if (!event->leaderboard_tracker) return;
+        const auto* tracker = event->leaderboard_tracker;
+        const auto* kind = event->type == RC_CLIENT_EVENT_LEADERBOARD_TRACKER_HIDE ? "tracker_hide" : "tracker_show";
+        c.event(kind, "Classement en cours", tracker->display, std::to_string(tracker->id).c_str());
+    } else if (event->type == RC_CLIENT_EVENT_LEADERBOARD_STARTED ||
+               event->type == RC_CLIENT_EVENT_LEADERBOARD_FAILED ||
+               event->type == RC_CLIENT_EVENT_LEADERBOARD_SUBMITTED ||
+               event->type == RC_CLIENT_EVENT_LEADERBOARD_SCOREBOARD) {
+        if (!event->leaderboard) return;
+        const auto* kind =
+            event->type == RC_CLIENT_EVENT_LEADERBOARD_STARTED ? "leaderboard_started" :
+            event->type == RC_CLIENT_EVENT_LEADERBOARD_FAILED ? "leaderboard_failed" :
+            event->type == RC_CLIENT_EVENT_LEADERBOARD_SUBMITTED ? "leaderboard_submitted" :
+            "leaderboard_scoreboard";
+        c.event(kind, event->leaderboard->title, event->leaderboard->description,
+            std::to_string(event->leaderboard->id).c_str());
+    }
 }
 // Copy SDK-owned strings on the owner thread. No credentials enter UI snapshots.
 std::vector<std::string> summary_records(rc_client_t* rc) {
@@ -217,6 +258,20 @@ JNIEXPORT jobjectArray JNICALL JNI_RA(summary)(JNIEnv* env, jclass, jlong h) {
 }
 JNIEXPORT jobjectArray JNICALL JNI_RA(achievements)(JNIEnv* env, jclass, jlong h) {
     return guarded<jobjectArray>(env, nullptr, [&] { auto data = achievement_records(client(h).rc); return drain(env, data); });
+}
+JNIEXPORT jstring JNICALL JNI_RA(richPresence)(JNIEnv* env, jclass, jlong h) {
+    return guarded<jstring>(env, nullptr, [&] {
+        char value[512]{};
+        rc_client_get_rich_presence_message(client(h).rc, value, sizeof(value));
+        value[sizeof(value) - 1] = 0;
+        return java_string(env, std::string(value));
+    });
+}
+JNIEXPORT jboolean JNICALL JNI_RA(hardcore)(JNIEnv*, jclass, jlong h) {
+    return rc_client_get_hardcore_enabled(client(h).rc) ? JNI_TRUE : JNI_FALSE;
+}
+JNIEXPORT jboolean JNICALL JNI_RA(canPause)(JNIEnv*, jclass, jlong h) {
+    return rc_client_can_pause(client(h).rc, nullptr) ? JNI_TRUE : JNI_FALSE;
 }
 JNIEXPORT jlong JNICALL JNI_RA(create)(JNIEnv* env, jclass) {
     return guarded<jlong>(env, 0, [] {
