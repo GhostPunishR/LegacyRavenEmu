@@ -13,7 +13,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /** Token only; encrypted with an Android Keystore key and excluded from backups. */
-class AchievementAccount(context: Context) {
+class AchievementAccount(private val context: Context) {
     /**
      * [avatarUrl] n'est pas un secret : il est conservé avec le reste pour que
      * la carte de profil montre le portrait sans attendre le réseau. Un fichier
@@ -56,7 +56,11 @@ class AchievementAccount(context: Context) {
         }
     }
 
-    fun clear() = file.delete()
+    fun clear() {
+        file.delete()
+        // Pending encrypted submissions must not survive an explicit sign-out.
+        AchievementOfflineQueue(context).clear()
+    }
 
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
