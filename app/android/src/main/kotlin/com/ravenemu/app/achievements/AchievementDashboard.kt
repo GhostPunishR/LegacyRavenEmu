@@ -7,8 +7,9 @@ import android.os.Looper
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.ListView
-import android.widget.RadioButton
-import android.widget.RadioGroup
+import android.view.View
+import android.widget.AdapterView
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -55,16 +56,16 @@ internal object AchievementDashboard {
             setPadding(padding, padding / 2, padding, 0)
         }
         val header = TextView(activity)
-        val filters = RadioGroup(activity).apply { orientation = RadioGroup.HORIZONTAL }
-        listOf("Tous", "À obtenir", "Obtenus").forEachIndexed { index, label ->
-            filters.addView(RadioButton(activity).apply { id = index + 1; text = label })
+        val filters = Spinner(activity).apply {
+            contentDescription = "Filtrer les succès"
+            adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item,
+                listOf("Tous les succès", "À obtenir", "Obtenus"))
         }
-        filters.check(1)
         val adapter = ArrayAdapter<String>(activity, android.R.layout.simple_list_item_1)
         val list = ListView(activity).apply { this.adapter = adapter }
         content.addView(header)
         content.addView(filters)
-        content.addView(list, LinearLayout.LayoutParams(-1, (activity.resources.displayMetrics.heightPixels * 0.4).toInt()))
+        content.addView(list, LinearLayout.LayoutParams(-1, (activity.resources.displayMetrics.heightPixels * 0.32).toInt()))
         fun render() {
             val snapshot = latest
             val s = snapshot?.summary
@@ -80,7 +81,13 @@ internal object AchievementDashboard {
                 adapter.addAll(entries.map { it.label() })
             }
         }
-        filters.setOnCheckedChangeListener { _, id -> filter = id - 1; render() }
+        filters.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                filter = position
+                render()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
         list.setOnItemClickListener { _, _, position, _ ->
             val entry = visible[position]
             val date = if (entry.unlockedAt > 0) "\nObtenu le ${DateFormat.getDateTimeInstance().format(Date(entry.unlockedAt * 1000))}" else ""
