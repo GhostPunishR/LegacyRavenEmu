@@ -28,6 +28,13 @@ internal class AchievementClient(
         }
     }
 
+    private var status = "Connexion en cours…"
+    fun snapshot(): AchievementSnapshot = AchievementSnapshot(
+        status, Native.summary(handle).toList(), Native.achievements(handle).asList().chunked(8).map {
+            AchievementEntry(it[0], it[1], it[2], it[3], it[4].toInt(), it[5], it[6].toLong(), it[7].toInt())
+        },
+    )
+
     fun login(username: String, secret: String, token: Boolean) = Native.login(handle, username, secret, token)
     fun load(console: Int, rom: ByteArray) = Native.load(handle, console, rom)
     fun reset() = Native.reset(handle)
@@ -39,7 +46,13 @@ internal class AchievementClient(
             Native.respond(handle, response.id, response.body, response.status, memory)
         }
         Native.tick(handle, memory, frame)
-        Native.events(handle).asList().chunked(4).forEach { onEvent(Event(it[0], it[1], it[2], it[3])) }
+        Native.events(handle).asList().chunked(4).forEach { 
+            when (it[0]) {
+                "login" -> status = "Chargement des succès…"
+                "game", "online" -> status = "Connecté • Mode normal (Softcore)"
+                "login_error", "game_error", "offline" -> status = it[1]
+            }
+            onEvent(Event(it[0], it[1], it[2], it[3])) }
         Native.requests(handle).asList().chunked(4).forEach { record ->
             http.execute {
                 val response = request(record)

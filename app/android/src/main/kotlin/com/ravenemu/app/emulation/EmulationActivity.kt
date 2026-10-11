@@ -85,6 +85,8 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
     private var session: EmulationSession? = null
     // Accessed only by the emulation thread after setup.
     private var achievements: com.ravenemu.app.achievements.AchievementClient? = null
+    private var achievementRom: ByteArray? = null
+    private var achievementDialogOpen = false
     private val achievementPopup by lazy { com.ravenemu.app.achievements.AchievementPopup(this) }
     private var deltaSkinLoadGeneration = 0L
     private var customSkinActive = false
@@ -466,26 +468,28 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
                 !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))) {
             newSession.pause()
         }
+        achievementRom = rom
+        reconnectAchievements()
+        newSession.start()
+    }
+
+    private fun reconnectAchievements() {
+        val rom = achievementRom ?: return
         val account = com.ravenemu.app.achievements.AchievementAccount(this).read()
-        if (account != null) newSession.post { target ->
-            runCatching {
+        session?.post { target ->
+            achievements?.close()
+            achievements = null
+            if (account != null) runCatching {
                 val consoleId = when (console) {
                     ConsoleType.GAME_BOY -> if ((rom[0x143].toInt() and 0x80) != 0) 6 else 4
                     ConsoleType.GAME_BOY_ADVANCE -> 5
                 }
-                var gameImage: ByteArray? = rom
                 achievements = com.ravenemu.app.achievements.AchievementClient(target) { event ->
-                    if (event.kind == "login") {
-                        gameImage?.let { achievements?.load(consoleId, it) }
-                        gameImage = null
-                    } else {
-                        if (event.kind == "login_error") gameImage = null
-                        showAchievementMessage(event)
-                    }
+                    if (event.kind == "login") achievements?.load(consoleId, rom)
+                    else showAchievementMessage(event)
                 }.also { it.login(account.username, account.token, true) }
             }.onFailure { achievements?.close(); achievements = null }
         }
-        newSession.start()
     }
 
     // ---- Callbacks de session (thread d'émulation) ----
@@ -565,11 +569,22 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
             getString(R.string.emulation_save_state) to { saveSnapshot() },
             getString(R.string.emulation_load_state) to { loadSnapshot() },
             getString(R.string.retroachievements_title) to {
-                com.ravenemu.app.achievements.AchievementLogin.show(this) {
-                    if (!controls.editMode && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                        currentSession.resume()
-                    }
-                }
+                achievementDialogOpen = true
+                com.ravenemu.app.achievements.AchievementDashboard.show(this,
+                    request = { callback ->
+                        currentSession.post {
+                            val snapshot = runCatching { achievements?.snapshot() }.getOrNull()
+                            runOnUiThread { callback(snapshot) }
+                        }
+                    },
+                    reconnect = { reconnectAchievements() },
+                    onDismiss = {
+                        achievementDialogOpen = false
+                        if (!controls.editMode && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                            currentSession.resume()
+                        }
+                    },
+                )
             },
             getString(R.string.emulation_edit_controls) to { enterEditMode() },
             perGameLabel to { togglePerGameProfile() },
@@ -819,7 +834,7 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
             s.audioEnabled = settings.audioEnabled
             s.setAudioVolume(settings.audioVolume / 100f)
         }
-        if (!controls.editMode) session?.resume()
+        if (!controls.editMode && !achievementDialogOpen) session?.resume()
     }
 
     override fun onPause() {
@@ -838,6 +853,7 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
     }
 
     override fun onDestroy() {
+        achievementRom = null
         achievementPopup.close()
         super.onDestroy()
         val currentCore = core

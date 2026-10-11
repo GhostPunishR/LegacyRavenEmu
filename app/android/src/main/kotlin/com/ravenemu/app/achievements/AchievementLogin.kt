@@ -20,7 +20,11 @@ object AchievementLogin {
         val existing = account.read()
         if (existing != null) {
             MaterialAlertDialogBuilder(activity).setTitle("RetroAchievements")
-                .setMessage("Connecté : ${existing.displayName}\nConnexion mémorisée sur cet appareil, même après fermeture de l’application.\nMode normal (Softcore).\nLes changements prennent effet à la prochaine partie.")
+                .setMessage("Connecté : ${existing.displayName}\nConnexion mémorisée sur cet appareil, même après fermeture de l’application.\nMode normal (Softcore).\nLe menu en jeu applique la connexion à la partie en cours.")
+                .setNeutralButton("Voir le profil") { _, _ ->
+                    val uri = android.net.Uri.parse("https://retroachievements.org/user/").buildUpon().appendPath(existing.username).build()
+                    runCatching { activity.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri)) }
+                }
                 .setNegativeButton("Fermer", null)
                 .setPositiveButton("Se déconnecter") { _, _ -> account.clear() }
                 .setOnDismissListener { onDismiss() }.show()
@@ -88,7 +92,7 @@ object AchievementLogin {
                             var saved = false
                             val message = if (event.kind == "login") {
                                 runCatching { account.save(event.title, event.extra, event.detail) }
-                                    .fold({ saved = true; "Connecté : ${event.detail.ifBlank { event.title }}. Connexion mémorisée sur cet appareil. Relancez la partie pour activer les succès." },
+                                    .fold({ saved = true; "Connecté : ${event.detail.ifBlank { event.title }}. Connexion mémorisée sur cet appareil. Fermez ce dialogue pour activer les succès dans la partie en cours." },
                                         { "Impossible de conserver la connexion sur cet appareil." })
                             } else event.title
                             activity.runOnUiThread {

@@ -5,6 +5,8 @@ public final class NativeAchievementsBridge {
     static { NativeCoreBridge.ensureLoaded(); }
     private NativeAchievementsBridge() {}
     public interface Memory { byte[] read(int address, int count); }
+    public static native String[] summary(long handle);
+    public static native String[] achievements(long handle);
     public static native long create();
     public static native void destroy(long handle);
     public static native void login(long handle, String username, String secret, boolean token);

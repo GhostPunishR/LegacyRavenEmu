@@ -105,10 +105,41 @@ void event_handler(const rc_client_event_t* event, rc_client_t* rc) {
         const auto& a = *event->achievement;
         const auto points = std::to_string(a.points);
         c.event("achievement", a.title, a.description, points.c_str());
-    } else if (event->type == RC_CLIENT_EVENT_DISCONNECTED) c.event("notice", "RetroAchievements hors ligne", "Les succès en attente seront renvoyés pendant cette session.");
-    else if (event->type == RC_CLIENT_EVENT_RECONNECTED) c.event("notice", "RetroAchievements reconnecté");
+    } else if (event->type == RC_CLIENT_EVENT_DISCONNECTED) c.event("offline", "RetroAchievements hors ligne", "Les succès en attente seront renvoyés pendant cette session.");
+    else if (event->type == RC_CLIENT_EVENT_RECONNECTED) c.event("online", "RetroAchievements reconnecté");
     else if (event->type == RC_CLIENT_EVENT_SERVER_ERROR) c.event("notice", "Erreur RetroAchievements", "Un succès peut ne pas avoir été enregistré sur le serveur.");
     else if (event->type == RC_CLIENT_EVENT_GAME_COMPLETED) c.event("notice", "Tous les succès obtenus !");
+}
+// Copy SDK-owned strings on the owner thread. No credentials enter UI snapshots.
+std::vector<std::string> summary_records(rc_client_t* rc) {
+    const auto* user = rc_client_get_user_info(rc);
+    const auto* game = rc_client_get_game_info(rc);
+    rc_client_user_game_summary_t summary{};
+    rc_client_get_user_game_summary(rc, &summary);
+    return {user && user->display_name ? user->display_name : "",
+        std::to_string(user ? user->score_softcore : 0),
+        std::to_string(user ? user->score : 0),
+        game && game->title ? game->title : "", std::to_string(game ? game->id : 0),
+        std::to_string(summary.num_unlocked_achievements), std::to_string(summary.num_core_achievements),
+        std::to_string(summary.points_unlocked), std::to_string(summary.points_core)};
+}
+std::vector<std::string> achievement_records(rc_client_t* rc) {
+    std::vector<std::string> result;
+    std::unique_ptr<rc_client_achievement_list_t, decltype(&rc_client_destroy_achievement_list)> list(
+        rc_client_create_achievement_list(rc, RC_CLIENT_ACHIEVEMENT_CATEGORY_CORE,
+            RC_CLIENT_ACHIEVEMENT_LIST_GROUPING_PROGRESS), rc_client_destroy_achievement_list);
+    if (!list) return result;
+    for (uint32_t b = 0; b < list->num_buckets; ++b) {
+        const auto& bucket = list->buckets[b];
+        for (uint32_t i = 0; i < bucket.num_achievements; ++i) {
+            const auto& a = *bucket.achievements[i];
+            for (auto value : {std::to_string(a.id), std::string(a.title ? a.title : ""),
+                std::string(a.description ? a.description : ""), std::to_string(a.points),
+                std::to_string(a.state), std::string(a.measured_progress),
+                std::to_string(a.unlock_time), std::to_string(bucket.bucket_type)}) result.push_back(value);
+        }
+    }
+    return result;
 }
 // Java uses UTF-16, the SDK uses standard UTF-8 (not JNI modified UTF-8).
 std::string utf8(JNIEnv* env, jstring value) {
@@ -157,6 +188,12 @@ template<typename T, typename F> T guarded(JNIEnv* env, T fallback, F f) {
 }
 #define JNI_RA(name) Java_com_ravenemu_nativebridge_NativeAchievementsBridge_##name
 extern "C" {
+JNIEXPORT jobjectArray JNICALL JNI_RA(summary)(JNIEnv* env, jclass, jlong h) {
+    return guarded<jobjectArray>(env, nullptr, [&] { auto data = summary_records(client(h).rc); return drain(env, data); });
+}
+JNIEXPORT jobjectArray JNICALL JNI_RA(achievements)(JNIEnv* env, jclass, jlong h) {
+    return guarded<jobjectArray>(env, nullptr, [&] { auto data = achievement_records(client(h).rc); return drain(env, data); });
+}
 JNIEXPORT jlong JNICALL JNI_RA(create)(JNIEnv* env, jclass) {
     return guarded<jlong>(env, 0, [] {
         auto c = std::make_unique<Client>();

@@ -4,6 +4,28 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceScreen
+        android:key="screen_retroachievements"
+        android:icon="@drawable/ic_settings_achievements"
+        android:summary="@string/retroachievements_summary"
+        android:title="@string/retroachievements_title">
+        <Preference
+            android:key="retroachievements"
+            android:icon="@drawable/ic_settings_account"
+            android:title="@string/retroachievements_sign_in"
+            android:summary="@string/retroachievements_signed_out" />
+        <Preference
+            android:key="retroachievements_hardcore"
+            android:selectable="false"
+            android:title="@string/retroachievements_hardcore"
+            android:summary="@string/retroachievements_hardcore_summary" />
+        <Preference
+            android:key="retroachievements_mode"
+            android:selectable="false"
+            android:title="@string/retroachievements_mode"
+            android:summary="@string/retroachievements_mode_summary" />
+    </PreferenceScreen>
+
+    <PreferenceScreen
         android:key="screen_general"
         android:icon="@drawable/ic_settings_general"
         android:summary="@string/settings_screen_general_summary"
@@ -164,22 +186,7 @@
                 android:title="@string/settings_clear_index" />
         </PreferenceCategory>
     </PreferenceScreen>
-    <PreferenceScreen
-        android:key="screen_retroachievements"
-        android:icon="@drawable/ic_settings_achievements"
-        android:summary="@string/retroachievements_summary"
-        android:title="@string/retroachievements_title">
-        <Preference
-            android:key="retroachievements"
-            android:icon="@drawable/ic_settings_account"
-            android:title="@string/retroachievements_sign_in"
-            android:summary="@string/retroachievements_signed_out" />
-        <Preference
-            android:key="retroachievements_mode"
-            android:selectable="false"
-            android:title="@string/retroachievements_mode"
-            android:summary="@string/retroachievements_mode_summary" />
-    </PreferenceScreen>
+
 </PreferenceScreen>
 
 

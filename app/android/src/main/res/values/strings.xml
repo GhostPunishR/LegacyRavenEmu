@@ -193,6 +193,8 @@
     <string name="retroachievements_session_saved">Connexion mémorisée sur cet appareil. Touchez pour gérer votre compte.</string>
     <string name="retroachievements_mode">Mode normal (Softcore)</string>
     <string name="retroachievements_mode_summary">Succès GB, GBC et GBA. Le mode Hardcore et les classements ne sont pas activés.</string>
+    <string name="retroachievements_hardcore">Mode Hardcore</string>
+    <string name="retroachievements_hardcore_summary">Indisponible : protections et validation RetroAchievements requises. Aucun succès Hardcore envoyé.</string>
 </resources>
 
 

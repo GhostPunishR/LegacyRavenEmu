@@ -62,7 +62,7 @@ class SettingsScreenPolicyTest {
             "Un réglage est resté à la racine : il échappe au rangement par catégorie",
         )
         assertEquals(
-            listOf("screen_general", "screen_audio", "screen_video", "screen_ui", "screen_retroachievements"),
+            listOf("screen_retroachievements", "screen_general", "screen_audio", "screen_video", "screen_ui"),
             enfants.map { it.key() },
             "Les cinq catégories attendues, dans cet ordre",
         )

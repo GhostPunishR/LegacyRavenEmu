@@ -90,9 +90,17 @@ void sdk_unlock() {
     check(game_loaded,"game callback missing");
     rc_client_do_frame(client); // condition false first, arm trigger
     check(awards == 0 && popups == 0,"premature unlock");
+    const auto before = achievement_records(client);
+    check(before.size() == 8 && before[4] == "1", "dashboard must expose locked achievement");
+    const auto profile = summary_records(client);
+    check(profile.size() == 9 && profile[6] == "1", "dashboard game totals missing");
+    check(std::find(profile.begin(), profile.end(), "local-test-only") == profile.end(), "snapshot leaked token");
     std::vector<int32_t> frame(core->video_spec().pixel_count()); core->run_frame(frame,true);
     rc_client_do_frame(client);
     check(awards == 1 && popups == 1,"memory change must emit one award and one popup");
+    const auto after = achievement_records(client);
+    check(after.size() == 8 && after[4] == "2" && after[6] != "0", "dashboard must expose dated unlock");
+    check(summary_records(client)[5] == "1", "dashboard completion total not updated");
     rc_client_reset(client); rc_client_do_frame(client); rc_client_idle(client);
     check(awards == 1 && popups == 1,"reset must not duplicate unlocked achievements");
     rc_client_destroy(client);
