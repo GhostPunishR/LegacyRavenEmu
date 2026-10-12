@@ -134,6 +134,34 @@ Java_com_ravenemu_v3_android_NativeCore_nativeLoadState(
     env->ReleaseByteArrayElements(input, bytes, JNI_ABORT);
     return ok ? JNI_TRUE : JNI_FALSE;
 }
+JNIEXPORT jboolean JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeBatteryDirty(JNIEnv*, jobject, jlong pointer) {
+    return ravenemu_v3_battery_dirty(handle(pointer)) ? JNI_TRUE : JNI_FALSE;
+}
+JNIEXPORT jboolean JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeCopyBatteryGeneration(
+    JNIEnv* env, jobject, jlong pointer, jbyteArray output, jlongArray generation_out
+) {
+    if (!output || !generation_out || env->GetArrayLength(generation_out) < 1) return JNI_FALSE;
+    auto* bytes = env->GetByteArrayElements(output, nullptr);
+    if (!bytes) return JNI_FALSE;
+    std::uint64_t generation = 0;
+    const auto ok = ravenemu_v3_copy_battery_generation(
+        handle(pointer), reinterpret_cast<std::uint8_t*>(bytes),
+        static_cast<std::size_t>(env->GetArrayLength(output)), &generation);
+    env->ReleaseByteArrayElements(output, bytes, ok ? 0 : JNI_ABORT);
+    if (!ok) return JNI_FALSE;
+    const auto value = static_cast<jlong>(generation);
+    env->SetLongArrayRegion(generation_out, 0, 1, &value);
+    return env->ExceptionCheck() ? JNI_FALSE : JNI_TRUE;
+}
+JNIEXPORT jboolean JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeAcknowledgeBattery(
+    JNIEnv*, jobject, jlong pointer, jlong generation
+) {
+    return ravenemu_v3_acknowledge_battery(
+        handle(pointer), static_cast<std::uint64_t>(generation)) ? JNI_TRUE : JNI_FALSE;
+}
 JNIEXPORT jint JNICALL
 Java_com_ravenemu_v3_android_NativeCore_nativeBatterySize(JNIEnv*, jobject, jlong pointer) {
     const auto n = ravenemu_v3_battery_size(handle(pointer));
