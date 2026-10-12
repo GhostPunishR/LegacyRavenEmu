@@ -362,7 +362,9 @@ private fun GbVideoScreen(
         if (onButtonChange != null) {
             GbTouchControls(
                 onButton = onButtonChange,
-                modifier = Modifier.padding(vertical = 8.dp),
+                // Keep the lower pills slightly above the system navigation bar,
+                // matching the requested default control placement.
+                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
             )
         }
 
