@@ -26,6 +26,13 @@ jobs:
           java-version: "21"
       - name: Build Android preview
         run: ./gradlew -p v3 :androidApp:assembleDebug --stacktrace
+      - name: Publish unsigned preview APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ravenemu-v3-android-preview
+          path: v3/androidApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
 
   ios:
     name: V3 iOS shared framework
