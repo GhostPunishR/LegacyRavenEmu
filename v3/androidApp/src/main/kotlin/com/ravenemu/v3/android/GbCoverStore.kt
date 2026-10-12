@@ -99,12 +99,7 @@ internal class GbCoverStore(
         AtomicFile(fileFor(id)).delete()
     }
 
-    internal fun fileFor(id: String): File {
-        require(id.length == 64 && id.all { it in '0'..'9' || it in 'a'..'f' }) {
-            "Identifiant de ROM invalide."
-        }
-        return File(directory, "$id.jpg")
-    }
+    internal fun fileFor(id: String): File = coverFileFor(directory, id)
 
     private fun readBounded(input: InputStream, limit: Int): ByteArray {
         val result = ByteArrayOutputStream()
@@ -129,4 +124,12 @@ internal class GbCoverStore(
         const val MAX_COVER_BYTES = 1024 * 1024
         const val MAX_SOURCE_DIMENSION = 16384
     }
+}
+
+/** Shared by disk writes and path-traversal unit tests. */
+internal fun coverFileFor(directory: File, id: String): File {
+    require(id.length == 64 && id.all { it in '0'..'9' || it in 'a'..'f' }) {
+        "Identifiant de ROM invalide."
+    }
+    return File(directory, "$id.jpg")
 }
