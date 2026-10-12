@@ -91,11 +91,8 @@ internal class GbRomLibrary(
     fun readRom(id: String): ByteArray {
         val entry = list().firstOrNull { it.id == id }
             ?: throw IllegalArgumentException("Jeu absent de la bibliothèque.")
-        val file = fileFor(entry.id)
-        require(file.isFile && file.length() in 1..RomImportPolicy.maxRomBytes.toLong()) {
-            "La ROM stockée est introuvable ou trop volumineuse."
-        }
-        val rom = AtomicFile(file).openRead().use { readBounded(it) }
+        // AtomicFile.openRead recovers an interrupted write from its backup.
+        val rom = AtomicFile(fileFor(entry.id)).openRead().use { readBounded(it) }
         require(GbBatteryStore.keyForRom(rom) == entry.id) {
             "La ROM ne correspond plus à son empreinte."
         }
