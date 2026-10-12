@@ -116,6 +116,11 @@ internal class AchievementDashboardHeader(private val context: Context) {
         progressBackgroundTintList = android.content.res.ColorStateList.valueOf(color(R.color.raven_outline))
     }
 
+    private val richPresence = TextView(context).apply {
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        setTextColor(color(R.color.raven_text_muted))
+    }
+
     private val progress = TextView(context).apply {
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
         setTextColor(color(R.color.raven_text_secondary))
@@ -129,6 +134,7 @@ internal class AchievementDashboardHeader(private val context: Context) {
             topMargin = dp(12); bottomMargin = dp(12)
         })
         addView(game)
+        addView(richPresence)
         addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(6)).apply {
             topMargin = dp(8); bottomMargin = dp(6)
         })
@@ -149,6 +155,7 @@ internal class AchievementDashboardHeader(private val context: Context) {
             account.visibility = View.GONE
             separator.visibility = View.GONE
             bar.visibility = View.GONE
+            richPresence.visibility = View.GONE
             game.text = context.getString(R.string.retroachievements_dashboard_signed_out)
             progress.text = snapshot?.status.orEmpty()
             progress.visibility = if (progress.text.isNullOrEmpty()) View.GONE else View.VISIBLE
@@ -171,9 +178,13 @@ internal class AchievementDashboardHeader(private val context: Context) {
             game.text = context.getString(R.string.retroachievements_dashboard_no_game)
             bar.visibility = View.GONE
             progress.visibility = View.GONE
+            richPresence.visibility = View.GONE
             return
         }
         game.text = current.title
+        val presence = snapshot?.richPresence.orEmpty()
+        richPresence.text = presence
+        richPresence.visibility = if (presence.isBlank()) View.GONE else View.VISIBLE
         if (current.empty) {
             bar.visibility = View.GONE
             progress.text = context.getString(R.string.retroachievements_dashboard_no_achievement)

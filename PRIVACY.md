@@ -29,7 +29,7 @@ Pendant une partie connectée, le SDK officiel transmet l’empreinte du jeu, le
 
 Les badges des succès et le portrait du compte sont des images publiques, téléchargées en HTTPS depuis `https://media.retroachievements.org`. C’est le seul autre hôte contacté, aucune donnée n’y est envoyée au-delà de ce que comporte une requête HTTPS, et les images sont conservées dans le cache de l’application, que le système peut vider et qu’effacer les données supprime.
 
-Les informations enregistrées par RetroAchievements relèvent de sa [politique de confidentialité](https://retroachievements.org/privacy.php). RavenEmu ne stocke pas ces informations sur un serveur du projet. Les envois de succès en échec sont retentés pendant la session ; leur file d’attente n’est pas conservée après la fermeture du jeu.
+Les informations enregistrées par RetroAchievements relèvent de sa [politique de confidentialité](https://retroachievements.org/privacy.php). RavenEmu ne stocke pas ces informations sur un serveur du projet. Les requêtes Softcore légitimes émises par le SDK sont désormais conservées localement dans un journal chiffré via Android Keystore et exclu des sauvegardes Android. Ce journal contient les paramètres de la requête d'origine, y compris le jeton du compte ; il est limité à 256 demandes et les nouvelles tentatives ne sont effectuées qu'après authentification du même compte, avec le jeton de cette connexion. Les échecs sont retentés pendant la session avec un délai progressif de 5 à 120 secondes. Les entrées sont retirées après confirmation de réussite et toute la file est effacée lors d'une déconnexion explicite ou de la suppression des données de l'application. RavenEmu n'héberge pas ces données sur un serveur.
 
 ## Accès aux fichiers
 
@@ -62,4 +62,5 @@ Cette politique peut être mise à jour si les fonctions de l’application, le 
 Pour une question générale, utilisez les issues sans publier de donnée sensible.
 
 Pour un problème de confidentialité nécessitant un échange privé, utilisez [un avis de sécurité privé](https://github.com/GhostPunishR/RavenEmu/security/advisories/new) et précisez qu’il s’agit d’une demande de confidentialité.
+
 

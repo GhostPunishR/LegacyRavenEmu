@@ -189,5 +189,73 @@ void adapter_shutdown() {
     }
 }
 
+
+void ui_events() {
+    Client adapter;
+    adapter.rc = rc_client_create(memory, server_call);
+    check(adapter.rc != nullptr, "native SDK client creation failed");
+    rc_client_set_userdata(adapter.rc, &adapter);
+
+    rc_client_achievement_t achievement{};
+    achievement.title = "Measured objective";
+    achievement.id = 42;
+    std::strcpy(achievement.measured_progress, "3/10");
+    achievement.badge_locked_url = "https://media.retroachievements.org/Badge/test_lock.png";
+    rc_client_event_t event{};
+    event.achievement = &achievement;
+    event.type = RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_UPDATE;
+    event_handler(&event, adapter.rc);
+    check(adapter.events.size() == 5 && adapter.events[0] == "progress_show" &&
+          adapter.events[1] == "Measured objective" && adapter.events[2] == "3/10" &&
+          adapter.events[3] == "42", "measured progress event mapping");
+    adapter.events.clear();
+
+    event.type = RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_HIDE;
+    event.achievement = nullptr; // Actual timer event from rcheevos 12.5.0.
+    event_handler(&event, adapter.rc);
+    check(adapter.events.size() == 5 && adapter.events[0] == "progress_hide",
+          "global progress hide must survive a null achievement pointer");
+    adapter.events.clear();
+    event.achievement = &achievement;
+
+    event.type = RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_HIDE;
+    event_handler(&event, adapter.rc);
+    check(adapter.events.size() == 5 && adapter.events[0] == "challenge_hide",
+          "challenge indicator hide event mapping");
+    adapter.events.clear();
+
+    rc_client_leaderboard_t leaderboard{};
+    leaderboard.title = "Speed run";
+    leaderboard.description = "Beat the stage";
+    leaderboard.id = 77;
+    event = {};
+    event.type = RC_CLIENT_EVENT_LEADERBOARD_STARTED;
+    event.leaderboard = &leaderboard;
+    event_handler(&event, adapter.rc);
+    check(adapter.events.size() == 5 && adapter.events[0] == "leaderboard_started" &&
+          adapter.events[1] == "Speed run" && adapter.events[3] == "77",
+          "leaderboard started event mapping");
+    adapter.events.clear();
+
+    rc_client_leaderboard_tracker_t tracker{};
+    tracker.id = 9;
+    std::strcpy(tracker.display, "00:03.21");
+    event = {};
+    event.type = RC_CLIENT_EVENT_LEADERBOARD_TRACKER_UPDATE;
+    event.leaderboard_tracker = &tracker;
+    event_handler(&event, adapter.rc);
+    check(adapter.events.size() == 5 && adapter.events[0] == "tracker_show" &&
+          adapter.events[2] == "00:03.21" && adapter.events[3] == "9",
+          "leaderboard tracker event mapping");
+    adapter.events.clear();
+
+    event = {};
+    event.type = RC_CLIENT_EVENT_RESET;
+    event_handler(&event, adapter.rc);
+    check(adapter.events.size() == 5 && adapter.events[0] == "hardcore_reset",
+          "hardcore reset event mapping");
 }
-int main() { memory_maps(); sdk_unlock(); adapter_shutdown(); }
+
+}
+int main() { memory_maps(); sdk_unlock(); adapter_shutdown(); ui_events(); }
+
