@@ -26,6 +26,8 @@ jobs:
           java-version: "21"
       - name: Build Android preview
         run: ./gradlew -p v3 :androidApp:assembleDebug --stacktrace
+      - name: Test GB import validation
+        run: ./gradlew -p v3 :androidApp:testDebugUnitTest --stacktrace
       - name: Publish unsigned preview APK
         uses: actions/upload-artifact@v4
         with:
