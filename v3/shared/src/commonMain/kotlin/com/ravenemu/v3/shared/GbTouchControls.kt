@@ -31,9 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
@@ -46,9 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
-private val ControlBorder = Color.White.copy(alpha = 0.64f)
-private val ControlFill = Color.White.copy(alpha = 0.13f)
+private val ControlBorder = Color(0xFFBBB3D4).copy(alpha = 0.88f)
 private val ControlAccent = Color(0xFFA78BFA)
+private val ControlAccentBright = Color(0xFFD7CAFF)
+private val ControlBackgroundTop = Color(0xFF35334A)
+private val ControlBackgroundBottom = Color(0xFF161620)
+private val ControlPressedTop = Color(0xFF735BB3)
+private val ControlPressedBottom = Color(0xFF33284F)
 
 /**
  * Portrait controls inspired by RavenEmu 0.8.1 TouchControlsView:
@@ -184,17 +190,46 @@ private fun GbDpad(
         val horizontal = Offset(0f, (size.height - arm) / 2f)
         val verticalSize = Size(arm, size.height)
         val horizontalSize = Size(size.width, arm)
-        drawRoundRect(if (highContrast) Color.White.copy(alpha = 0.27f) else ControlFill,
-            topLeft = vertical, size = verticalSize, cornerRadius = corner)
-        drawRoundRect(if (highContrast) Color.White.copy(alpha = 0.27f) else ControlFill,
-            topLeft = horizontal, size = horizontalSize, cornerRadius = corner)
-        val stroke = Stroke(width = 2.dp.toPx())
-        val outline = if (held.isNotEmpty()) ControlAccent
+        // A raised dark-glass D-pad. Only its paint changes: the native GB
+        // hit-test and the geometry chosen by the player remain untouched.
+        val fill = Brush.verticalGradient(
+            colors = if (held.isNotEmpty()) {
+                listOf(ControlPressedTop, ControlPressedBottom)
+            } else if (highContrast) {
+                listOf(Color(0xFF55546D), Color(0xFF22232E))
+            } else {
+                listOf(ControlBackgroundTop, ControlBackgroundBottom)
+            },
+        )
+        drawRoundRect(brush = fill, topLeft = vertical, size = verticalSize,
+            cornerRadius = corner)
+        drawRoundRect(brush = fill, topLeft = horizontal, size = horizontalSize,
+            cornerRadius = corner)
+        val outline = if (held.isNotEmpty()) ControlAccentBright
             else if (highContrast) Color.White else ControlBorder
+        val stroke = Stroke(width = 1.7.dp.toPx())
         drawRoundRect(outline, topLeft = vertical, size = verticalSize,
             cornerRadius = corner, style = stroke)
         drawRoundRect(outline, topLeft = horizontal, size = horizontalSize,
             cornerRadius = corner, style = stroke)
+
+        // Recessed hub and four discreet directional indicators.
+        val centre = Offset(size.width / 2f, size.height / 2f)
+        drawCircle(Color(0xFF0F1019), radius = arm * 0.38f, center = centre)
+        drawCircle(outline.copy(alpha = 0.65f), radius = arm * 0.36f,
+            center = centre, style = Stroke(width = 1.dp.toPx()))
+        val indicator = ControlAccentBright.copy(alpha = if (held.isEmpty()) 0.64f else 1f)
+        val offset = size.width * 0.36f
+        val half = arm * 0.11f
+        val weight = 2.3.dp.toPx()
+        drawLine(indicator, Offset(centre.x - half, centre.y - offset),
+            Offset(centre.x + half, centre.y - offset), strokeWidth = weight)
+        drawLine(indicator, Offset(centre.x - half, centre.y + offset),
+            Offset(centre.x + half, centre.y + offset), strokeWidth = weight)
+        drawLine(indicator, Offset(centre.x - offset, centre.y - half),
+            Offset(centre.x - offset, centre.y + half), strokeWidth = weight)
+        drawLine(indicator, Offset(centre.x + offset, centre.y - half),
+            Offset(centre.x + offset, centre.y + half), strokeWidth = weight)
     }
 }
 
@@ -219,10 +254,21 @@ private fun GbMomentaryButton(
             .height(diameter.dp)
             .then(if (pill) Modifier else Modifier.width(diameter.dp))
             .semantics { contentDescription = label; role = Role.Button }
-            .border(2.dp, if (down) ControlAccent
-                else if (highContrast) Color.White else ControlBorder, shape)
-            .background(if (down) ControlAccent.copy(alpha = .25f)
-                else if (highContrast) Color.White.copy(alpha = .27f) else ControlFill, shape)
+            .shadow(if (down) 2.dp else 6.dp, shape)
+            .border(
+                if (down) 2.dp else 1.5.dp,
+                if (down) ControlAccentBright
+                    else if (highContrast) Color.White else ControlBorder,
+                shape,
+            )
+            .background(
+                brush = Brush.verticalGradient(
+                    if (down) listOf(ControlPressedTop, ControlPressedBottom)
+                    else if (highContrast) listOf(Color(0xFF55546D), Color(0xFF22232E))
+                    else listOf(ControlBackgroundTop, ControlBackgroundBottom),
+                ),
+                shape = shape,
+            )
             .pointerInput(button) {
                 detectTapGestures(onPress = {
                     down = true
@@ -241,8 +287,9 @@ private fun GbMomentaryButton(
         Text(
             label,
             fontSize = if (pill) 11.sp else 24.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.White.copy(alpha = if (down || highContrast) 1f else .86f),
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = if (pill) 0.8.sp else 0.sp,
+            color = if (down) Color.White else ControlAccentBright,
         )
     }
 }
