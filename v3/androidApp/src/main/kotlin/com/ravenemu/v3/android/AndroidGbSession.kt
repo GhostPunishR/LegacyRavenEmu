@@ -21,6 +21,7 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
     private val lock = Any()
     private val saveLock = Any()
     private val batteryStore = GbBatteryStore(File(filesDir, "gb-battery"))
+    private val stateStore = GbSaveStateStore(File(filesDir, "gb-states"))
     private var closed = false
     private var active: NativeCore? = null
     private var activeRomKey: String? = null
@@ -93,6 +94,40 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
         }
         Log.d(TAG, "Battery saved for ROM ${key.take(12)}")
         return true
+    }
+
+    /**
+     * An explicit slot-0 snapshot. Native capture is serialized with frames,
+     * while the atomic disk write happens without holding the emulation lock.
+     * ROM replacement and concurrent state operations are ordered by saveLock.
+     */
+    fun saveStateSlot() = synchronized(saveLock) {
+        val (key, state) = synchronized(lock) {
+            check(!closed) { "La session a été fermée." }
+            val core = active ?: error("Aucun jeu chargé.")
+            val key = activeRomKey ?: error("Aucune ROM active.")
+            key to core.saveState()
+        }
+        stateStore.write(key, state)
+        Log.d(TAG, "Save state stored for ROM ${key.take(12)}")
+    }
+
+    /** A missing slot or an incompatible/corrupt state never resets the game. */
+    fun loadStateSlot() = synchronized(saveLock) {
+        val key = synchronized(lock) {
+            check(!closed) { "La session a été fermée." }
+            activeRomKey ?: error("Aucun jeu chargé.")
+        }
+        val state = stateStore.read(key) ?: error("Aucun save state pour ce jeu.")
+        synchronized(lock) {
+            check(!closed && activeRomKey == key) { "La ROM active a changé." }
+            val core = active ?: error("Aucun jeu chargé.")
+            // Release the physical touch buttons before replacing native state.
+            for (button in heldButtons) core.button(button.nativeCode, false)
+            heldButtons.clear()
+            core.loadState(state)
+        }
+        Log.d(TAG, "Save state restored for ROM ${key.take(12)}")
     }
 
     /**
