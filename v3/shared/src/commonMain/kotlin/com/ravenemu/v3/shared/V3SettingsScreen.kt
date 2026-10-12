@@ -44,6 +44,7 @@ private val Outline = Color(0xFF3C4052)
 
 private enum class Page(val label: String) {
     HOME("Paramètres"),
+    RETRO("RetroAchievements"),
     GENERAL("Général"),
     AUDIO("Audio"),
     VIDEO("Vidéo"),
@@ -58,6 +59,11 @@ fun V3SettingsScreen(
     onSettingsChange: ((V3Settings) -> Unit)?,
     appVersion: String,
     onOpenLink: ((String) -> Unit)?,
+    retroSnapshot: V3RetroSnapshot = V3RetroSnapshot(),
+    retroBusy: Boolean = false,
+    onRetroLogin: ((String, String) -> Unit)? = null,
+    onRetroDisconnect: (() -> Unit)? = null,
+    onRetroRetry: (() -> Unit)? = null,
     aboutOnly: Boolean,
     onBack: () -> Unit,
 ) {
@@ -88,6 +94,11 @@ fun V3SettingsScreen(
         ) {
             when (page) {
                 Page.HOME -> {
+                    if (onRetroLogin != null) {
+                        CategoryRow("RetroAchievements", "Compte, succès et progression") {
+                            page = Page.RETRO
+                        }
+                    }
                     CategoryRow("Général", "Pause et diagnostics") { page = Page.GENERAL }
                     CategoryRow("Audio", "Son du jeu et volume") { page = Page.AUDIO }
                     CategoryRow("Vidéo", "Couleurs, luminosité et contraste") { page = Page.VIDEO }
@@ -95,8 +106,16 @@ fun V3SettingsScreen(
                     CategoryRow("À propos", "Version, auteur, confidentialité et licences") {
                         page = Page.ABOUT
                     }
-                    Text("RetroAchievements sera disponible après son intégration aux cœurs V3.",
-                        color = Muted, fontSize = 12.sp)
+                }
+                Page.RETRO -> {
+                    V3RetroAchievementsContent(
+                        snapshot = retroSnapshot,
+                        loginBusy = retroBusy,
+                        onLogin = onRetroLogin,
+                        onDisconnect = onRetroDisconnect,
+                        onRetry = onRetroRetry,
+                        onOpenLink = onOpenLink,
+                    )
                 }
                 Page.GENERAL -> {
                     GroupTitle("Émulation")
@@ -237,6 +256,7 @@ private fun GroupTitle(title: String) {
 @Composable
 private fun CategoryRow(title: String, summary: String, onClick: () -> Unit) {
     val icon = when (title) {
+        "RetroAchievements" -> V2IconType.ABOUT
         "Général" -> V2IconType.GENERAL
         "Audio" -> V2IconType.AUDIO
         "Vidéo" -> V2IconType.VIDEO
