@@ -27,6 +27,8 @@ class AndroidGbAudioOutput(
     context: Context,
     sampleRateHz: Int,
     videoRateHz: Double,
+    soundEnabled: Boolean = true,
+    volumePercent: Int = 100,
 ) : AutoCloseable {
     private val lock = Any()
     private val outputRate = resolveNativeRate(context)
@@ -95,6 +97,9 @@ class AndroidGbAudioOutput(
             throw IllegalStateException("Impossible d'initialiser AudioTrack.")
         }
         track = candidate
+        // Output gain only: do not change the clock, priming, resampler or
+        // 180 ms start fade validated on the phone.
+        track.setVolume(if (soundEnabled) volumePercent.coerceIn(0, 100) / 100f else 0f)
     }
 
     /** Submit samples on the emulation worker after each RavenGB frame. */
