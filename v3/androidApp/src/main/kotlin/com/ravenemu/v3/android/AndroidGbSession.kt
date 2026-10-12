@@ -106,6 +106,26 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
         return true
     }
 
+    /**
+     * Release a matching cached core BEFORE installing externally imported
+     * saves. Otherwise its stale in-memory battery RAM could be auto-saved on
+     * the next ROM launch or lifecycle event, overwriting the imported .sav.
+     * The next user launch recreates the core from the imported save files.
+     */
+    fun releaseForSaveImport(romKey: String) = synchronized(saveLock) {
+        saveBatteryIfDirtyLocked()
+        synchronized(lock) {
+            check(!closed) { "La session a été fermée." }
+            if (activeRomKey == romKey) {
+                for (button in heldButtons) active?.button(button.nativeCode, false)
+                heldButtons.clear()
+                active?.close()
+                active = null
+                activeRomKey = null
+            }
+        }
+    }
+
     /** Serialize state operations with both emulation and battery saves. */
     fun saveStateSlot(slot: Int = 0, preview: ByteArray? = null) = synchronized(saveLock) {
         val (key, state) = synchronized(lock) {
