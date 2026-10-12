@@ -4,13 +4,15 @@ Aperçu de la future interface **identique sur Android et iOS**. Le projet vit d
 
 ## État de la V3
 
-- Une interface Compose commune Android/iOS pour Bibliothèque, Lecteur et Réglages.
+- **Étape 2, interface fidèle à RavenEmu 0.8.1 :** palette sombre identique, barre compacte avec titre de console centré, recherche permanente, pages console balayables, grille de jaquettes sans cartes, mode liste, indicateur de pages et signature en bas. Les écrans sont construits une fois dans Compose Multiplatform pour Android et iOS.
+- La bibliothèque présente uniquement les consoles réellement chargées, comme la V2. L'import Android `.gb` reste accessible par le bouton +.
+- Les jaquettes sont pour l'instant représentées par un espace réservé neutre : aucune fausse pochette ni jeu préchargé. Les réglages et le menu de jeu affichent clairement les fonctions non encore migrées.
 - Une passerelle C native reliant les moteurs maison GB/GBC/GBA, avec adaptateurs Android JNI et Swift.
 - **Étape 1 :** import d'un fichier `.gb` depuis le sélecteur Android et chargement dans le vrai cœur RavenGB. L'écran confirme le nom et les dimensions de la ROM si le chargement réussit.
 - Le fichier n'est chargé **qu'en mémoire**. Il n'y a pas encore de bibliothèque persistante.
 - Les fichiers vides, non `.gb`, invalides ou supérieurs à 16 Mio sont refusés. Un échec conserve la session précédente si elle existe.
 
-**Encore à réaliser :** rendu en temps réel, commandes, audio, sauvegardes disque, import iOS, autres consoles dans le lecteur et RetroAchievements. Une ROM chargée n'est pas une partie jouable.
+**Encore à réaliser :** véritables jaquettes et scan des dossiers, écran de réglages complet, rendu en temps réel, commandes, audio, sauvegardes disque, import iOS, autres consoles dans le lecteur et RetroAchievements. Une ROM chargée n'est pas une partie jouable.
 
 ## Architecture
 
@@ -68,4 +70,4 @@ L'import GB Android charge maintenant les ROMs dans le cœur natif, mais l'exéc
 
 Les fichiers Gradle V2 à la racine ne changent pas ; V3 possède son propre `settings.gradle.kts`. Une modification de l'application V2 ou des cœurs ne met pas automatiquement V3 à jour.
 
-Prochaines étapes, dans cet ordre : affichage du framebuffer GB sur Android, commandes tactiles, audio, sauvegardes persistantes, puis import et lecteur iOS, et enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.
+Prochaines étapes, dans cet ordre : vérification visuelle sur téléphone Android de l'interface V2 reconstituée, puis affichage du framebuffer GB, commandes tactiles, audio, sauvegardes persistantes, import et lecteur iOS, enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.

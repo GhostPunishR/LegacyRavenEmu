@@ -1,50 +1,79 @@
 package com.ravenemu.v3.shared
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
-private val RavenPurple = Color(0xFFAD92FF)
-private val RavenDark = Color(0xFF111019)
-private enum class RavenTab(val title: String, val glyph: String) {
-    LIBRARY("Bibliothèque", "G"),
-    PLAYER("Jouer", "P"),
-    SETTINGS("Réglages", "S"),
-}
+/*
+ * RavenEmu 0.8.1 visual reference:
+ * app/android/src/main/res/layout/activity_main.xml
+ * app/android/src/main/res/layout/item_rom_grid.xml
+ * app/android/src/main/res/values/colors.xml
+ *
+ * Reimplemented with shared Compose so Android and iOS show the same screens.
+ */
+private val RavenBackground = Color(0xFF0B0C12)
+private val RavenSurface = Color(0xFF161821)
+private val RavenAccent = Color(0xFFA78BFA)
+private val RavenText = Color(0xFFF5F2FF)
+private val RavenSecondary = Color(0xFFCBC4DC)
+private val RavenMuted = Color(0xFFAAA2BC)
+private val RavenOutline = Color(0xFF3C4052)
+private val RavenDanger = Color(0xFFFF928B)
 
-/** The same Compose UI is displayed on Android and iOS. */
+private enum class RavenScreen { LIBRARY, SETTINGS, ABOUT }
+private enum class RavenGlyph { SETTINGS, ADD, MORE, SEARCH, BACK }
+
 @Composable
 fun RavenEmuApp(
     onImportRom: (() -> Unit)? = null,
@@ -52,49 +81,136 @@ fun RavenEmuApp(
     importBusy: Boolean = false,
     importError: String? = null,
 ) {
-    var current by remember { mutableStateOf(RavenTab.LIBRARY) }
-    var darkMode by remember { mutableStateOf(true) }
-    val colors = if (darkMode) {
-        darkColorScheme(primary = RavenPurple, background = RavenDark, surface = Color(0xFF1E1B2A))
-    } else {
-        lightColorScheme(primary = Color(0xFF6745BD), surface = Color(0xFFF7F5FD))
+    var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
+    var search by remember { mutableStateOf("") }
+    var listMode by remember { mutableStateOf(false) }
+    var gameDetails by remember { mutableStateOf<GameEntry?>(null) }
+    val games = if (loadedGame == null) emptyList() else listOf(
+        GameEntry("active", loadedGame.filename, loadedGame.platform),
+    )
+    val pages = LibraryNavigation.pages(games)
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+
+    LaunchedEffect(pages.size) {
+        if (pagerState.currentPage >= pages.size) pagerState.scrollToPage(0)
     }
 
-    MaterialTheme(colorScheme = colors) {
-        Scaffold(
-            topBar = {
-                Surface(tonalElevation = 2.dp) {
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
-                        Text("RAVENEMU", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text("V3 · Aperçu multiplateforme", style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    MaterialTheme(colorScheme = darkColorScheme(
+        primary = RavenAccent,
+        background = RavenBackground,
+        surface = RavenSurface,
+        onBackground = RavenText,
+        onSurface = RavenText,
+        onPrimary = RavenBackground,
+    )) {
+        Column(Modifier.fillMaxSize().background(RavenBackground)) {
+            when (screen) {
+                RavenScreen.LIBRARY -> {
+                    LibraryToolbar(
+                        title = pages.getOrElse(pagerState.currentPage) { pages.first() }.title,
+                        importEnabled = onImportRom != null && !importBusy,
+                        listMode = listMode,
+                        onSettings = { screen = RavenScreen.SETTINGS },
+                        onAdd = { onImportRom?.invoke() },
+                        onToggleView = { listMode = !listMode },
+                        onAbout = { screen = RavenScreen.ABOUT },
+                    )
+                    SearchField(query = search, onChange = { search = it })
+                    if (importBusy) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Text("Chargement de la ROM...", fontSize = 12.sp, color = RavenMuted)
+                        }
                     }
-                }
-            },
-            bottomBar = {
-                NavigationBar {
-                    RavenTab.entries.forEach { tab ->
-                        NavigationBarItem(
-                            selected = tab == current,
-                            onClick = { current = tab },
-                            icon = { Text(tab.glyph, fontWeight = FontWeight.Bold) },
-                            label = { Text(tab.title) },
+                    if (importError != null) {
+                        Text(
+                            importError,
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            color = RavenDanger,
+                            fontSize = 12.sp,
                         )
                     }
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                    ) { index ->
+                        val page = pages[index]
+                        val entries = LibraryNavigation.gamesForPage(games, page, search)
+                        LibraryPageContent(
+                            entries = entries,
+                            emptyMessage = when {
+                                search.isNotBlank() -> "Aucun jeu ne correspond à cette recherche."
+                                games.isEmpty() && onImportRom != null ->
+                                    "Aucun jeu détecté.\nAjoutez une ROM avec le bouton + de la barre."
+                                games.isEmpty() -> "Aucun jeu détecté.\nImport iOS à venir."
+                                else -> "Aucun jeu ${page.title} dans votre bibliothèque."
+                            },
+                            listMode = listMode,
+                            onSelect = { gameDetails = it },
+                        )
+                    }
+                    PageIndicator(pages.size, pagerState.currentPage)
+                    Text(
+                        "RavenEmu By GhostPunishR",
+                        modifier = Modifier.fillMaxWidth().height(28.dp),
+                        color = RavenMuted,
+                        fontSize = 10.sp,
+                        letterSpacing = 0.8.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                    )
                 }
-            },
-        ) { padding ->
-            Column(
-                Modifier.fillMaxSize().padding(padding).padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                RavenScreen.SETTINGS -> V2Subscreen(
+                    title = "Réglages",
+                    onBack = { screen = RavenScreen.LIBRARY },
+                ) {
+                    Text("RavenEmu V3 Preview", fontSize = 16.sp, color = RavenText)
+                    Text(
+                        "L'interface reprend RavenEmu 0.8.1. Les réglages du moteur, les skins et les comptes seront migrés après le lecteur.",
+                        fontSize = 14.sp,
+                        color = RavenMuted,
+                    )
+                }
+                RavenScreen.ABOUT -> V2Subscreen(
+                    title = "À propos",
+                    onBack = { screen = RavenScreen.LIBRARY },
+                ) {
+                    Text("RavenEmu", color = RavenText, fontSize = 20.sp)
+                    Text("Préversion V3 Android / iOS", color = RavenMuted, fontSize = 14.sp)
+                    Text(
+                        "Chargement Game Boy disponible sur Android. L'affichage du jeu et les contrôles arrivent dans les étapes suivantes.",
+                        color = RavenMuted,
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+        }
+        if (gameDetails != null) {
+            ModalBottomSheet(
+                onDismissRequest = { gameDetails = null },
+                containerColor = RavenSurface,
+                contentColor = RavenText,
             ) {
-                when (current) {
-                    RavenTab.LIBRARY -> LibraryScreen(
-                        onImportRom, loadedGame, importBusy, importError)
-                    RavenTab.PLAYER -> PlayerScreen(
-                        loadedGame, onOpenLibrary = { current = RavenTab.LIBRARY })
-                    RavenTab.SETTINGS -> SettingsScreen(
-                        darkMode = darkMode, onDarkModeChange = { darkMode = it })
+                val entry = gameDetails!!
+                Column(
+                    Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(entry.title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(platformLabel(entry.platform), color = RavenSecondary, fontSize = 13.sp)
+                    Text("ROM chargée dans RavenGB.", color = RavenText)
+                    Text(
+                        "Lecture et commandes pas encore disponibles dans cette préversion.",
+                        color = RavenMuted,
+                        fontSize = 13.sp,
+                    )
+                    TextButton(onClick = { gameDetails = null }) {
+                        Text("Fermer", color = RavenAccent)
+                    }
                 }
             }
         }
@@ -102,117 +218,271 @@ fun RavenEmuApp(
 }
 
 @Composable
-private fun LibraryScreen(
-    onImportRom: (() -> Unit)?,
-    loadedGame: LoadedGameInfo?,
-    importBusy: Boolean,
-    importError: String?,
+private fun LibraryToolbar(
+    title: String,
+    importEnabled: Boolean,
+    listMode: Boolean,
+    onSettings: () -> Unit,
+    onAdd: () -> Unit,
+    onToggleView: () -> Unit,
+    onAbout: () -> Unit,
 ) {
-    var query by remember { mutableStateOf("") }
-    var selected by remember { mutableStateOf<GamePlatform?>(null) }
-    val games = if (loadedGame == null) emptyList() else listOf(
-        GameEntry("session", loadedGame.filename, loadedGame.platform))
-    val filtered = LibraryCatalog.search(games, query, selected)
+    var menuOpen by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth().height(48.dp)) {
+        Text(
+            title,
+            Modifier.align(Alignment.Center).padding(horizontal = 104.dp),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium,
+            color = RavenText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+        Row(Modifier.align(Alignment.CenterStart).padding(start = 4.dp)) {
+            IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)) {
+                RavenIcon(RavenGlyph.SETTINGS, RavenText)
+            }
+        }
+        Row(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) {
+            IconButton(
+                onClick = onAdd,
+                enabled = importEnabled,
+                modifier = Modifier.size(48.dp),
+            ) {
+                RavenIcon(RavenGlyph.ADD, if (importEnabled) RavenAccent else RavenMuted)
+            }
+            Box {
+                IconButton(
+                    onClick = { menuOpen = true },
+                    modifier = Modifier.size(48.dp),
+                ) { RavenIcon(RavenGlyph.MORE, RavenText) }
+                DropdownMenu(
+                    expanded = menuOpen,
+                    onDismissRequest = { menuOpen = false },
+                    modifier = Modifier.background(RavenSurface),
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(if (listMode) "Vue grille" else "Vue liste", color = RavenText) },
+                        onClick = { menuOpen = false; onToggleView() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("À propos", color = RavenText) },
+                        onClick = { menuOpen = false; onAbout() },
+                    )
+                }
+            }
+        }
+    }
+}
 
-    Text("Mes jeux", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-    Button(
-        onClick = { onImportRom?.invoke() },
-        enabled = onImportRom != null && !importBusy,
-    ) {
-        Text(if (importBusy) "Chargement de la ROM..." else "Importer une ROM .gb")
-    }
-    if (onImportRom == null) {
-        Text("Import sur cette plateforme à venir.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    if (importError != null) {
-        Text(importError, color = MaterialTheme.colorScheme.error)
-    }
-
-    TextField(
+@Composable
+private fun SearchField(query: String, onChange: (String) -> Unit) {
+    BasicTextField(
         value = query,
-        onValueChange = { query = it },
-        label = { Text("Rechercher un jeu") },
+        onValueChange = onChange,
         singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        textStyle = TextStyle(color = RavenText, fontSize = 15.sp),
+        cursorBrush = SolidColor(RavenAccent),
+        modifier = Modifier.fillMaxWidth()
+            .padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
+            .height(42.dp)
+            .background(RavenSurface, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp),
+        decorationBox = { field ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RavenIcon(RavenGlyph.SEARCH, RavenMuted)
+                Spacer(Modifier.width(8.dp))
+                Box(Modifier.weight(1f)) {
+                    if (query.isEmpty()) {
+                        Text("Rechercher un jeu", color = RavenMuted, fontSize = 15.sp)
+                    }
+                    field()
+                }
+            }
+        },
     )
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        FilterChip(selected = selected == null, onClick = { selected = null }, label = { Text("Tous") })
-        GamePlatform.entries.forEach { platform ->
-            FilterChip(
-                selected = selected == platform,
-                onClick = { selected = platform },
-                label = { Text(platform.name) },
+}
+
+@Composable
+private fun LibraryPageContent(
+    entries: List<GameEntry>,
+    emptyMessage: String,
+    listMode: Boolean,
+    onSelect: (GameEntry) -> Unit,
+) {
+    if (entries.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                emptyMessage,
+                Modifier.padding(32.dp),
+                textAlign = TextAlign.Center,
+                color = RavenMuted,
+                fontSize = 14.sp,
+                lineHeight = 21.sp,
             )
         }
-    }
-    Card(Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    } else if (listMode) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(1),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = 12.dp, vertical = 8.dp),
         ) {
-            if (filtered.isNotEmpty() && loadedGame != null) {
-                Text(loadedGame.filename, style = MaterialTheme.typography.titleLarge)
-                Text("Game Boy · ${loadedGame.width} × ${loadedGame.height}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("ROM chargée en mémoire. Le jeu n'est pas encore lancé.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center)
-            } else {
-                Text(
-                    if (loadedGame == null) "Aucune ROM chargée" else "Aucun résultat",
-                    style = MaterialTheme.typography.titleLarge)
-                Text("La bibliothèque permanente sera ajoutée plus tard.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center)
+            items(entries, key = { it.id }) { entry ->
+                Row(
+                    Modifier.fillMaxWidth().clickable { onSelect(entry) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CoverPlaceholder(
+                        entry.platform, Modifier.width(44.dp).height(52.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(entry.title, color = RavenText, fontSize = 15.sp,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(platformLabel(entry.platform), color = RavenMuted, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 106.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp),
+        ) {
+            items(entries, key = { it.id }) { entry ->
+                Column(
+                    modifier = Modifier.clickable { onSelect(entry) }
+                        .padding(start = 4.dp, top = 6.dp, end = 4.dp, bottom = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    CoverPlaceholder(entry.platform,
+                        Modifier.fillMaxWidth().aspectRatio(6f / 7f))
+                    Spacer(Modifier.height(6.dp))
+                    Text(entry.title, color = RavenSecondary, fontSize = 11.sp,
+                        maxLines = 3, overflow = TextOverflow.Ellipsis,
+                        lineHeight = 14.sp, textAlign = TextAlign.Center)
+                }
+            }
+        }
+    }
+}
+
+/* No invented artwork. A neutral placeholder is used until covers are migrated. */
+@Composable
+private fun CoverPlaceholder(platform: GamePlatform, modifier: Modifier) {
+    Box(modifier.background(RavenSurface), contentAlignment = Alignment.Center) {
+        Text(
+            platform.name,
+            color = RavenMuted.copy(alpha = 0.6f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+@Composable
+private fun PageIndicator(pageCount: Int, currentPage: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(28.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (pageCount > 1) {
+            repeat(pageCount) { index ->
+                Box(
+                    Modifier.padding(horizontal = 4.dp)
+                        .size(if (index == currentPage) 7.dp else 5.dp)
+                        .background(
+                            if (index == currentPage) RavenAccent else RavenOutline,
+                            CircleShape,
+                        ),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun PlayerScreen(loadedGame: LoadedGameInfo?, onOpenLibrary: () -> Unit) {
-    Text("Lecteur", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-    Card(Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier.fillMaxWidth().height(230.dp).background(Color(0xFF161824)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("RAVEN", color = RavenPurple, style = MaterialTheme.typography.headlineLarge)
-                Text(
-                    if (loadedGame == null) "Aucune ROM chargée"
-                    else "ROM chargée : " + loadedGame.filename,
-                    color = Color.White)
-            }
+private fun V2Subscreen(
+    title: String,
+    onBack: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().height(48.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+            RavenIcon(RavenGlyph.BACK, RavenText)
         }
+        Text(title, fontSize = 20.sp, color = RavenText, fontWeight = FontWeight.Medium)
     }
-    Text("Le rendu du jeu, les commandes et l'audio seront branchés dans les étapes suivantes.",
-        color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Button(onClick = onOpenLibrary) { Text("Retour à la bibliothèque") }
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) { content() }
 }
 
+private fun platformLabel(platform: GamePlatform): String = when (platform) {
+    GamePlatform.GB -> "Game Boy"
+    GamePlatform.GBC -> "Game Boy Color"
+    GamePlatform.GBA -> "Game Boy Advance"
+}
+
+/* Vector icons render consistently on Android and iOS without system glyphs. */
 @Composable
-private fun SettingsScreen(darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
-    Text("Réglages", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-    Card(Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column {
-                Text("Mode sombre", style = MaterialTheme.typography.titleMedium)
-                Text("Même thème sur les deux plateformes", style = MaterialTheme.typography.bodySmall)
+private fun RavenIcon(icon: RavenGlyph, tint: Color) {
+    Canvas(Modifier.size(24.dp)) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val line = 2.dp.toPx()
+        when (icon) {
+            RavenGlyph.ADD -> {
+                drawLine(tint, Offset(cx, size.height * .16f),
+                    Offset(cx, size.height * .84f), strokeWidth = line)
+                drawLine(tint, Offset(size.width * .16f, cy),
+                    Offset(size.width * .84f, cy), strokeWidth = line)
             }
-            Switch(checked = darkMode, onCheckedChange = onDarkModeChange)
+            RavenGlyph.MORE -> {
+                for (fraction in listOf(.24f, .5f, .76f)) {
+                    drawCircle(tint, radius = 1.8.dp.toPx(),
+                        center = Offset(cx, size.height * fraction))
+                }
+            }
+            RavenGlyph.SEARCH -> {
+                drawCircle(tint, radius = size.minDimension * .27f,
+                    center = Offset(cx * .88f, cy * .86f),
+                    style = Stroke(width = line))
+                drawLine(tint, Offset(size.width * .63f, size.height * .63f),
+                    Offset(size.width * .85f, size.height * .85f), strokeWidth = line)
+            }
+            RavenGlyph.BACK -> {
+                drawLine(tint, Offset(size.width * .6f, size.height * .18f),
+                    Offset(size.width * .28f, cy), strokeWidth = line)
+                drawLine(tint, Offset(size.width * .28f, cy),
+                    Offset(size.width * .6f, size.height * .82f), strokeWidth = line)
+            }
+            RavenGlyph.SETTINGS -> {
+                drawCircle(tint, radius = size.minDimension * .28f,
+                    center = Offset(cx, cy), style = Stroke(width = line))
+                drawCircle(tint, radius = size.minDimension * .09f,
+                    center = Offset(cx, cy), style = Stroke(width = line))
+                for (i in 0..7) {
+                    val angle = i.toDouble() * PI / 4
+                    val x = cos(angle).toFloat()
+                    val y = sin(angle).toFloat()
+                    drawLine(tint,
+                        Offset(cx + x * size.minDimension * .32f,
+                            cy + y * size.minDimension * .32f),
+                        Offset(cx + x * size.minDimension * .44f,
+                            cy + y * size.minDimension * .44f),
+                        strokeWidth = line)
+                }
+            }
         }
     }
-    Text("Les préférences persistantes seront ajoutées avec le stockage natif.",
-        color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
