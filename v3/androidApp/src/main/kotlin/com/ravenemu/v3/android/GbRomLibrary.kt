@@ -69,8 +69,22 @@ internal class GbRomLibrary(
         val id = GbBatteryStore.keyForRom(bytes)
         val existing = list()
         val already = existing.firstOrNull { it.id == id }
-        if (already != null) return already
+        if (already != null) {
+            // Re-importing a known cartridge can repair a missing or corrupt
+            // private ROM copy without touching its .sav or save state.
+            if (runCatching { readRom(id).contentEquals(bytes) }.getOrDefault(false).not()) {
+                writeRom(id, bytes)
+            }
+            return already
+        }
         require(existing.size < MAX_GAMES) { "Bibliothèque pleine ($MAX_GAMES jeux)." }
+        writeRom(id, bytes)
+        val added = StoredGbRom(id, filename.take(256))
+        writeIndex(existing + added)
+        return added
+    }
+
+    private fun writeRom(id: String, bytes: ByteArray) {
         check(romFolder.isDirectory || romFolder.mkdirs()) {
             "Impossible de créer le dossier des ROM."
         }
@@ -83,9 +97,6 @@ internal class GbRomLibrary(
             file.failWrite(output)
             throw error
         }
-        val added = StoredGbRom(id, filename.take(256))
-        writeIndex(existing + added)
-        return added
     }
 
     fun readRom(id: String): ByteArray {
