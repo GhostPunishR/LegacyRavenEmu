@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
             var audioStatus by remember { mutableStateOf<String?>(null) }
             var stateOperationBusy by remember { mutableStateOf(false) }
             var restoringState by remember { mutableStateOf(false) }
+            var stateRevision by remember { mutableStateOf(0) }
             val scope = rememberCoroutineScope()
             val exportAudio = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.CreateDocument("text/plain"),
@@ -98,7 +99,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(videoEnabled, loadedGame, foreground, restoringState) {
+            LaunchedEffect(videoEnabled, loadedGame, foreground, restoringState, stateRevision) {
                 frame = null
                 videoMetrics = null
                 if (!videoEnabled || !foreground || loadedGame == null || restoringState) return@LaunchedEffect
@@ -314,6 +315,8 @@ class MainActivity : ComponentActivity() {
                                     Toast.LENGTH_LONG,
                                 ).show()
                             } finally {
+                                // Even a very fast load must restart the audio pipeline.
+                                stateRevision++
                                 restoringState = false
                                 stateOperationBusy = false
                             }
