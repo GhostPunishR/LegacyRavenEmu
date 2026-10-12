@@ -41,17 +41,20 @@ object GbDisplayFilter {
             val sourceR = (color ushr 16) and 255
             val sourceG = (color ushr 8) and 255
             val sourceB = color and 255
-            val (r, g, b) = if (profile == "original") {
-                Triple(sourceR, sourceG, sourceB)
-            } else {
+            var r = sourceR
+            var g = sourceG
+            var b = sourceB
+            if (profile != "original") {
                 val luminance = (sourceR * 30 + sourceG * 59 + sourceB * 11) / 100
                 if (profile == "dmg") {
                     // Retro LCD green with a dark-green shadow color.
-                    Triple(15 + luminance * 140 / 255,
-                        56 + luminance * 132 / 255,
-                        15 + luminance * 85 / 255)
+                    r = 15 + luminance * 140 / 255
+                    g = 56 + luminance * 132 / 255
+                    b = 15 + luminance * 85 / 255
                 } else {
-                    Triple(luminance, luminance, luminance)
+                    r = luminance
+                    g = luminance
+                    b = luminance
                 }
             }
             fun adjust(channel: Int): Int =
