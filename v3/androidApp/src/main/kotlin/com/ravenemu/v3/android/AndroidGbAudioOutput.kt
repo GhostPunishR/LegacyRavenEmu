@@ -13,7 +13,7 @@ import kotlin.math.roundToInt
  * Audio output based on RavenEmu 0.8.1's proven transport.
  *
  * Convert the native GB stereo PCM16 stream with a band-limited resampler to
- * the phone's preferred rate (usually 48kHz). Keep six frames queued before
+ * the phone's preferred rate (usually 48kHz). Keep two frames queued before
  * starting playback and gently adapt to the device audio clock.
  *
  * Unlike the V2 sink, the V3 preview keeps non-blocking AudioTrack writes
@@ -38,7 +38,7 @@ class AndroidGbAudioOutput(
 
     private var writtenFrames = 0L
     private var droppedSamples = 0L
-    private val fadeFrames = (outputRate / 8).coerceAtLeast(1) // ~125 ms, suppress startup transients
+    private val fadeFrames = (outputRate / 20).coerceAtLeast(1) // ~50 ms fade, without delaying playback
     private var rampFrame = 0
     private var closed = false
 
@@ -68,7 +68,7 @@ class AndroidGbAudioOutput(
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build(),
             )
-            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_NONE)
+            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
             .setAudioFormat(
                 AudioFormat.Builder()
                     .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
@@ -135,7 +135,8 @@ class AndroidGbAudioOutput(
     /** Live diagnostics to distinguish device underruns from bounded FIFO overflow. */
     fun diagnostics(): String = synchronized(lock) {
         "Audio: underruns=${track.underrunCount}, pertesPCM=${droppedSamples / CHANNELS} frames, " +
-            "file=${queue.size / CHANNELS} frames"
+            "file=${queue.size / CHANNELS} PCM, " +
+            "latence~=${((writtenFrames - (track.playbackHeadPosition.toLong() and MASK_32)).coerceAtLeast(0L) * 1000L / outputRate)}ms"
     }
 
     /** Start from silence even if the native APU already has nonzero samples. */
@@ -176,8 +177,8 @@ class AndroidGbAudioOutput(
     private companion object {
         const val CHANNELS = 2
         const val BYTES_PER_SAMPLE = 2
-        const val BUFFER_VIDEO_FRAMES = 12
-        const val PRIME_VIDEO_FRAMES = 8
+        const val BUFFER_VIDEO_FRAMES = 4
+        const val PRIME_VIDEO_FRAMES = 2
         const val MASK_32 = 0xFFFF_FFFFL
 
         fun resolveNativeRate(context: Context): Int = try {
