@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var gameSession: AndroidGbSession
     private var foreground by mutableStateOf(false)
     private var activeAudio: AndroidGbAudioOutput? = null
+    private var lastAudioReport: String = "Aucune session audio enregistrée.\n"
 
     override fun onResume() {
         super.onResume()
@@ -72,6 +73,19 @@ class MainActivity : ComponentActivity() {
             var videoMetrics by remember { mutableStateOf<GbVideoMetrics?>(null) }
             var audioStatus by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
+            val exportAudio = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.CreateDocument("text/plain"),
+            ) { uri ->
+                if (uri != null) {
+                    try {
+                        contentResolver.openOutputStream(uri)?.use { stream ->
+                            stream.write(lastAudioReport.toByteArray(Charsets.UTF_8))
+                        } ?: Log.e("RavenEmuAudio", "Unable to open diagnostic destination")
+                    } catch (error: Exception) {
+                        Log.e("RavenEmuAudio", "Unable to save audio report", error)
+                    }
+                }
+            }
 
             LaunchedEffect(videoEnabled, loadedGame, foreground) {
                 frame = null
@@ -96,6 +110,7 @@ class MainActivity : ComponentActivity() {
                             ?: throw IllegalStateException("Aucune piste audio GB active.")
                         output = AndroidGbAudioOutput(applicationContext, rate, targetFps)
                         activeAudio = output
+                        lastAudioReport = "Session audio démarrée; diagnostic en cours.\n"
                         audioStatus = "Audio GB optimisé (préversion)"
                     } catch (error: Exception) {
                         audioStatus = "Audio indisponible : ${error.message ?: "Erreur AudioTrack"}"
@@ -138,6 +153,7 @@ class MainActivity : ComponentActivity() {
                             if (captured.audioFailure != null) {
                                 audioStatus = "Audio interrompu : ${captured.audioFailure}"
                                 if (activeAudio === output) activeAudio = null
+                                output?.let { lastAudioReport = it.exportReport() }
                                 output?.close()
                                 output = null
                             }
@@ -149,7 +165,10 @@ class MainActivity : ComponentActivity() {
                             if (sample != null) {
                                 videoMetrics = sample
                                 if (captured.audioFailure == null) {
-                                    output?.let { Log.d("RavenEmuAudio", it.diagnostics()) }
+                                    output?.let {
+                                        lastAudioReport = it.exportReport()
+                                        Log.d("RavenEmuAudio", it.diagnostics())
+                                    }
                                 }
                             }
                         } catch (cancelled: CancellationException) {
@@ -170,6 +189,7 @@ class MainActivity : ComponentActivity() {
                     }
                 } finally {
                     if (activeAudio === output) activeAudio = null
+                    output?.let { lastAudioReport = it.exportReport() }
                     output?.close()
                 }
             }
@@ -216,6 +236,10 @@ class MainActivity : ComponentActivity() {
                 videoFrame = frame,
                 videoError = videoError,
                 videoMetrics = videoMetrics,
+                onExportAudioDiagnostics = {
+                    lastAudioReport = activeAudio?.exportReport() ?: lastAudioReport
+                    exportAudio.launch("ravenemu-audio-diagnostic.txt")
+                },
             )
         }
     }
