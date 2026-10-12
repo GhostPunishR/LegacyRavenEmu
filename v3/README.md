@@ -12,7 +12,9 @@ Aperçu de la future interface **identique sur Android et iOS**. Le projet vit d
 - Le fichier n'est chargé **qu'en mémoire**. Il n'y a pas encore de bibliothèque persistante.
 - Les fichiers vides, non `.gb`, invalides ou supérieurs à 16 Mio sont refusés. Un échec conserve la session précédente si elle existe.
 
-**Encore à réaliser :** véritables jaquettes et scan des dossiers, écran de réglages complet, rendu en temps réel, commandes, audio, sauvegardes disque, import iOS, autres consoles dans le lecteur et RetroAchievements. Une ROM chargée n'est pas une partie jouable.
+**Étape suivante, vidéo GB Android :** la fiche du jeu comporte maintenant "Afficher l'écran". Le lecteur exécute des frames RavenGB sur un thread de travail et affiche le vrai framebuffer avec un filtrage pixel art, dans le lecteur Compose partagé. L'exécution est suspendue quand l'écran est fermé ou que l'application passe en arrière-plan. La cadence cible provient du cœur, mais la synchronisation audio et le frame pacing précis restent à développer.
+
+**Encore à réaliser :** essais sur appareil Android de cette prévisualisation, véritables jaquettes et scan des dossiers, écran de réglages complet, commandes, audio, sauvegardes disque, import iOS, autres consoles dans le lecteur et RetroAchievements. L'absence de commandes signifie qu'il ne s'agit pas encore d'un jeu jouable.
 
 ## Architecture
 
@@ -70,4 +72,4 @@ L'import GB Android charge maintenant les ROMs dans le cœur natif, mais l'exéc
 
 Les fichiers Gradle V2 à la racine ne changent pas ; V3 possède son propre `settings.gradle.kts`. Une modification de l'application V2 ou des cœurs ne met pas automatiquement V3 à jour.
 
-Prochaines étapes, dans cet ordre : vérification visuelle sur téléphone Android de l'interface V2 reconstituée, puis affichage du framebuffer GB, commandes tactiles, audio, sauvegardes persistantes, import et lecteur iOS, enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.
+Prochaines étapes, dans cet ordre : valider la prévisualisation vidéo GB sur un téléphone Android, puis commandes tactiles, audio, sauvegardes persistantes, import et lecteur iOS, enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.

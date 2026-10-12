@@ -1,6 +1,7 @@
 package com.ravenemu.v3.shared
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
@@ -72,7 +76,7 @@ private val RavenMuted = Color(0xFFAAA2BC)
 private val RavenOutline = Color(0xFF3C4052)
 private val RavenDanger = Color(0xFFFF928B)
 
-private enum class RavenScreen { LIBRARY, SETTINGS, ABOUT }
+private enum class RavenScreen { LIBRARY, SETTINGS, ABOUT, PLAYER }
 private enum class RavenGlyph { SETTINGS, ADD, MORE, SEARCH, BACK }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,6 +86,10 @@ fun RavenEmuApp(
     loadedGame: LoadedGameInfo? = null,
     importBusy: Boolean = false,
     importError: String? = null,
+    onStartVideo: (() -> Unit)? = null,
+    onStopVideo: (() -> Unit)? = null,
+    videoFrame: ImageBitmap? = null,
+    videoError: String? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
     var search by remember { mutableStateOf("") }
@@ -184,11 +192,20 @@ fun RavenEmuApp(
                     Text("RavenEmu", color = RavenText, fontSize = 20.sp)
                     Text("Préversion V3 Android / iOS", color = RavenMuted, fontSize = 14.sp)
                     Text(
-                        "Chargement Game Boy disponible sur Android. L'affichage du jeu et les contrôles arrivent dans les étapes suivantes.",
+                        "La prévisualisation vidéo Game Boy est disponible sur Android. Les commandes et l'audio ne sont pas encore connectés.",
                         color = RavenMuted,
                         fontSize = 14.sp,
                     )
                 }
+                RavenScreen.PLAYER -> GbVideoScreen(
+                    title = loadedGame?.filename.orEmpty(),
+                    frame = videoFrame,
+                    error = videoError,
+                    onBack = {
+                        onStopVideo?.invoke()
+                        screen = RavenScreen.LIBRARY
+                    },
+                )
             }
         }
         if (gameDetails != null) {
@@ -206,16 +223,85 @@ fun RavenEmuApp(
                     Text(platformLabel(entry.platform), color = RavenSecondary, fontSize = 13.sp)
                     Text("ROM chargée dans RavenGB.", color = RavenText)
                     Text(
-                        "Lecture et commandes pas encore disponibles dans cette préversion.",
+                        "Cette préversion affiche les images du jeu sans commandes ni audio.",
                         color = RavenMuted,
                         fontSize = 13.sp,
                     )
+                    if (onStartVideo != null && loadedGame != null) {
+                        TextButton(onClick = {
+                            gameDetails = null
+                            onStartVideo()
+                            screen = RavenScreen.PLAYER
+                        }) {
+                            Text("Afficher l'écran", color = RavenAccent)
+                        }
+                    }
                     TextButton(onClick = { gameDetails = null }) {
                         Text("Fermer", color = RavenAccent)
                     }
                 }
             }
         }
+    }
+}
+
+
+/**
+ * First video milestone. The common Compose screen is ready for both systems,
+ * while the video producer is implemented only in the Android host so far.
+ * No input, audio output or save-file behavior is implied.
+ */
+@Composable
+private fun GbVideoScreen(
+    title: String,
+    frame: ImageBitmap?,
+    error: String?,
+    onBack: () -> Unit,
+) {
+    Column(Modifier.fillMaxSize().background(Color.Black)) {
+        Row(
+            Modifier.fillMaxWidth().height(48.dp).background(RavenBackground),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+                RavenIcon(RavenGlyph.BACK, RavenText)
+            }
+            Text(
+                title,
+                color = RavenText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontSize = 16.sp,
+            )
+        }
+        Box(
+            Modifier.fillMaxWidth().weight(1f).background(Color.Black),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (frame != null) {
+                Image(
+                    bitmap = frame,
+                    contentDescription = "Image de la Game Boy",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    filterQuality = FilterQuality.None,
+                )
+            } else {
+                Text(
+                    if (error == null) "Préparation de l'image du jeu..." else error,
+                    color = if (error == null) RavenMuted else RavenDanger,
+                    modifier = Modifier.padding(20.dp),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        Text(
+            "Prévisualisation vidéo uniquement. Commandes et audio à venir.",
+            color = RavenMuted,
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+        )
     }
 }
 
