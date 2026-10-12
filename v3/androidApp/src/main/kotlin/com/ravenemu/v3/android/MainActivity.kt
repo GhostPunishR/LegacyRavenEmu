@@ -609,24 +609,57 @@ class MainActivity : ComponentActivity() {
                 },
                 onExportGameBackup = { id ->
                     if (!saveTransferBusy && !videoEnabled && libraryGames.any { it.id == id }) {
+                        saveTransferBusy = true
                         val gameName = libraryGames.first { it.id == id }.title
                             .substringBeforeLast('.')
                             .replace(Regex("[^A-Za-z0-9_-]+"), "-")
                             .take(48)
                             .ifBlank { "GameBoy" }
-                        pendingExport = id to "zip"
-                        exportBackup.launch("$gameName-ravenemu-saves.zip")
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    gameSession.saveBatteryIfDirty()
+                                    check(saveTransfer.hasAnySave(id)) {
+                                        "Aucune sauvegarde à exporter pour ce jeu."
+                                    }
+                                }
+                                pendingExport = id to "zip"
+                                exportBackup.launch("$gameName-ravenemu-saves.zip")
+                            } catch (error: Exception) {
+                                Toast.makeText(applicationContext,
+                                    error.message ?: "Export impossible", Toast.LENGTH_LONG).show()
+                            } finally {
+                                saveTransferBusy = false
+                            }
+                        }
                     }
                 },
                 onExportBatterySave = { id ->
                     if (!saveTransferBusy && !videoEnabled && libraryGames.any { it.id == id }) {
+                        saveTransferBusy = true
                         val gameName = libraryGames.first { it.id == id }.title
                             .substringBeforeLast('.')
                             .replace(Regex("[^A-Za-z0-9_-]+"), "-")
                             .take(48)
                             .ifBlank { "GameBoy" }
-                        pendingExport = id to "sav"
-                        exportBattery.launch("$gameName.sav")
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    gameSession.saveBatteryIfDirty()
+                                    check(saveTransfer.hasBattery(id)) {
+                                        "Ce jeu n'a pas encore de sauvegarde .sav."
+                                    }
+                                }
+                                pendingExport = id to "sav"
+                                exportBattery.launch("$gameName.sav")
+                            } catch (error: Exception) {
+                                Toast.makeText(applicationContext,
+                                    error.message ?: "Export .sav impossible",
+                                    Toast.LENGTH_LONG).show()
+                            } finally {
+                                saveTransferBusy = false
+                            }
+                        }
                     }
                 },
                 onImportGameSave = { id ->
