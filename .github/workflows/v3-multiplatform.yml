@@ -45,3 +45,5 @@ jobs:
           java-version: "21"
       - name: Build iOS simulator framework
         run: ./gradlew -p v3 :shared:linkDebugFrameworkIosSimulatorArm64 --stacktrace
+      - name: Cross-compile native emulator SDK for iOS simulator
+        run: sh v3/native/build-ios.sh

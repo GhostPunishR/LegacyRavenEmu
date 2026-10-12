@@ -55,6 +55,15 @@ Sélectionnez le simulateur iOS et démarrez l'application depuis Xcode. Le scri
 
 L'application iOS et la compilation Apple nécessitent un Mac avec Xcode. Aucun binaire iOS signé n'est encore distribué.
 
+## Passerelle native GB / GBC / GBA
+
+La base native est disponible dans [`native/`](native/README.md). Elle relie les trois cœurs maison depuis un commit épinglé de [RavenEmu-Cores](https://github.com/GhostPunishR/RavenEmu-Cores/pull/3).
+
+- **Android** : `NativeCore.kt` charge la bibliothèque JNI `ravenemu_v3_android`. Elle permet de charger des octets de ROM et de lire les frames ARGB8888, l'audio stéréo et les boutons.
+- **iOS** : `RavenNativeCore.swift` importe la même API C compilée pour l'architecture Apple. Le script `sh v3/native/build-ios.sh` produit les archives C++ nécessaires.
+
+Les écrans Compose sont encore des maquettes : l'import des ROMs, l'exécution à cadence réelle et le rendu interactif ne sont pas raccordés au lecteur. Une compilation native réussie n'atteste pas encore de l'exécution sur un appareil iOS.
+
 ## Isolation et suite
 
 Les fichiers Gradle V2 à la racine ne changent pas ; V3 possède son propre `settings.gradle.kts`. Une modification de l'application V2 ou des cœurs ne met pas automatiquement V3 à jour.

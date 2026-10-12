@@ -14,7 +14,7 @@ Sur Mac (Xcode et CMake nécessaires) :
 
 ```sh
 cd v3/native
-./build-ios.sh
+sh ./build-ios.sh
 ```
 
 Android (SDK/NDK nécessaires) : `./gradlew -p v3 :androidApp:assembleDebug`.
