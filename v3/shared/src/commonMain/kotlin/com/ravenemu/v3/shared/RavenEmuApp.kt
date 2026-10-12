@@ -97,6 +97,7 @@ fun RavenEmuApp(
     videoError: String? = null,
     videoMetrics: GbVideoMetrics? = null,
     onButtonChange: ((GbButton, Boolean) -> Unit)? = null,
+    audioStatus: String? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
     var search by remember { mutableStateOf("") }
@@ -202,7 +203,7 @@ fun RavenEmuApp(
                     Text("RavenEmu", color = RavenText, fontSize = 20.sp)
                     Text("Préversion V3 Android / iOS", color = RavenMuted, fontSize = 14.sp)
                     Text(
-                        "Le lecteur Game Boy et ses commandes tactiles sont disponibles sur Android. L'audio et les sauvegardes restent à intégrer.",
+                        "Le lecteur Game Boy, ses commandes et l'audio PCM16 sont en test sur Android. Les sauvegardes seront intégrées ensuite.",
                         color = RavenMuted,
                         fontSize = 14.sp,
                     )
@@ -213,6 +214,7 @@ fun RavenEmuApp(
                     error = videoError,
                     metrics = videoMetrics,
                     onButtonChange = onButtonChange,
+                    audioStatus = audioStatus,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -235,7 +237,7 @@ fun RavenEmuApp(
                     Text(platformLabel(entry.platform), color = RavenSecondary, fontSize = 13.sp)
                     Text("ROM chargée dans RavenGB.", color = RavenText)
                     Text(
-                        "La vidéo et les commandes Game Boy sont disponibles sur Android. Audio et sauvegardes à venir.",
+                        "Vidéo, commandes et audio Game Boy disponibles en préversion sur Android. Sauvegardes à venir.",
                         color = RavenMuted,
                         fontSize = 13.sp,
                     )
@@ -270,6 +272,7 @@ private fun GbVideoScreen(
     error: String?,
     metrics: GbVideoMetrics?,
     onButtonChange: ((GbButton, Boolean) -> Unit)?,
+    audioStatus: String?,
     onBack: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().background(Color.Black)) {
@@ -342,7 +345,7 @@ private fun GbVideoScreen(
             )
         }
         Text(
-            "Audio et sauvegardes à venir",
+            audioStatus ?: "Audio GB en préparation. Sauvegardes à venir.",
             color = RavenMuted,
             fontSize = 10.sp,
             textAlign = TextAlign.Center,

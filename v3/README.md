@@ -20,7 +20,9 @@ Aperçu de la future interface **identique sur Android et iOS**. Le projet vit d
 
 **Retour Android reçu :** commandes Game Boy fonctionnelles, barres système correctement espacées et image à environ 59,9 FPS calculés. Ajustement suivant : regroupement ergonomique de A/B et dimension de la croix adaptée à la largeur, Start/Select rapprochés et télémétrie FPS/moteur/conversion compacte juste sous le titre. Le viewport Game Boy reste à l'échelle avec pixels sans lissage, et les commandes restent en bas de la zone sûre.
 
-**Encore à réaliser :** validation ergonomique de cette nouvelle disposition sur téléphone Android, véritables jaquettes et scan des dossiers, écran de réglages complet, audio, sauvegardes disque, import et lecteur iOS, autres consoles et RetroAchievements.
+**Étape 5, audio GB Android :** le cœur RavenGB fournit maintenant les échantillons stéréo PCM16 au même rythme que les frames vidéo. La sortie Android `AudioTrack` lit le flux à la fréquence du cœur via une file FIFO bornée et des écritures non bloquantes. L'audio démarre après un léger préremplissage et se coupe immédiatement à la fermeture du lecteur ou à la mise en arrière-plan. Une erreur du périphérique est affichée sans interrompre la vidéo. Le débit audio natif est utilisé; Android se charge pour l'instant du rééchantillonnage matériel. La stabilité/latence de l'audio reste à vérifier sur un vrai téléphone et peut demander ensuite une régulation de dérive.
+
+**Encore à réaliser :** test audio Android (Pokémon Bleu : musique, absence de craquements, sortie/reprise et maintien d'environ 60 FPS), sauvegardes disque, véritables jaquettes et scan des dossiers, écran de réglages complet, import et lecteur iOS, autres consoles et RetroAchievements.
 
 ## Architecture
 
@@ -72,10 +74,10 @@ La base native est disponible dans [`native/`](native/README.md). Elle relie les
 - **Android** : `NativeCore.kt` charge la bibliothèque JNI `ravenemu_v3_android`. Elle permet de charger des octets de ROM et de lire les frames ARGB8888, l'audio stéréo et les boutons.
 - **iOS** : `RavenNativeCore.swift` importe la même API C compilée pour l'architecture Apple. Le script `sh v3/native/build-ios.sh` produit les archives C++ nécessaires.
 
-L'import GB Android charge maintenant les ROMs dans le cœur natif, mais l'exécution à cadence réelle et le rendu interactif ne sont pas raccordés au lecteur. Une compilation native réussie n'atteste pas encore de l'exécution sur un appareil iOS.
+L'import GB Android charge maintenant les ROMs dans le cœur natif. L'exécution des frames, les commandes tactiles et le flux audio PCM16 sont raccordés dans le lecteur Android de préversion. Une compilation native réussie n'atteste pas encore de l'exécution sur un appareil iOS.
 
 ## Isolation et suite
 
 Les fichiers Gradle V2 à la racine ne changent pas ; V3 possède son propre `settings.gradle.kts`. Une modification de l'application V2 ou des cœurs ne met pas automatiquement V3 à jour.
 
-Prochaines étapes, dans cet ordre : tester sur un téléphone Android la réactivité de la croix et des boutons GB ainsi que les barres système, puis intégrer audio, sauvegardes persistantes, import et lecteur iOS, enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.
+Prochaines étapes, dans cet ordre : valider l'audio GB sur téléphone Android sans perte de FPS ni craquements, puis les sauvegardes batterie et save states persistants, puis importer et jouer sur iOS, enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.

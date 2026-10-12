@@ -55,15 +55,25 @@ class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
      * Writes exactly one native frame into a reusable caller-owned buffer.
      * Serialize against ROM replacement, import and Activity shutdown.
      */
-    fun nextFrameInto(output: IntArray): Boolean = synchronized(lock) {
-        check(!closed) { "La session a été fermée." }
-        val core = active ?: return@synchronized false
-        core.frameInto(output)
-        true
-    }
+    /**
+     * Advance exactly one frame, then drain interleaved stereo PCM16 from the
+     * same native handle under one lock. No second emulation clock is started.
+     * Returns null if no ROM is active.
+     */
+    fun nextFrameWithAudioInto(pixels: IntArray, audio: ShortArray): Int? =
+        synchronized(lock) {
+            check(!closed) { "La session a été fermée." }
+            val core = active ?: return@synchronized null
+            core.frameInto(pixels)
+            core.readAudioInto(audio)
+        }
 
     fun refreshRateHz(): Double? = synchronized(lock) {
         if (closed) null else active?.fps
+    }
+
+    fun audioRateHz(): Int? = synchronized(lock) {
+        if (closed) null else active?.audioRate
     }
 
     /**

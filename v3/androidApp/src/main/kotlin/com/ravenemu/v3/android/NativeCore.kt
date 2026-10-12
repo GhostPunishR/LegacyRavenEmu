@@ -5,8 +5,8 @@ package com.ravenemu.v3.android
  * Own one instance per running game and call it from a single emulation thread.
  * No ROMs or BIOS files are bundled with the APK.
  *
- * Rendering, audio timing, file import and persistence will be wired into the
- * shared Compose player in the next increment.
+ * Video, PCM16 audio and touch input are wired on Android V3.
+ * The application host owns real-time pacing and audio output.
  */
 class NativeCore(system: Int) : AutoCloseable {
     private var pointer: Long = nativeCreate(system).also {
@@ -30,11 +30,17 @@ class NativeCore(system: Int) : AutoCloseable {
     /** Convenience method for callers that need a new buffer. */
     fun frame(): IntArray = IntArray(width * height).also(::frameInto)
 
+    /** Reuse a caller-provided PCM16 stereo sample buffer. */
+    fun readAudioInto(output: ShortArray): Int {
+        val count = nativeReadAudio(requireOpen(), output)
+        check(count in 0..output.size) { "Invalid audio sample count from native bridge" }
+        return count
+    }
+
     fun readAudio(maxSamples: Int = 4096): ShortArray {
         require(maxSamples >= 0)
         val buffer = ShortArray(maxSamples)
-        val count = nativeReadAudio(requireOpen(), buffer)
-        return buffer.copyOf(count)
+        return buffer.copyOf(readAudioInto(buffer))
     }
 
     fun button(button: Int, pressed: Boolean) {

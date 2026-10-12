@@ -33,11 +33,13 @@ private data class CapturedGbFrame(
     val bitmap: ImageBitmap,
     val coreTimeNanos: Long,
     val conversionTimeNanos: Long,
+    val audioFailure: String?,
 )
 
 class MainActivity : ComponentActivity() {
     private lateinit var gameSession: AndroidGbSession
     private var foreground by mutableStateOf(false)
+    private var activeAudio: AndroidGbAudioOutput? = null
 
     override fun onResume() {
         super.onResume()
@@ -46,6 +48,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         foreground = false
+        activeAudio?.stopNow()
         gameSession.releaseAllButtons()
         super.onPause()
     }
@@ -66,6 +69,7 @@ class MainActivity : ComponentActivity() {
             var frame by remember { mutableStateOf<ImageBitmap?>(null) }
             var videoError by remember { mutableStateOf<String?>(null) }
             var videoMetrics by remember { mutableStateOf<GbVideoMetrics?>(null) }
+            var audioStatus by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
 
             LaunchedEffect(videoEnabled, loadedGame, foreground) {
@@ -74,61 +78,93 @@ class MainActivity : ComponentActivity() {
                 if (!videoEnabled || !foreground || loadedGame == null) return@LaunchedEffect
 
                 videoError = null
+                audioStatus = null
                 val currentGame = loadedGame ?: return@LaunchedEffect
                 val targetFps = (gameSession.refreshRateHz() ?: 59.7).coerceIn(1.0, 120.0)
                 val periodNanos = (1_000_000_000.0 / targetFps).roundToLong()
                 val stats = GbVideoMetricsAccumulator(targetFps)
                 val pixels = IntArray(currentGame.width * currentGame.height)
+                // More than one GB frame of interleaved stereo, reused per frame.
+                val samples = ShortArray(4096)
                 var due = System.nanoTime()
+                var output: AndroidGbAudioOutput? = null
 
-                while (isActive) {
+                try {
                     try {
-                        // Only emulation and pixel conversion run on the worker;
-                        // Compose state is assigned on the UI coroutine.
-                        val captured = withContext(Dispatchers.Default) {
-                            val nativeStart = System.nanoTime()
-                            val hasFrame = gameSession.nextFrameInto(pixels)
-                            val nativeElapsed = System.nanoTime() - nativeStart
-                            if (!hasFrame) null else {
+                        val rate = gameSession.audioRateHz()
+                            ?: throw IllegalStateException("Aucune piste audio GB active.")
+                        output = AndroidGbAudioOutput(rate, targetFps)
+                        activeAudio = output
+                        audioStatus = "Audio GB activé (préversion)"
+                    } catch (error: Exception) {
+                        audioStatus = "Audio indisponible : ${error.message ?: "Erreur AudioTrack"}"
+                    }
+
+                    while (isActive) {
+                        try {
+                            // One synchronized native frame + PCM read, then one
+                            // non-blocking audio submission on the worker.
+                            val sink = output
+                            val captured = withContext(Dispatchers.Default) {
+                                val nativeStart = System.nanoTime()
+                                val sampleCount =
+                                    gameSession.nextFrameWithAudioInto(pixels, samples)
+                                        ?: return@withContext null
+                                val nativeElapsed = System.nanoTime() - nativeStart
+                                var audioFailure: String? = null
+                                if (sink != null) {
+                                    try {
+                                        sink.submit(samples, sampleCount)
+                                    } catch (error: Exception) {
+                                        audioFailure = error.message ?: "Sortie audio interrompue"
+                                        sink.stopNow()
+                                    }
+                                }
                                 val conversionStart = System.nanoTime()
                                 val image = Bitmap.createBitmap(
-                                    pixels,
-                                    currentGame.width,
-                                    currentGame.height,
+                                    pixels, currentGame.width, currentGame.height,
                                     Bitmap.Config.ARGB_8888,
                                 ).asImageBitmap()
                                 CapturedGbFrame(
-                                    image,
-                                    nativeElapsed,
-                                    System.nanoTime() - conversionStart,
+                                    bitmap = image,
+                                    coreTimeNanos = nativeElapsed,
+                                    conversionTimeNanos = System.nanoTime() - conversionStart,
+                                    audioFailure = audioFailure,
                                 )
+                            } ?: break
+
+                            frame = captured.bitmap
+                            if (captured.audioFailure != null) {
+                                audioStatus = "Audio interrompu : ${captured.audioFailure}"
+                                if (activeAudio === output) activeAudio = null
+                                output?.close()
+                                output = null
                             }
-                        } ?: break
+                            val sample = stats.record(
+                                System.nanoTime(),
+                                captured.coreTimeNanos,
+                                captured.conversionTimeNanos,
+                            )
+                            if (sample != null) videoMetrics = sample
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (error: Exception) {
+                            videoError = error.message ?: "Erreur de rendu Game Boy."
+                            frame = null
+                            break
+                        }
 
-                        frame = captured.bitmap
-                        val sample = stats.record(
-                            System.nanoTime(),
-                            captured.coreTimeNanos,
-                            captured.conversionTimeNanos,
-                        )
-                        if (sample != null) videoMetrics = sample
-                    } catch (cancelled: CancellationException) {
-                        throw cancelled
-                    } catch (error: Exception) {
-                        videoError = error.message ?: "Erreur de rendu Game Boy."
-                        frame = null
-                        break
+                        due += periodNanos
+                        val remaining = due - System.nanoTime()
+                        if (remaining > 0) {
+                            delay((remaining / 1_000_000L).coerceAtLeast(1L))
+                        } else if (remaining < -periodNanos) {
+                            due = System.nanoTime()
+                        }
                     }
-
-                    due += periodNanos
-                    val remaining = due - System.nanoTime()
-                    if (remaining > 0) {
-                        delay((remaining / 1_000_000L).coerceAtLeast(1L))
-                    } else if (remaining < -periodNanos) {
-                        // If frames are slower than real time, show the measured
-                        // speed instead of trying to process an infinite backlog.
-                        due = System.nanoTime()
-                    }
+                } finally {
+                    if (activeAudio === output) activeAudio = null
+                    output?.close()
                 }
             }
 
@@ -161,24 +197,26 @@ class MainActivity : ComponentActivity() {
                 importError = importError,
                 onStartVideo = { videoEnabled = true },
                 onStopVideo = {
+                    activeAudio?.stopNow()
                     gameSession.releaseAllButtons()
                     videoEnabled = false
                     frame = null
                     videoMetrics = null
+                    audioStatus = null
                 },
                 onButtonChange = { button: GbButton, pressed: Boolean ->
-                    if (videoEnabled && foreground) {
-                        gameSession.setButton(button, pressed)
-                    }
+                    if (videoEnabled && foreground) gameSession.setButton(button, pressed)
                 },
                 videoFrame = frame,
                 videoError = videoError,
                 videoMetrics = videoMetrics,
+                audioStatus = audioStatus,
             )
         }
     }
 
     override fun onDestroy() {
+        activeAudio?.stopNow()
         gameSession.close()
         super.onDestroy()
     }
