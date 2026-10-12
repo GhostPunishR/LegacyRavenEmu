@@ -279,15 +279,26 @@ fun RavenEmuApp(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Text(
-                                if (libraryCovers.containsKey(entry.id))
-                                    "Jaquette personnalisée" else "Aucune jaquette",
+                                when {
+                                    libraryCovers.containsKey(entry.id) ->
+                                        "Jaquette enregistrée dans RavenEmu"
+                                    coverBusy -> "Recherche de jaquette…"
+                                    else -> "Jaquette introuvable automatiquement"
+                                },
                                 color = RavenMuted, fontSize = 13.sp,
                             )
                             if (onChooseCover != null) {
                                 OutlinedButton(
                                     onClick = { onChooseCover(entry.id) },
                                     enabled = !coverBusy && !importBusy,
-                                ) { Text("Choisir une image", fontSize = 12.sp) }
+                                ) {
+                                    Text(
+                                        if (libraryCovers.containsKey(entry.id))
+                                            "Changer l'image"
+                                        else "Image manuelle (facultatif)",
+                                        fontSize = 12.sp,
+                                    )
+                                }
                             }
                         }
                     }
