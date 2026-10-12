@@ -71,7 +71,7 @@ L'application iOS et la compilation Apple nécessitent un Mac avec Xcode. Aucun 
 
 ## Passerelle native GB / GBC / GBA
 
-La base native est disponible dans [`native/`](native/README.md). Elle relie les trois cœurs maison depuis un commit épinglé de [RavenEmu-Cores](https://github.com/GhostPunishR/RavenEmu-Cores/pull/3).
+La base native est disponible dans [`native/`](native/README.md). Elle relie les trois cœurs maison depuis un commit épinglé de [RavenEmu-Cores](https://github.com/GhostPunishR/RavenEmu-Cores/commit/9a99ee94f488fa34aff1efa90ce5c17e18a2f14e). La PR #4 apporte des contrôles supplémentaires sur les save states, des corrections GBA et des tests de sécurité ASan/UBSan. Elle ne corrige pas à elle seule la qualité sonore GB.
 
 - **Android** : `NativeCore.kt` charge la bibliothèque JNI `ravenemu_v3_android`. Elle permet de charger des octets de ROM et de lire les frames ARGB8888, l'audio stéréo et les boutons.
 - **iOS** : `RavenNativeCore.swift` importe la même API C compilée pour l'architecture Apple. Le script `sh v3/native/build-ios.sh` produit les archives C++ nécessaires.

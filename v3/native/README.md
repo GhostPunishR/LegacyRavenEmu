@@ -2,7 +2,7 @@
 
 Le même SDK C de [RavenEmu-Cores](https://github.com/GhostPunishR/RavenEmu-Cores) est utilisé sur Android et iOS. Le code C++ des moteurs n'est pas copié dans la V3.
 
-Le projet CMake télécharge le dépôt des cœurs à un **commit SHA précis**. La branche de travail actuelle est suivie dans la [PR RavenEmu-Cores #3](https://github.com/GhostPunishR/RavenEmu-Cores/pull/3). En attendant sa validation, ce commit reste épinglé.
+Le projet CMake télécharge les cœurs à un **commit SHA précis** de `main` : [`9a99ee9`](https://github.com/GhostPunishR/RavenEmu-Cores/commit/9a99ee94f488fa34aff1efa90ce5c17e18a2f14e), qui inclut la [PR #3](https://github.com/GhostPunishR/RavenEmu-Cores/pull/3) et la [PR #4](https://github.com/GhostPunishR/RavenEmu-Cores/pull/4). Les tests natifs, Libretro et ASan/UBSan ont réussi avant la mise à jour. Ce commit ajoute notamment la validation des save states ; le correctif audio GBA n'est pas un correctif audio GB.
 
 - Android : `v3/native/android/bridge_jni.cpp` fournit JNI à `NativeCore.kt` et rend des images ARGB8888 avec audio PCM16.
 - iOS : `v3/native/apple/module.modulemap` importe la même API C dans Swift, avec `RavenNativeCore.swift`. Le script `build-ios.sh` compile les bibliothèques C++ pour `iphoneos` ou `iphonesimulator`.
