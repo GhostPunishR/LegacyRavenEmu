@@ -37,7 +37,8 @@ class AndroidGbAudioOutput(
     private val track: AudioTrack
 
     private var writtenFrames = 0L
-    private val fadeFrames = (outputRate / 33).coerceAtLeast(1) // ~30 ms
+    private var droppedSamples = 0L
+    private val fadeFrames = (outputRate / 8).coerceAtLeast(1) // ~125 ms, suppress startup transients
     private var rampFrame = 0
     private var closed = false
 
@@ -67,7 +68,7 @@ class AndroidGbAudioOutput(
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build(),
             )
-            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_NONE)
             .setAudioFormat(
                 AudioFormat.Builder()
                     .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
@@ -101,7 +102,7 @@ class AndroidGbAudioOutput(
                 governor.rateScale,
             )
             fadeIn(resampled, produced)
-            queue.append(resampled, produced)
+            droppedSamples += queue.append(resampled, produced).toLong()
 
             // A partial non-blocking write stays in the bounded FIFO and is
             // retried on the next frame, without causing skips or duplicates.
@@ -129,6 +130,12 @@ class AndroidGbAudioOutput(
         val played = track.playbackHeadPosition.toLong() and MASK_32
         val queued = (writtenFrames - played) and MASK_32
         return governor.onQueuedFrames(queued.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+    }
+
+    /** Live diagnostics to distinguish device underruns from bounded FIFO overflow. */
+    fun diagnostics(): String = synchronized(lock) {
+        "Audio: underruns=${track.underrunCount}, pertesPCM=${droppedSamples / CHANNELS} frames, " +
+            "file=${queue.size / CHANNELS} frames"
     }
 
     /** Start from silence even if the native APU already has nonzero samples. */
@@ -169,8 +176,8 @@ class AndroidGbAudioOutput(
     private companion object {
         const val CHANNELS = 2
         const val BYTES_PER_SAMPLE = 2
-        const val BUFFER_VIDEO_FRAMES = 8
-        const val PRIME_VIDEO_FRAMES = 6
+        const val BUFFER_VIDEO_FRAMES = 12
+        const val PRIME_VIDEO_FRAMES = 8
         const val MASK_32 = 0xFFFF_FFFFL
 
         fun resolveNativeRate(context: Context): Int = try {
