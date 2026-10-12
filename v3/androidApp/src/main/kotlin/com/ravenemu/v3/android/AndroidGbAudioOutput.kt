@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.util.Log
 import com.ravenemu.v3.shared.GbPcmQueue
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -38,6 +39,7 @@ class AndroidGbAudioOutput(
 
     private var writtenFrames = 0L
     private var droppedSamples = 0L
+    private var startupBlocks = 0
     private val fadeFrames = (outputRate / 20).coerceAtLeast(1) // ~50 ms fade, without delaying playback
     private var rampFrame = 0
     private var closed = false
@@ -93,6 +95,7 @@ class AndroidGbAudioOutput(
             require(count in 0..samples.size && count % CHANNELS == 0) {
                 "Échantillons PCM stéréo invalides."
             }
+            if (startupBlocks < 12) logPcm("native", samples, count)
             val needed = resampler.maxOutput(count, correctionForDrift())
             if (needed > resampled.size) resampled = ShortArray(needed)
             val produced = resampler.resample(
@@ -102,6 +105,10 @@ class AndroidGbAudioOutput(
                 governor.rateScale,
             )
             fadeIn(resampled, produced)
+            if (startupBlocks < 12) {
+                logPcm("output", resampled, produced)
+                startupBlocks++
+            }
             droppedSamples += queue.append(resampled, produced).toLong()
 
             // A partial non-blocking write stays in the bounded FIFO and is
@@ -120,7 +127,10 @@ class AndroidGbAudioOutput(
                 }
                 queue.discard(written)
                 writtenFrames += written / CHANNELS
-                if (primer.onSamplesQueued(written)) track.play()
+                if (primer.onSamplesQueued(written)) {
+                    Log.d(TAG, "AudioTrack.play: startupBlocks=$startupBlocks queuedFrames=${writtenFrames} underruns=${track.underrunCount}")
+                    track.play()
+                }
             }
         }
     }
@@ -130,6 +140,23 @@ class AndroidGbAudioOutput(
         val played = track.playbackHeadPosition.toLong() and MASK_32
         val queued = (writtenFrames - played) and MASK_32
         return governor.onQueuedFrames(queued.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+    }
+
+    /** Diagnostic for the first PCM blocks; avoids recording or exposing game audio. */
+    private fun logPcm(stage: String, samples: ShortArray, count: Int) {
+        var peak = 0
+        var jump = 0
+        var previousLeft = 0
+        var previousRight = 0
+        for (i in 0 until count step CHANNELS) {
+            val left = samples[i].toInt()
+            val right = samples[i + 1].toInt()
+            peak = maxOf(peak, kotlin.math.abs(left), kotlin.math.abs(right))
+            if (i != 0) jump = maxOf(jump, kotlin.math.abs(left - previousLeft), kotlin.math.abs(right - previousRight))
+            previousLeft = left
+            previousRight = right
+        }
+        Log.d(TAG, "startup block=$startupBlocks stage=$stage samples=$count firstL=${if (count > 0) samples[0] else 0} firstR=${if (count > 1) samples[1] else 0} peak=$peak maxJump=$jump")
     }
 
     /** Live diagnostics to distinguish device underruns from bounded FIFO overflow. */
@@ -175,6 +202,7 @@ class AndroidGbAudioOutput(
     }
 
     private companion object {
+        const val TAG = "RavenEmuAudio"
         const val CHANNELS = 2
         const val BYTES_PER_SAMPLE = 2
         const val BUFFER_VIDEO_FRAMES = 4
