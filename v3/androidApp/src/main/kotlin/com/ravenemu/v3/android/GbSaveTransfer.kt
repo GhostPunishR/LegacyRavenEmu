@@ -71,13 +71,21 @@ internal class GbSaveTransfer(filesDir: File) {
     }
 
     /** This must run on Dispatchers.IO. Source is capped even for ZIP bombs. */
-    fun previewImport(stream: InputStream, targetKey: String): ImportPayload {
+    fun previewImport(stream: InputStream, targetKey: String, filename: String): ImportPayload {
         validKey(targetKey)
+        val archive = filename.endsWith(".zip", ignoreCase = true)
+        val raw = filename.endsWith(".sav", ignoreCase = true)
+        require(archive || raw) {
+            "Sélectionnez une sauvegarde .sav ou une archive .zip RavenEmu."
+        }
         val source = readLimited(stream, MAX_ARCHIVE_BYTES)
         require(source.isNotEmpty()) { "Le fichier est vide." }
         val magic = source.size >= 4 && source[0] == 'P'.code.toByte() &&
             source[1] == 'K'.code.toByte() && source[2] == 3.toByte() &&
             source[3] == 4.toByte()
+        require(magic == archive) {
+            "Le contenu du fichier ne correspond pas à son extension."
+        }
         if (!magic) {
             // A raw .sav has no embedded ROM ID: caller explicitly confirms
             // the selected target game before writing it.
