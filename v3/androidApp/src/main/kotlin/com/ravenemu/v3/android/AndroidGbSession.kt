@@ -126,6 +126,15 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
         }
     }
 
+    /** Read-only RetroAchievements memory; do not clock the emulated bus. */
+    fun readAchievementMemory(address: Int, count: Int): ByteArray = synchronized(lock) {
+        if (closed || address < 0 || count <= 0 || count > 0x58000) return@synchronized ByteArray(0)
+        val native = active ?: return@synchronized ByteArray(0)
+        val bytes = ByteArray(count)
+        val read = native.readAchievementMemory(address, bytes)
+        if (read == count) bytes else bytes.copyOf(read)
+    }
+
     /** Serialize state operations with both emulation and battery saves. */
     fun saveStateSlot(slot: Int = 0, preview: ByteArray? = null) = synchronized(saveLock) {
         val (key, state) = synchronized(lock) {
