@@ -97,6 +97,7 @@ fun RavenEmuApp(
     videoError: String? = null,
     videoMetrics: GbVideoMetrics? = null,
     onButtonChange: ((GbButton, Boolean) -> Unit)? = null,
+    onExportAudioDiagnostics: (() -> Unit)? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
     var search by remember { mutableStateOf("") }
@@ -213,6 +214,7 @@ fun RavenEmuApp(
                     error = videoError,
                     metrics = videoMetrics,
                     onButtonChange = onButtonChange,
+                    onExportAudioDiagnostics = onExportAudioDiagnostics,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -270,8 +272,10 @@ private fun GbVideoScreen(
     error: String?,
     metrics: GbVideoMetrics?,
     onButtonChange: ((GbButton, Boolean) -> Unit)?,
+    onExportAudioDiagnostics: (() -> Unit)?,
     onBack: () -> Unit,
 ) {
+    var diagnosticsMenuOpen by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(Color.Black)) {
         Row(
             Modifier.fillMaxWidth().height(48.dp).background(RavenBackground),
@@ -286,7 +290,27 @@ private fun GbVideoScreen(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 fontSize = 16.sp,
+                modifier = Modifier.weight(1f),
             )
+            if (onExportAudioDiagnostics != null) {
+                Box {
+                    TextButton(onClick = { diagnosticsMenuOpen = true }) {
+                        Text("⋮", color = RavenText, fontSize = 22.sp)
+                    }
+                    DropdownMenu(
+                        expanded = diagnosticsMenuOpen,
+                        onDismissRequest = { diagnosticsMenuOpen = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Exporter le diagnostic audio") },
+                            onClick = {
+                                diagnosticsMenuOpen = false
+                                onExportAudioDiagnostics()
+                            },
+                        )
+                    }
+                }
+            }
         }
         // Compact diagnostics stay directly below the title. Their height does
         // not change while waiting for the first one-second measurement.
