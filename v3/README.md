@@ -2,15 +2,15 @@
 
 Aperçu de la future interface **identique sur Android et iOS**. Le projet vit dans `v3/` sur la branche `feature/v3-multiplatform` et ne remplace pas encore RavenEmu Android V2.
 
-## Ce qui fonctionne dans cette première étape
+## État de la V3
 
-- Navigation Compose partagée entre Bibliothèque, Lecteur et Réglages.
-- Recherche et filtres de consoles préparés avec tests de logique commune.
-- Thème clair / sombre en mémoire, non persistant.
-- Hôte Android indépendant (`com.ravenemu.v3.preview`), sans conflit avec l'application existante.
-- Hôte iOS SwiftUI qui affiche le même composant Compose (projet Xcode généré par XcodeGen).
+- Une interface Compose commune Android/iOS pour Bibliothèque, Lecteur et Réglages.
+- Une passerelle C native reliant les moteurs maison GB/GBC/GBA, avec adaptateurs Android JNI et Swift.
+- **Étape 1 :** import d'un fichier `.gb` depuis le sélecteur Android et chargement dans le vrai cœur RavenGB. L'écran confirme le nom et les dimensions de la ROM si le chargement réussit.
+- Le fichier n'est chargé **qu'en mémoire**. Il n'y a pas encore de bibliothèque persistante.
+- Les fichiers vides, non `.gb`, invalides ou supérieurs à 16 Mio sont refusés. Un échec conserve la session précédente si elle existe.
 
-**Pas encore connecté :** chargement des ROMs, rendu des cœurs GB/GBC/GBA, audio, sauvegardes, contrôleurs, skins, RetroAchievements et stockage. Aucun écran ne prétend lancer un jeu à cette étape.
+**Encore à réaliser :** rendu en temps réel, commandes, audio, sauvegardes disque, import iOS, autres consoles dans le lecteur et RetroAchievements. Une ROM chargée n'est pas une partie jouable.
 
 ## Architecture
 
@@ -21,7 +21,7 @@ v3/
   iosApp/       Hôte iOS SwiftUI + spécification XcodeGen
 ```
 
-Le code d'émulation reste dans [RavenEmu-Cores](https://github.com/GhostPunishR/RavenEmu-Cores). Pour la prochaine étape, une API C stable sera créée autour des moteurs C++20 ; Android l'utilisera via JNI, iOS via Kotlin/Native ou interop Swift. **Libretro n'est pas l'interface native de l'application.**
+Le code d'émulation reste dans [RavenEmu-Cores](https://github.com/GhostPunishR/RavenEmu-Cores). Une API C de préversion existe désormais pour les moteurs C++20, utilisée côté Android par JNI et côté iOS par Swift. **Libretro n'est pas l'interface native de l'application.**
 
 ## Android
 
@@ -62,10 +62,10 @@ La base native est disponible dans [`native/`](native/README.md). Elle relie les
 - **Android** : `NativeCore.kt` charge la bibliothèque JNI `ravenemu_v3_android`. Elle permet de charger des octets de ROM et de lire les frames ARGB8888, l'audio stéréo et les boutons.
 - **iOS** : `RavenNativeCore.swift` importe la même API C compilée pour l'architecture Apple. Le script `sh v3/native/build-ios.sh` produit les archives C++ nécessaires.
 
-Les écrans Compose sont encore des maquettes : l'import des ROMs, l'exécution à cadence réelle et le rendu interactif ne sont pas raccordés au lecteur. Une compilation native réussie n'atteste pas encore de l'exécution sur un appareil iOS.
+L'import GB Android charge maintenant les ROMs dans le cœur natif, mais l'exécution à cadence réelle et le rendu interactif ne sont pas raccordés au lecteur. Une compilation native réussie n'atteste pas encore de l'exécution sur un appareil iOS.
 
 ## Isolation et suite
 
 Les fichiers Gradle V2 à la racine ne changent pas ; V3 possède son propre `settings.gradle.kts`. Une modification de l'application V2 ou des cœurs ne met pas automatiquement V3 à jour.
 
-Les prochaines étapes sont : ajout d'un contrat d'émulation partagé, wrapper C multiplateforme depuis RavenEmu-Cores, tests des ROMs synthétiques sur les deux systèmes, puis migration progressive de la bibliothèque et du lecteur. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.
+Prochaines étapes, dans cet ordre : affichage du framebuffer GB sur Android, commandes tactiles, audio, sauvegardes persistantes, puis import et lecteur iOS, et enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.

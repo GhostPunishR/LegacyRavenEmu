@@ -6,15 +6,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
@@ -48,9 +44,14 @@ private enum class RavenTab(val title: String, val glyph: String) {
     SETTINGS("Réglages", "S"),
 }
 
-/** Exactly the same Compose hierarchy is called by Android and the iOS host. */
+/** The same Compose UI is displayed on Android and iOS. */
 @Composable
-fun RavenEmuApp() {
+fun RavenEmuApp(
+    onImportRom: (() -> Unit)? = null,
+    loadedGame: LoadedGameInfo? = null,
+    importBusy: Boolean = false,
+    importError: String? = null,
+) {
     var current by remember { mutableStateOf(RavenTab.LIBRARY) }
     var darkMode by remember { mutableStateOf(true) }
     val colors = if (darkMode) {
@@ -88,12 +89,12 @@ fun RavenEmuApp() {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 when (current) {
-                    RavenTab.LIBRARY -> LibraryScreen()
-                    RavenTab.PLAYER -> PlayerScreen(onOpenLibrary = { current = RavenTab.LIBRARY })
+                    RavenTab.LIBRARY -> LibraryScreen(
+                        onImportRom, loadedGame, importBusy, importError)
+                    RavenTab.PLAYER -> PlayerScreen(
+                        loadedGame, onOpenLibrary = { current = RavenTab.LIBRARY })
                     RavenTab.SETTINGS -> SettingsScreen(
-                        darkMode = darkMode,
-                        onDarkModeChange = { darkMode = it },
-                    )
+                        darkMode = darkMode, onDarkModeChange = { darkMode = it })
                 }
             }
         }
@@ -101,12 +102,34 @@ fun RavenEmuApp() {
 }
 
 @Composable
-private fun LibraryScreen() {
+private fun LibraryScreen(
+    onImportRom: (() -> Unit)?,
+    loadedGame: LoadedGameInfo?,
+    importBusy: Boolean,
+    importError: String?,
+) {
     var query by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<GamePlatform?>(null) }
-    val games = LibraryCatalog.search(emptyList(), query, selected)
+    val games = if (loadedGame == null) emptyList() else listOf(
+        GameEntry("session", loadedGame.filename, loadedGame.platform))
+    val filtered = LibraryCatalog.search(games, query, selected)
 
     Text("Mes jeux", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    Button(
+        onClick = { onImportRom?.invoke() },
+        enabled = onImportRom != null && !importBusy,
+    ) {
+        Text(if (importBusy) "Chargement de la ROM..." else "Importer une ROM .gb")
+    }
+    if (onImportRom == null) {
+        Text("Import sur cette plateforme à venir.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if (importError != null) {
+        Text(importError, color = MaterialTheme.colorScheme.error)
+    }
+
     TextField(
         value = query,
         onValueChange = { query = it },
@@ -133,19 +156,27 @@ private fun LibraryScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("Bibliothèque vide", style = MaterialTheme.typography.titleLarge)
-            Text(
-                if (games.isEmpty()) "L'import de ROMs sera connecté au moteur multiplateforme."
-                else "${games.size} jeux",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+            if (filtered.isNotEmpty() && loadedGame != null) {
+                Text(loadedGame.filename, style = MaterialTheme.typography.titleLarge)
+                Text("Game Boy · ${loadedGame.width} × ${loadedGame.height}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("ROM chargée en mémoire. Le jeu n'est pas encore lancé.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center)
+            } else {
+                Text(
+                    if (loadedGame == null) "Aucune ROM chargée" else "Aucun résultat",
+                    style = MaterialTheme.typography.titleLarge)
+                Text("La bibliothèque permanente sera ajoutée plus tard.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center)
+            }
         }
     }
 }
 
 @Composable
-private fun PlayerScreen(onOpenLibrary: () -> Unit) {
+private fun PlayerScreen(loadedGame: LoadedGameInfo?, onOpenLibrary: () -> Unit) {
     Text("Lecteur", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
     Card(Modifier.fillMaxWidth()) {
         Box(
@@ -154,12 +185,14 @@ private fun PlayerScreen(onOpenLibrary: () -> Unit) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("RAVEN", color = RavenPurple, style = MaterialTheme.typography.headlineLarge)
-                Spacer(Modifier.height(8.dp))
-                Text("Aucune partie en cours", color = Color.White)
+                Text(
+                    if (loadedGame == null) "Aucune ROM chargée"
+                    else "ROM chargée : " + loadedGame.filename,
+                    color = Color.White)
             }
         }
     }
-    Text("L'affichage du jeu, les commandes et l'audio seront branchés sur RavenEmu-Cores.",
+    Text("Le rendu du jeu, les commandes et l'audio seront branchés dans les étapes suivantes.",
         color = MaterialTheme.colorScheme.onSurfaceVariant)
     Button(onClick = onOpenLibrary) { Text("Retour à la bibliothèque") }
 }

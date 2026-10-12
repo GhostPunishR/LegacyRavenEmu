@@ -1,0 +1,94 @@
+package com.ravenemu.v3.android
+
+import android.content.ContentResolver
+import android.net.Uri
+import android.provider.OpenableColumns
+import com.ravenemu.v3.shared.GamePlatform
+import com.ravenemu.v3.shared.LoadedGameInfo
+import com.ravenemu.v3.shared.RomImportPolicy
+import java.io.ByteArrayOutputStream
+import java.io.Closeable
+
+/**
+ * Owns one GB emulation core for the current Activity.
+ * The selected file is loaded into memory only, not added to a persistent library.
+ */
+class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
+    private val lock = Any()
+    private var closed = false
+    private var active: NativeCore? = null
+
+    /** Must be called off the UI thread. */
+    fun load(uri: Uri): LoadedGameInfo {
+        val filename = displayName(uri)
+        require(RomImportPolicy.acceptsGameBoyFile(filename)) {
+            "Pour cette étape, sélectionnez une ROM Game Boy au format .gb."
+        }
+        val bytes = readBounded(uri)
+        val replacement = NativeCore(NativeCore.GB)
+        var transferred = false
+        try {
+            replacement.load(bytes)
+            val result = LoadedGameInfo(
+                filename = filename,
+                platform = GamePlatform.GB,
+                width = replacement.width,
+                height = replacement.height,
+            )
+            synchronized(lock) {
+                check(!closed) { "La session a été fermée." }
+                val previous = active
+                active = replacement
+                transferred = true
+                previous?.close()
+            }
+            return result
+        } finally {
+            if (!transferred) replacement.close()
+        }
+    }
+
+    private fun displayName(uri: Uri): String {
+        val name = resolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null
+        }
+        return name?.takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("Impossible de lire le nom du fichier.")
+    }
+
+    private fun readBounded(uri: Uri): ByteArray {
+        val stream = resolver.openInputStream(uri)
+            ?: throw IllegalArgumentException("Impossible d'ouvrir cette ROM.")
+        return stream.use { input ->
+            val output = ByteArrayOutputStream()
+            val chunk = ByteArray(64 * 1024)
+            var total = 0
+            while (true) {
+                val read = input.read(chunk)
+                if (read == -1) break
+                if (read == 0) continue
+                require(read <= RomImportPolicy.maxRomBytes - total) {
+                    "Cette ROM dépasse la limite de 16 Mio."
+                }
+                output.write(chunk, 0, read)
+                total += read
+            }
+            require(total > 0) { "Le fichier est vide." }
+            output.toByteArray()
+        }
+    }
+
+    override fun close() {
+        synchronized(lock) {
+            closed = true
+            active?.close()
+            active = null
+        }
+    }
+}
