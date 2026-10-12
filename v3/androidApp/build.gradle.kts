@@ -15,6 +15,9 @@ android {
         versionName = "0.1.0-preview"
     }
     buildFeatures { compose = true }
+    externalNativeBuild {
+        cmake { path = file("../native/CMakeLists.txt") }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
