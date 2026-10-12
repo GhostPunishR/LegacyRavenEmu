@@ -43,6 +43,11 @@ internal class GbBatteryStore(private val directory: File) {
         }
     }
 
+    /** Only used to roll back an interrupted import of a previously absent save. */
+    fun delete(romKey: String) {
+        AtomicFile(fileFor(romKey)).delete()
+    }
+
     private fun fileFor(key: String): File {
         require(key.length == 64 && key.all { it in '0'..'9' || it in 'a'..'f' }) {
             "Identifiant de ROM invalide."
