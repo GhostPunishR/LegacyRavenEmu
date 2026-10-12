@@ -24,7 +24,9 @@ Aperçu de la future interface **identique sur Android et iOS**. Le projet vit d
 
 **Correctif audio après test utilisateur (pic sonore au lancement et musique dégradée) :** reprise du rééchantillonneur à bande limitée, du préremplissage d'environ six frames et du régulateur léger de dérive audio éprouvés dans RavenEmu 0.8.1. Sortie `AudioTrack` au débit préféré du téléphone, au lieu d'imposer celui du moteur, et démarrage adouci sur environ 30 ms. Les erreurs audio sont visibles sans bloquer la vidéo. Le résultat doit encore être validé à l'écoute sur Android et l'horloge reste provisoirement pilotée par la vidéo.
 
-**Encore à réaliser :** test audio Android (Pokémon Bleu : musique, absence de craquements, sortie/reprise et maintien d'environ 60 FPS), sauvegardes disque, véritables jaquettes et scan des dossiers, écran de réglages complet, import et lecteur iOS, autres consoles et RetroAchievements.
+**Étape 6, sauvegardes de cartouche Game Boy sur Android (préversion) :** la RAM batterie produite par la fonction « Sauvegarder » du jeu est automatiquement enregistrée toutes les cinq secondes si elle a changé, ainsi qu'à la sortie du lecteur, au changement de ROM et à la mise en arrière-plan. L'écriture est atomique dans le stockage privé Android ; elle est identifiée par SHA-256 du contenu de la ROM et rechargée au prochain import du même fichier, même s'il a été renommé. La progression survit à la fermeture de l'application, mais pas à sa désinstallation ni à un effacement de ses données. Cela ne crée pas encore de save states ni de bibliothèque persistante.
+
+**Encore à réaliser :** validation sur téléphone de la reprise de progression après fermeture/rechargement, optimisation des interruptions audio restantes, save states persistants, export/import des sauvegardes, véritables jaquettes et scan des dossiers, écran de réglages complet, import et lecteur iOS, autres consoles et RetroAchievements.
 
 ## Architecture
 
@@ -82,4 +84,4 @@ L'import GB Android charge maintenant les ROMs dans le cœur natif. L'exécution
 
 Les fichiers Gradle V2 à la racine ne changent pas ; V3 possède son propre `settings.gradle.kts`. Une modification de l'application V2 ou des cœurs ne met pas automatiquement V3 à jour.
 
-Prochaines étapes, dans cet ordre : valider l'audio GB sur téléphone Android sans perte de FPS ni craquements, puis les sauvegardes batterie et save states persistants, puis importer et jouer sur iOS, enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.
+Prochaines étapes, dans cet ordre : valider les sauvegardes batterie GB sur téléphone Android (enregistrement dans le jeu, fermeture, réimport, reprise), puis les save states persistants et l'export des sauvegardes, puis importer et jouer sur iOS, enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.
