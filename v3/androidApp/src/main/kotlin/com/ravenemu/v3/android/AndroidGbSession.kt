@@ -154,7 +154,7 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
         Log.d(TAG, "Save state slot ${slot + 1} deleted for ROM ${key.take(12)}")
     }
 
-    fun listStateSlots(): List<GbSlotSummary> = synchronized(saveLock) {
+    internal fun listStateSlots(): List<GbSlotSummary> = synchronized(saveLock) {
         val key = synchronized(lock) {
             check(!closed) { "La session a été fermée." }
             activeRomKey ?: error("Aucun jeu chargé.")
