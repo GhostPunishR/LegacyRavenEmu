@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import com.ravenemu.v3.shared.GameEntry
 import com.ravenemu.v3.shared.GamePlatform
+import com.ravenemu.v3.shared.GbFolderImportSummary
 import com.ravenemu.v3.shared.GbDisplayFilter
 import com.ravenemu.v3.shared.GbButton
 import com.ravenemu.v3.shared.GbStateSlot
@@ -159,6 +160,8 @@ class MainActivity : ComponentActivity() {
             var loadedGame by remember { mutableStateOf<LoadedGameInfo?>(null) }
             var loading by remember { mutableStateOf(false) }
             var importError by remember { mutableStateOf<String?>(null) }
+            var folderImportProgress by remember { mutableStateOf<String?>(null) }
+            var folderImportSummary by remember { mutableStateOf<GbFolderImportSummary?>(null) }
             var saveTransferBusy by remember { mutableStateOf(false) }
             var pendingExport by remember { mutableStateOf<Pair<String, String>?>(null) }
             var pendingImportGame by remember { mutableStateOf<String?>(null) }
@@ -362,6 +365,62 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // OpenDocumentTree grants temporary read access to just the
+            // chosen folder. All accepted ROMs are copied to app-private
+            // storage; no broad storage permission or persisted URI required.
+            val folderPicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocumentTree(),
+            ) { uri ->
+                if (uri != null && !loading && !videoEnabled) {
+                    loading = true
+                    importError = null
+                    folderImportSummary = null
+                    folderImportProgress = "Analyse du dossier…"
+                    scope.launch {
+                        try {
+                            val (result, entries) = withContext(Dispatchers.IO) {
+                                val imported = GbFolderImporter(contentResolver, romLibrary)
+                                    .importTree(uri) { scanned ->
+                                        if (scanned == 1 || scanned % 5 == 0) {
+                                            scope.launch {
+                                                folderImportProgress =
+                                                    "Importation du dossier… $scanned ROM examinées"
+                                            }
+                                        }
+                                    }
+                                imported to romLibrary.list().map {
+                                    GameEntry(it.id, it.filename, GamePlatform.GB)
+                                }
+                            }
+                            libraryGames = entries
+                            folderImportSummary = GbFolderImportSummary(
+                                added = result.added,
+                                duplicate = result.duplicate,
+                                invalid = result.invalid,
+                                unreadable = result.unreadable,
+                                otherFiles = result.otherFiles,
+                                scannedFolders = result.folders,
+                                limited = result.limited,
+                            )
+                        } catch (error: Exception) {
+                            Log.e("RavenEmuFolder", "Folder ROM import failed", error)
+                            importError = "Importation du dossier impossible : " +
+                                (error.message ?: "erreur inconnue")
+                            // Even a partial import already committed its
+                            // valid ROMs. Refresh the library in that case.
+                            libraryGames = withContext(Dispatchers.IO) {
+                                romLibrary.list().map {
+                                    GameEntry(it.id, it.filename, GamePlatform.GB)
+                                }
+                            }
+                        } finally {
+                            folderImportProgress = null
+                            loading = false
+                        }
+                    }
+                }
+            }
+
             val documentPicker = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocument(),
             ) { uri ->
@@ -560,6 +619,12 @@ class MainActivity : ComponentActivity() {
                 onImportRom = {
                     if (!loading) documentPicker.launch(arrayOf("*/*"))
                 },
+                onImportFolder = {
+                    if (!loading && !videoEnabled) folderPicker.launch(null)
+                },
+                folderImportProgress = folderImportProgress,
+                folderImportSummary = folderImportSummary,
+                onDismissFolderImportSummary = { folderImportSummary = null },
                 loadedGame = loadedGame,
                 libraryGames = libraryGames,
                 saveTransferBusy = saveTransferBusy,
