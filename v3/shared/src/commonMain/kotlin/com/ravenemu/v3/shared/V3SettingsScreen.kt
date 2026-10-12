@@ -236,12 +236,12 @@ private fun GroupTitle(title: String) {
 
 @Composable
 private fun CategoryRow(title: String, summary: String, onClick: () -> Unit) {
-    val symbol = when (title) {
-        "Général" -> "✦"
-        "Audio" -> "♫"
-        "Vidéo" -> "▣"
-        "Interface" -> "◈"
-        else -> "ⓘ"
+    val icon = when (title) {
+        "Général" -> V2IconType.GENERAL
+        "Audio" -> V2IconType.AUDIO
+        "Vidéo" -> V2IconType.VIDEO
+        "Interface" -> V2IconType.INTERFACE
+        else -> V2IconType.ABOUT
     }
     Row(
         Modifier.fillMaxWidth()
@@ -256,7 +256,7 @@ private fun CategoryRow(title: String, summary: String, onClick: () -> Unit) {
             Modifier.size(42.dp)
                 .background(Accent.copy(alpha = 0.13f), RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center,
-        ) { Text(symbol, color = Accent, fontSize = 22.sp) }
+        ) { V2Icon(icon, Accent) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, color = TextMain, fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold)
