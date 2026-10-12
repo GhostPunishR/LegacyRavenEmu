@@ -24,18 +24,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: Verify Android SDK from runner image
-        shell: bash
-        run: |
-          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
-          if [ -z "$SDK_ROOT" ] || [ ! -d "$SDK_ROOT" ]; then
-            echo "::error::Android SDK not available on runner"
-            exit 1
-          fi
-          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
-          if [ ! -d "$SDK_ROOT/platforms/android-37" ]; then
-            "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37"
-          fi
       - name: Build Android preview
         run: ./gradlew -p v3 :androidApp:assembleDebug --stacktrace
 
@@ -48,17 +36,5 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: Verify Android SDK from runner image
-        shell: bash
-        run: |
-          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
-          if [ -z "$SDK_ROOT" ] || [ ! -d "$SDK_ROOT" ]; then
-            echo "::error::Android SDK not available on runner"
-            exit 1
-          fi
-          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
-          if [ ! -d "$SDK_ROOT/platforms/android-37" ]; then
-            "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37"
-          fi
       - name: Build iOS simulator framework
         run: ./gradlew -p v3 :shared:linkDebugFrameworkIosSimulatorArm64 --stacktrace
