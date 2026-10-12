@@ -116,12 +116,12 @@ fun GbTouchControls(
                     GbButton.SELECT, "SELECT", onButton, diameter = 40,
                     modifier = Modifier.width(84.dp),
                     haptics = haptics, highContrast = highContrast,
-                    haptics = haptics, highContrast = highContrast,
                 )
                 Spacer(Modifier.width(selectStartGap))
                 GbMomentaryButton(
                     GbButton.START, "START", onButton, diameter = 40,
                     modifier = Modifier.width(84.dp),
+                    haptics = haptics, highContrast = highContrast,
                 )
             }
         }
