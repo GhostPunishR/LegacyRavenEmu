@@ -10,13 +10,10 @@ import java.io.FileNotFoundException
  */
 internal class GbSaveStateStore(private val directory: File) {
     fun read(romKey: String): ByteArray? {
-        val file = fileFor(romKey)
-        if (!file.exists()) return null
-        require(file.length() in 1..MAX_STATE_BYTES.toLong()) {
-            "État de sauvegarde invalide ou trop volumineux."
-        }
+        // AtomicFile.openRead can recover its backup after an interrupted
+        // write, even when the primary file is missing. Do not pre-check it.
         return try {
-            AtomicFile(file).openRead().use { stream ->
+            AtomicFile(fileFor(romKey)).openRead().use { stream ->
                 val bytes = stream.readBytes()
                 require(bytes.size in 1..MAX_STATE_BYTES) {
                     "État de sauvegarde invalide ou trop volumineux."
