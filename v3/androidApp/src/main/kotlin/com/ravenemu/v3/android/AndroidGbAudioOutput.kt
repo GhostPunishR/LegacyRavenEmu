@@ -40,6 +40,7 @@ class AndroidGbAudioOutput(
     private var writtenFrames = 0L
     private var droppedSamples = 0L
     private var startupBlocks = 0
+    private val report = StringBuilder("RavenEmu V3 GB audio startup diagnostic\n")
     private val fadeFrames = (outputRate / 20).coerceAtLeast(1) // ~50 ms fade, without delaying playback
     private var rampFrame = 0
     private var closed = false
@@ -128,7 +129,7 @@ class AndroidGbAudioOutput(
                 queue.discard(written)
                 writtenFrames += written / CHANNELS
                 if (primer.onSamplesQueued(written)) {
-                    Log.d(TAG, "AudioTrack.play: startupBlocks=$startupBlocks queuedFrames=${writtenFrames} underruns=${track.underrunCount}")
+                    record("AudioTrack.play: startupBlocks=$startupBlocks queuedFrames=$writtenFrames underruns=${track.underrunCount}")
                     track.play()
                 }
             }
@@ -156,7 +157,16 @@ class AndroidGbAudioOutput(
             previousLeft = left
             previousRight = right
         }
-        Log.d(TAG, "startup block=$startupBlocks stage=$stage samples=$count firstL=${if (count > 0) samples[0] else 0} firstR=${if (count > 1) samples[1] else 0} peak=$peak maxJump=$jump")
+        record("startup block=$startupBlocks stage=$stage samples=$count firstL=${if (count > 0) samples[0] else 0} firstR=${if (count > 1) samples[1] else 0} peak=$peak maxJump=$jump")
+    }
+
+    private fun record(message: String) {
+        Log.d(TAG, message)
+        if (report.length < 16000) report.append(message).append('\n')
+    }
+
+    fun exportReport(): String = synchronized(lock) {
+        report.toString() + diagnostics() + "\n"
     }
 
     /** Live diagnostics to distinguish device underruns from bounded FIFO overflow. */
