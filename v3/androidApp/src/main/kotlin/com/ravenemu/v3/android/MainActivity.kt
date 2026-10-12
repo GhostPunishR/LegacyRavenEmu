@@ -2,6 +2,7 @@ package com.ravenemu.v3.android
 
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -148,7 +149,7 @@ class MainActivity : ComponentActivity() {
                             if (sample != null) {
                                 videoMetrics = sample
                                 if (captured.audioFailure == null) {
-                                    audioStatus = output?.diagnostics() ?: audioStatus
+                                    output?.let { Log.d("RavenEmuAudio", it.diagnostics()) }
                                 }
                             }
                         } catch (cancelled: CancellationException) {
@@ -215,7 +216,6 @@ class MainActivity : ComponentActivity() {
                 videoFrame = frame,
                 videoError = videoError,
                 videoMetrics = videoMetrics,
-                audioStatus = audioStatus,
             )
         }
     }
