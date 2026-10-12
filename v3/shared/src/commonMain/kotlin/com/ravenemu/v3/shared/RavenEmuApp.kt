@@ -101,6 +101,10 @@ fun RavenEmuApp(
     onSaveState: (() -> Unit)? = null,
     onLoadState: (() -> Unit)? = null,
     onGameMenuVisibilityChange: ((Boolean) -> Unit)? = null,
+    settings: V3Settings = V3Settings(),
+    onSettingsChange: ((V3Settings) -> Unit)? = null,
+    appVersion: String = "V3 Preview",
+    onOpenLink: ((String) -> Unit)? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
     var search by remember { mutableStateOf("") }
@@ -188,30 +192,24 @@ fun RavenEmuApp(
                         textAlign = TextAlign.Center,
                     )
                 }
-                RavenScreen.SETTINGS -> V2Subscreen(
-                    title = "Réglages",
+                RavenScreen.SETTINGS -> V3SettingsScreen(
+                    settings = settings,
+                    onSettingsChange = onSettingsChange,
+                    appVersion = appVersion,
+                    onOpenLink = onOpenLink,
+                    aboutOnly = false,
                     onBack = { screen = RavenScreen.LIBRARY },
-                ) {
-                    Text("RavenEmu V3 Preview", fontSize = 16.sp, color = RavenText)
-                    Text(
-                        "L'interface reprend RavenEmu 0.8.1. Les réglages du moteur, les skins et les comptes seront migrés après le lecteur.",
-                        fontSize = 14.sp,
-                        color = RavenMuted,
-                    )
-                }
-                RavenScreen.ABOUT -> V2Subscreen(
-                    title = "À propos",
+                )
+                RavenScreen.ABOUT -> V3SettingsScreen(
+                    settings = settings,
+                    onSettingsChange = onSettingsChange,
+                    appVersion = appVersion,
+                    onOpenLink = onOpenLink,
+                    aboutOnly = true,
                     onBack = { screen = RavenScreen.LIBRARY },
-                ) {
-                    Text("RavenEmu", color = RavenText, fontSize = 20.sp)
-                    Text("Préversion V3 Android / iOS", color = RavenMuted, fontSize = 14.sp)
-                    Text(
-                        "Le lecteur Game Boy et l'audio PCM16 sont en test sur Android. La progression enregistrée dans le jeu est conservée sur Android. Un save state manuel (emplacement 1) est disponible dans le menu du lecteur.",
-                        color = RavenMuted,
-                        fontSize = 14.sp,
-                    )
-                }
+                )
                 RavenScreen.PLAYER -> GbVideoScreen(
+                    settings = settings,
                     title = loadedGame?.filename.orEmpty(),
                     frame = videoFrame,
                     error = videoError,
@@ -274,6 +272,7 @@ fun RavenEmuApp(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GbVideoScreen(
+    settings: V3Settings,
     title: String,
     frame: ImageBitmap?,
     error: String?,
@@ -316,9 +315,8 @@ private fun GbVideoScreen(
                 }
             }
         }
-        // Compact diagnostics stay directly below the title. Their height does
-        // not change while waiting for the first one-second measurement.
-        Row(
+        // The debug bar is optional; enabled by default for the V3 preview.
+        if (settings.showDiagnostics) Row(
             modifier = Modifier.fillMaxWidth().height(32.dp)
                 .background(RavenSurface).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -366,6 +364,10 @@ private fun GbVideoScreen(
         if (onButtonChange != null) {
             GbTouchControls(
                 onButton = onButtonChange,
+                haptics = settings.haptics,
+                scalePercent = settings.controlsScale,
+                verticalGapDp = settings.controlsGap,
+                highContrast = settings.controlsStyle == "contrast",
                 // Keep the lower pills slightly above the system navigation bar,
                 // matching the requested default control placement.
                 modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
