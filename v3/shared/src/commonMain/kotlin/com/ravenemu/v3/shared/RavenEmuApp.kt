@@ -101,6 +101,10 @@ fun RavenEmuApp(
     onImportRom: (() -> Unit)? = null,
     loadedGame: LoadedGameInfo? = null,
     libraryGames: List<GameEntry> = emptyList(),
+    libraryCovers: Map<String, ImageBitmap> = emptyMap(),
+    onChooseCover: ((String) -> Unit)? = null,
+    onRemoveCover: ((String) -> Unit)? = null,
+    coverBusy: Boolean = false,
     onLaunchLibraryGame: ((String, () -> Unit) -> Unit)? = null,
     importBusy: Boolean = false,
     importError: String? = null,
@@ -188,6 +192,7 @@ fun RavenEmuApp(
                         val entries = LibraryNavigation.gamesForPage(games, page, search)
                         LibraryPageContent(
                             entries = entries,
+                            covers = libraryCovers,
                             emptyMessage = when {
                                 search.isNotBlank() -> "Aucun jeu ne correspond à cette recherche."
                                 games.isEmpty() && onImportRom != null ->
@@ -261,7 +266,37 @@ fun RavenEmuApp(
                 ) {
                     Text(entry.title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Text(platformLabel(entry.platform), color = RavenSecondary, fontSize = 13.sp)
-                    Text("ROM disponible dans la bibliothèque.", color = RavenText)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        CoverArtwork(
+                            entry.platform, libraryCovers[entry.id],
+                            Modifier.width(90.dp).height(105.dp),
+                        )
+                        Column(
+                            Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                if (libraryCovers.containsKey(entry.id))
+                                    "Jaquette personnalisée" else "Aucune jaquette",
+                                color = RavenMuted, fontSize = 13.sp,
+                            )
+                            if (onChooseCover != null) {
+                                OutlinedButton(
+                                    onClick = { onChooseCover(entry.id) },
+                                    enabled = !coverBusy && !importBusy,
+                                ) { Text("Choisir une image", fontSize = 12.sp) }
+                            }
+                        }
+                    }
+                    if (libraryCovers.containsKey(entry.id) && onRemoveCover != null) {
+                        TextButton(
+                            onClick = { onRemoveCover(entry.id) },
+                            enabled = !coverBusy,
+                        ) { Text("Retirer la jaquette", color = RavenAccent) }
+                    }
                     Text(
                         "Vidéo, commandes et audio Game Boy disponibles sur Android. La sauvegarde interne du jeu est automatique et un save state manuel est disponible dans le menu ⋮.",
                         color = RavenMuted,
@@ -698,6 +733,7 @@ private fun SearchField(query: String, onChange: (String) -> Unit) {
 @Composable
 private fun LibraryPageContent(
     entries: List<GameEntry>,
+    covers: Map<String, ImageBitmap>,
     emptyMessage: String,
     listMode: Boolean,
     onSelect: (GameEntry) -> Unit,
@@ -729,8 +765,9 @@ private fun LibraryPageContent(
                         .padding(horizontal = 10.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CoverPlaceholder(
-                        entry.platform, Modifier.width(44.dp).height(52.dp))
+                    CoverArtwork(
+                        entry.platform, covers[entry.id],
+                        Modifier.width(44.dp).height(52.dp))
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(entry.title, color = RavenText, fontSize = 15.sp,
@@ -753,7 +790,7 @@ private fun LibraryPageContent(
                         .padding(start = 4.dp, top = 6.dp, end = 4.dp, bottom = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    CoverPlaceholder(entry.platform,
+                    CoverArtwork(entry.platform, covers[entry.id],
                         Modifier.fillMaxWidth().aspectRatio(6f / 7f))
                     Spacer(Modifier.height(6.dp))
                     Text(entry.title, color = RavenSecondary, fontSize = 11.sp,
@@ -762,6 +799,28 @@ private fun LibraryPageContent(
                 }
             }
         }
+    }
+}
+
+/** Display imported artwork; never substitute invented or downloaded game covers. */
+@Composable
+private fun CoverArtwork(
+    platform: GamePlatform,
+    bitmap: ImageBitmap?,
+    modifier: Modifier,
+) {
+    if (bitmap == null) {
+        CoverPlaceholder(platform, modifier)
+    } else {
+        Image(
+            bitmap = bitmap,
+            contentDescription = "Jaquette personnalisée",
+            modifier = modifier
+                .clip(RoundedCornerShape(10.dp))
+                .border(1.dp, RavenOutline.copy(alpha = 0.75f),
+                    RoundedCornerShape(10.dp)),
+            contentScale = ContentScale.Crop,
+        )
     }
 }
 
