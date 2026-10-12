@@ -15,6 +15,17 @@ FetchContent_Declare(ravenemu_cores
 )
 FetchContent_MakeAvailable(ravenemu_cores)
 
+# The installed preview is assembled with Gradle's debug variant. Without
+# overriding Debug's -O0, the emulated CPU/PPU loops run unoptimized even on
+# high-end Android devices. Keep symbols/debuggability but optimize just the
+# native engine targets in the Android preview. Host/iOS SDKs are untouched.
+if(ANDROID)
+    foreach(core_target IN ITEMS
+            ravenemu_common gb_raven_core gbc_raven_core gba_raven_core ravenemu_c_api)
+        target_compile_options(${core_target} PRIVATE "$<$<CONFIG:Debug>:-O2>")
+    endforeach()
+endif()
+
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include")
 configure_file("${ravenemu_cores_SOURCE_DIR}/sdk/include/ravenemu/bridge.h"
                "${CMAKE_BINARY_DIR}/include/bridge.h" COPYONLY)

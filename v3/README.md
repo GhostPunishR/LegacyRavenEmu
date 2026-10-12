@@ -12,9 +12,11 @@ Aperçu de la future interface **identique sur Android et iOS**. Le projet vit d
 - Le fichier n'est chargé **qu'en mémoire**. Il n'y a pas encore de bibliothèque persistante.
 - Les fichiers vides, non `.gb`, invalides ou supérieurs à 16 Mio sont refusés. Un échec conserve la session précédente si elle existe.
 
-**Étape suivante, vidéo GB Android :** la fiche du jeu comporte maintenant "Afficher l'écran". Le lecteur exécute des frames RavenGB sur un thread de travail et affiche le vrai framebuffer avec un filtrage pixel art, dans le lecteur Compose partagé. L'exécution est suspendue quand l'écran est fermé ou que l'application passe en arrière-plan. La cadence cible provient du cœur, mais la synchronisation audio et le frame pacing précis restent à développer.
+**Étape 3, vidéo GB Android :** la fiche du jeu comporte "Afficher l'écran". Le lecteur exécute des frames RavenGB sur un thread de travail et affiche le vrai framebuffer sans lissage dans le lecteur Compose partagé. L'exécution est suspendue quand l'écran est fermé ou que l'application passe en arrière-plan.
 
-**Encore à réaliser :** essais sur appareil Android de cette prévisualisation, véritables jaquettes et scan des dossiers, écran de réglages complet, commandes, audio, sauvegardes disque, import iOS, autres consoles dans le lecteur et RetroAchievements. L'absence de commandes signifie qu'il ne s'agit pas encore d'un jeu jouable.
+**Diagnostic performance Android :** les moteurs C++ de la preview sont compilés avec `-O2` même quand l'APK Gradle est en Debug (le build iOS et les autres projets ne changent pas). Le tampon de pixels JNI est réutilisé d'une frame à l'autre. Une mesure sur une fenêtre d'environ une seconde montre les **frames calculées par seconde**, la cible du moteur et les temps moyens de calcul natif et conversion d'image. Ces nombres servent au diagnostic sur appareil réel : ils ne sont pas des FPS garantis à l'écran. Les images Bitmap restent allouées à chaque frame pour ne pas modifier un tampon pendant qu'il est affiché.
+
+**Encore à réaliser :** mesure des FPS et test de fluidité sur un téléphone Android avec l'APK optimisé, véritables jaquettes et scan des dossiers, écran de réglages complet, commandes, audio, sauvegardes disque, import iOS, autres consoles dans le lecteur et RetroAchievements. L'absence de commandes signifie qu'il ne s'agit pas encore d'un jeu jouable.
 
 ## Architecture
 

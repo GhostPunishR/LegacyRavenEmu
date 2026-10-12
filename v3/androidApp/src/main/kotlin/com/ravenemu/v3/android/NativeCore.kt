@@ -21,12 +21,14 @@ class NativeCore(system: Int) : AutoCloseable {
         check(nativeLoad(requireOpen(), rom, battery)) { nativeLastError() }
     }
 
-    /** Returns packed ARGB8888 pixels. The caller schedules the frame clock. */
-    fun frame(): IntArray {
-        val pixels = IntArray(width * height)
+    /** Fills a caller-owned ARGB8888 framebuffer without reallocating it. */
+    fun frameInto(pixels: IntArray) {
+        require(pixels.size == width * height) { "Invalid framebuffer dimensions" }
         check(nativeFrame(requireOpen(), pixels)) { nativeLastError() }
-        return pixels
     }
+
+    /** Convenience method for callers that need a new buffer. */
+    fun frame(): IntArray = IntArray(width * height).also(::frameInto)
 
     fun readAudio(maxSamples: Int = 4096): ShortArray {
         require(maxSamples >= 0)

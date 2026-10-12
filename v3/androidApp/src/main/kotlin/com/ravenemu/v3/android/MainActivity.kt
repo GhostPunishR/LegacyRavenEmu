@@ -1,27 +1,36 @@
 package com.ravenemu.v3.android
 
-import android.os.Bundle
 import android.graphics.Bitmap
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.runtime.LaunchedEffect
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlin.math.roundToLong
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import com.ravenemu.v3.shared.GbVideoMetrics
+import com.ravenemu.v3.shared.GbVideoMetricsAccumulator
 import com.ravenemu.v3.shared.LoadedGameInfo
 import com.ravenemu.v3.shared.RavenEmuApp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToLong
+
+private data class CapturedGbFrame(
+    val bitmap: ImageBitmap,
+    val coreTimeNanos: Long,
+    val conversionTimeNanos: Long,
+)
 
 class MainActivity : ComponentActivity() {
     private lateinit var gameSession: AndroidGbSession
@@ -48,33 +57,55 @@ class MainActivity : ComponentActivity() {
             var videoEnabled by remember { mutableStateOf(false) }
             var frame by remember { mutableStateOf<ImageBitmap?>(null) }
             var videoError by remember { mutableStateOf<String?>(null) }
+            var videoMetrics by remember { mutableStateOf<GbVideoMetrics?>(null) }
             val scope = rememberCoroutineScope()
 
-            // The coroutine is active only on the player screen while the
-            // Activity is in the foreground. Native calls and buffer creation
-            // happen off the main thread, protected by AndroidGbSession's lock.
             LaunchedEffect(videoEnabled, loadedGame, foreground) {
-                if (!videoEnabled || !foreground || loadedGame == null) {
-                    frame = null
-                    return@LaunchedEffect
-                }
+                frame = null
+                videoMetrics = null
+                if (!videoEnabled || !foreground || loadedGame == null) return@LaunchedEffect
+
                 videoError = null
-                val fps = gameSession.refreshRateHz() ?: 59.7
-                val periodNanos = (1_000_000_000.0 / fps.coerceIn(1.0, 120.0)).roundToLong()
+                val currentGame = loadedGame ?: return@LaunchedEffect
+                val targetFps = (gameSession.refreshRateHz() ?: 59.7).coerceIn(1.0, 120.0)
+                val periodNanos = (1_000_000_000.0 / targetFps).roundToLong()
+                val stats = GbVideoMetricsAccumulator(targetFps)
+                val pixels = IntArray(currentGame.width * currentGame.height)
                 var due = System.nanoTime()
+
                 while (isActive) {
                     try {
-                        val rendered = withContext(Dispatchers.Default) {
-                            gameSession.nextFrame()?.let { native ->
-                                Bitmap.createBitmap(
-                                    native.argb,
-                                    native.width,
-                                    native.height,
+                        // Only emulation and pixel conversion run on the worker;
+                        // Compose state is assigned on the UI coroutine.
+                        val captured = withContext(Dispatchers.Default) {
+                            val nativeStart = System.nanoTime()
+                            val hasFrame = gameSession.nextFrameInto(pixels)
+                            val nativeElapsed = System.nanoTime() - nativeStart
+                            if (!hasFrame) null else {
+                                val conversionStart = System.nanoTime()
+                                val image = Bitmap.createBitmap(
+                                    pixels,
+                                    currentGame.width,
+                                    currentGame.height,
                                     Bitmap.Config.ARGB_8888,
                                 ).asImageBitmap()
+                                CapturedGbFrame(
+                                    image,
+                                    nativeElapsed,
+                                    System.nanoTime() - conversionStart,
+                                )
                             }
                         } ?: break
-                        frame = rendered
+
+                        frame = captured.bitmap
+                        val sample = stats.record(
+                            System.nanoTime(),
+                            captured.coreTimeNanos,
+                            captured.conversionTimeNanos,
+                        )
+                        if (sample != null) videoMetrics = sample
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
                     } catch (error: Exception) {
                         videoError = error.message ?: "Erreur de rendu Game Boy."
                         frame = null
@@ -86,7 +117,8 @@ class MainActivity : ComponentActivity() {
                     if (remaining > 0) {
                         delay((remaining / 1_000_000L).coerceAtLeast(1L))
                     } else if (remaining < -periodNanos) {
-                        // Don't accumulate a backlog when the phone is slow.
+                        // If frames are slower than real time, show the measured
+                        // speed instead of trying to process an infinite backlog.
                         due = System.nanoTime()
                     }
                 }
@@ -123,9 +155,11 @@ class MainActivity : ComponentActivity() {
                 onStopVideo = {
                     videoEnabled = false
                     frame = null
+                    videoMetrics = null
                 },
                 videoFrame = frame,
                 videoError = videoError,
+                videoMetrics = videoMetrics,
             )
         }
     }

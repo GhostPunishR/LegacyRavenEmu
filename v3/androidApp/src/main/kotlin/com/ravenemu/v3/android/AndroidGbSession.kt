@@ -4,7 +4,6 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.ravenemu.v3.shared.GamePlatform
-import com.ravenemu.v3.shared.GbVideoFrame
 import com.ravenemu.v3.shared.LoadedGameInfo
 import com.ravenemu.v3.shared.RomImportPolicy
 import java.io.ByteArrayOutputStream
@@ -50,14 +49,14 @@ class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
     }
 
     /**
-     * Produces exactly one native frame. Serialize against ROM replacement and
-     * close, including when the player coroutine is cancelled in the middle of
-     * an import or during Activity shutdown.
+     * Writes exactly one native frame into a reusable caller-owned buffer.
+     * Serialize against ROM replacement, import and Activity shutdown.
      */
-    fun nextFrame(): GbVideoFrame? = synchronized(lock) {
+    fun nextFrameInto(output: IntArray): Boolean = synchronized(lock) {
         check(!closed) { "La session a été fermée." }
-        val core = active ?: return@synchronized null
-        GbVideoFrame(core.width, core.height, core.frame())
+        val core = active ?: return@synchronized false
+        core.frameInto(output)
+        true
     }
 
     fun refreshRateHz(): Double? = synchronized(lock) {

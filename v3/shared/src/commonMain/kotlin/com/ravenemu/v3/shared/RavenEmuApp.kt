@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.roundToInt
 
 /*
  * RavenEmu 0.8.1 visual reference:
@@ -90,6 +91,7 @@ fun RavenEmuApp(
     onStopVideo: (() -> Unit)? = null,
     videoFrame: ImageBitmap? = null,
     videoError: String? = null,
+    videoMetrics: GbVideoMetrics? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
     var search by remember { mutableStateOf("") }
@@ -201,6 +203,7 @@ fun RavenEmuApp(
                     title = loadedGame?.filename.orEmpty(),
                     frame = videoFrame,
                     error = videoError,
+                    metrics = videoMetrics,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -256,6 +259,7 @@ private fun GbVideoScreen(
     title: String,
     frame: ImageBitmap?,
     error: String?,
+    metrics: GbVideoMetrics?,
     onBack: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().background(Color.Black)) {
@@ -295,12 +299,28 @@ private fun GbVideoScreen(
                 )
             }
         }
+        if (metrics != null) {
+            Text(
+                "Frames calculées : ${oneDecimal(metrics.actualFps)} / ${oneDecimal(metrics.targetFps)} FPS",
+                color = RavenAccent,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
+            )
+            Text(
+                "Moteur : ${oneDecimal(metrics.coreMs)} ms/image | Conversion : ${oneDecimal(metrics.conversionMs)} ms/image",
+                color = RavenMuted,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
+            )
+        }
         Text(
             "Prévisualisation vidéo uniquement. Commandes et audio à venir.",
             color = RavenMuted,
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
         )
     }
 }
@@ -574,3 +594,6 @@ private fun RavenIcon(icon: RavenGlyph, tint: Color) {
         }
     }
 }
+
+private fun oneDecimal(value: Double): String =
+    ((value * 10.0).roundToInt() / 10.0).toString()
