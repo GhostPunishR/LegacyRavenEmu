@@ -145,7 +145,12 @@ class MainActivity : ComponentActivity() {
                                 captured.coreTimeNanos,
                                 captured.conversionTimeNanos,
                             )
-                            if (sample != null) videoMetrics = sample
+                            if (sample != null) {
+                                videoMetrics = sample
+                                if (captured.audioFailure == null) {
+                                    audioStatus = output?.diagnostics() ?: audioStatus
+                                }
+                            }
                         } catch (cancelled: CancellationException) {
                             throw cancelled
                         } catch (error: Exception) {
