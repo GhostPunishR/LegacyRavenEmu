@@ -136,14 +136,19 @@ class MainActivity : ComponentActivity() {
                 if (libraryGames.isNotEmpty()) {
                     autoCoverLoading = true
                     try {
-                        val pictures = withContext(Dispatchers.IO) {
-                            autoCoverDownloader.fillMissing(
-                                romLibrary.list(), coverStore, ignoredAutoCovers,
-                            ).mapValues { it.value.asImageBitmap() }
+                        // The downloader limits each pass to 30 images. Scan
+                        // every batch of a newly imported folder, not just the
+                        // first 30 games, without blocking the Compose UI.
+                        val entries = withContext(Dispatchers.IO) { romLibrary.list() }
+                        for (batch in entries.chunked(30)) {
+                            val pictures = withContext(Dispatchers.IO) {
+                                autoCoverDownloader.fillMissing(
+                                    batch, coverStore, ignoredAutoCovers,
+                                ).mapValues { it.value.asImageBitmap() }
+                            }
+                            // Manual artwork wins over a concurrent download.
+                            libraryCovers = pictures + libraryCovers
                         }
-                        // A manually selected cover always takes precedence over
-                        // a remote response that finished in the meantime.
-                        libraryCovers = pictures + libraryCovers
                     } catch (error: Exception) {
                         Log.w("RavenEmuCover", "Automatic cover lookup unavailable", error)
                     } finally {
