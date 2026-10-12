@@ -106,6 +106,13 @@ fun RavenEmuApp(
     onRemoveCover: ((String) -> Unit)? = null,
     coverBusy: Boolean = false,
     onLaunchLibraryGame: ((String, () -> Unit) -> Unit)? = null,
+    onExportGameBackup: ((String) -> Unit)? = null,
+    onExportBatterySave: ((String) -> Unit)? = null,
+    onImportGameSave: ((String) -> Unit)? = null,
+    saveTransferBusy: Boolean = false,
+    saveImportReview: GbSaveImportReview? = null,
+    onConfirmSaveImport: (() -> Unit)? = null,
+    onCancelSaveImport: (() -> Unit)? = null,
     importBusy: Boolean = false,
     importError: String? = null,
     onStartVideo: (() -> Unit)? = null,
@@ -261,7 +268,8 @@ fun RavenEmuApp(
             ) {
                 val entry = gameDetails!!
                 Column(
-                    Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+                    Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                        .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(entry.title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
@@ -339,6 +347,40 @@ fun RavenEmuApp(
                             Text("Jouer")
                         }
                     }
+                    if (onExportGameBackup != null || onImportGameSave != null) {
+                        Text("Sauvegardes", color = RavenText,
+                            fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Transférez votre progression sans exporter la ROM.",
+                            color = RavenMuted, fontSize = 12.sp,
+                        )
+                        if (onExportGameBackup != null) {
+                            FilledTonalButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !importBusy && !saveTransferBusy,
+                                onClick = { onExportGameBackup(entry.id) },
+                            ) { Text("Exporter toutes les sauvegardes (.zip)") }
+                        }
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            if (onExportBatterySave != null) {
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !importBusy && !saveTransferBusy,
+                                    onClick = { onExportBatterySave(entry.id) },
+                                ) { Text("Exporter .sav", fontSize = 12.sp) }
+                            }
+                            if (onImportGameSave != null) {
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !importBusy && !saveTransferBusy,
+                                    onClick = { onImportGameSave(entry.id) },
+                                ) { Text("Importer", fontSize = 12.sp) }
+                            }
+                        }
+                    }
                     OutlinedButton(
                         onClick = { gameDetails = null },
                         modifier = Modifier.fillMaxWidth(),
@@ -347,6 +389,54 @@ fun RavenEmuApp(
                     }
                 }
             }
+        }
+        val review = saveImportReview
+        if (review != null) {
+            AlertDialog(
+                onDismissRequest = { onCancelSaveImport?.invoke() },
+                title = { Text("Importer les sauvegardes ?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Jeu : ${review.gameTitle}")
+                        Text(
+                            "Contenu : " +
+                                (if (review.hasBattery) "sauvegarde .sav" else "pas de .sav") +
+                                (if (review.slots.isEmpty()) "" else
+                                    ", états ${review.slots.joinToString(", ")}"),
+                        )
+                        if (review.rawSav) {
+                            Text(
+                                "Un fichier .sav seul n'identifie pas sa ROM. Vérifiez que vous avez choisi le bon jeu.",
+                                color = RavenDanger, fontSize = 13.sp,
+                            )
+                        }
+                        if (review.conflicts.isNotEmpty()) {
+                            Text(
+                                "Des données existantes seront remplacées : " +
+                                    review.conflicts.joinToString(", ") + ".",
+                                color = RavenDanger, fontSize = 13.sp,
+                            )
+                        } else {
+                            Text("Les autres sauvegardes resteront inchangées.",
+                                color = RavenSecondary, fontSize = 13.sp)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !saveTransferBusy && onConfirmSaveImport != null,
+                        onClick = { onConfirmSaveImport?.invoke() },
+                    ) { Text("Confirmer l'import", color = RavenAccent) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { onCancelSaveImport?.invoke() }) {
+                        Text("Annuler", color = RavenSecondary)
+                    }
+                },
+                containerColor = RavenSurface,
+                titleContentColor = RavenText,
+                textContentColor = RavenText,
+            )
         }
     }
 }
