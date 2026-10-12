@@ -89,6 +89,17 @@ class MainActivity : ComponentActivity() {
             val settingsStore = remember { AndroidV3SettingsStore(applicationContext) }
             val romLibrary = remember { GbRomLibrary(File(filesDir, "gb-library"), contentResolver) }
             val coverStore = remember { GbCoverStore(File(filesDir, "gb-covers"), contentResolver) }
+            val autoCoverDownloader = remember { GbAutoCoverDownloader() }
+            val coverPreferences = remember {
+                applicationContext.getSharedPreferences("ravenemu_v3_cover_rules", MODE_PRIVATE)
+            }
+            var ignoredAutoCovers by remember {
+                mutableStateOf(
+                    coverPreferences.getStringSet("disabled_auto_cover_ids", emptySet())
+                        ?.toSet() ?: emptySet()
+                )
+            }
+            var autoCoverLoading by remember { mutableStateOf(false) }
             var libraryCovers by remember { mutableStateOf(emptyMap<String, ImageBitmap>()) }
             var coverBusy by remember { mutableStateOf(false) }
             var pendingCoverId by remember { mutableStateOf<String?>(null) }
@@ -112,6 +123,28 @@ class MainActivity : ComponentActivity() {
                     libraryCovers = covers
                 } catch (error: Exception) {
                     Log.e("RavenEmuLibrary", "Cannot open library index", error)
+                }
+            }
+            // Only run a cover search when the library changes or an excluded
+            // ROM is explicitly re-enabled. Recomposition/video frames never
+            // initiate network calls.
+            LaunchedEffect(libraryGames, ignoredAutoCovers) {
+                if (libraryGames.isNotEmpty()) {
+                    autoCoverLoading = true
+                    try {
+                        val pictures = withContext(Dispatchers.IO) {
+                            autoCoverDownloader.fillMissing(
+                                romLibrary.list(), coverStore, ignoredAutoCovers,
+                            ).mapValues { it.value.asImageBitmap() }
+                        }
+                        // A manually selected cover always takes precedence over
+                        // a remote response that finished in the meantime.
+                        libraryCovers = pictures + libraryCovers
+                    } catch (error: Exception) {
+                        Log.w("RavenEmuCover", "Automatic cover lookup unavailable", error)
+                    } finally {
+                        autoCoverLoading = false
+                    }
                 }
             }
             var userSettings by remember { mutableStateOf(settingsStore.read()) }
@@ -366,6 +399,12 @@ class MainActivity : ComponentActivity() {
                                 coverStore.save(id, uri).asImageBitmap()
                             }
                             libraryCovers = libraryCovers + (id to cover)
+                            if (id in ignoredAutoCovers) {
+                                ignoredAutoCovers = ignoredAutoCovers - id
+                                coverPreferences.edit()
+                                    .putStringSet("disabled_auto_cover_ids", ignoredAutoCovers)
+                                    .apply()
+                            }
                             Toast.makeText(
                                 applicationContext, "Jaquette enregistrée",
                                 Toast.LENGTH_SHORT,
@@ -409,7 +448,7 @@ class MainActivity : ComponentActivity() {
                 loadedGame = loadedGame,
                 libraryGames = libraryGames,
                 libraryCovers = libraryCovers,
-                coverBusy = coverBusy,
+                coverBusy = coverBusy || autoCoverLoading,
                 onChooseCover = { id ->
                     if (!coverBusy && libraryGames.any { it.id == id }) {
                         pendingCoverId = id
@@ -423,6 +462,10 @@ class MainActivity : ComponentActivity() {
                             try {
                                 withContext(Dispatchers.IO) { coverStore.delete(id) }
                                 libraryCovers = libraryCovers - id
+                                ignoredAutoCovers = ignoredAutoCovers + id
+                                coverPreferences.edit()
+                                    .putStringSet("disabled_auto_cover_ids", ignoredAutoCovers)
+                                    .apply()
                             } catch (error: Exception) {
                                 Log.e("RavenEmuLibrary", "Unable to remove cover", error)
                                 Toast.makeText(
