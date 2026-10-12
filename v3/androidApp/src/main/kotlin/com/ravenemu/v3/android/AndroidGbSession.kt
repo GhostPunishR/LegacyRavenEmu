@@ -106,38 +106,60 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
         return true
     }
 
-    /**
-     * An explicit slot-0 snapshot. Native capture is serialized with frames,
-     * while the atomic disk write happens without holding the emulation lock.
-     * ROM replacement and concurrent state operations are ordered by saveLock.
-     */
-    fun saveStateSlot() = synchronized(saveLock) {
+    /** Serialize state operations with both emulation and battery saves. */
+    fun saveStateSlot(slot: Int = 0, preview: ByteArray? = null) = synchronized(saveLock) {
         val (key, state) = synchronized(lock) {
             check(!closed) { "La session a été fermée." }
             val core = active ?: error("Aucun jeu chargé.")
             val key = activeRomKey ?: error("Aucune ROM active.")
             key to core.saveState()
         }
-        stateStore.write(key, state)
-        Log.d(TAG, "Save state stored for ROM ${key.take(12)}")
+        // Write the state before the optional thumbnail, so a preview cannot
+        // be mistaken for a complete save on crash or low storage.
+        stateStore.write(key, state, slot)
+        try {
+            if (preview != null) stateStore.writePreview(key, slot, preview)
+            else stateStore.deletePreview(key, slot)
+        } catch (error: Exception) {
+            Log.w(TAG, "Preview write failed; save state is still safe", error)
+            stateStore.deletePreview(key, slot)
+        }
+        Log.d(TAG, "Save state slot ${slot + 1} stored for ROM ${key.take(12)}")
     }
 
-    /** A missing slot or an incompatible/corrupt state never resets the game. */
-    fun loadStateSlot() = synchronized(saveLock) {
+    fun loadStateSlot(slot: Int = 0) = synchronized(saveLock) {
         val key = synchronized(lock) {
             check(!closed) { "La session a été fermée." }
             activeRomKey ?: error("Aucun jeu chargé.")
         }
-        val state = stateStore.read(key) ?: error("Aucun save state pour ce jeu.")
+        val state = stateStore.read(key, slot)
+            ?: error("Emplacement ${slot + 1} vide.")
         synchronized(lock) {
             check(!closed && activeRomKey == key) { "La ROM active a changé." }
             val core = active ?: error("Aucun jeu chargé.")
-            // Release the physical touch buttons before replacing native state.
             for (button in heldButtons) core.button(button.nativeCode, false)
             heldButtons.clear()
             core.loadState(state)
         }
-        Log.d(TAG, "Save state restored for ROM ${key.take(12)}")
+        Log.d(TAG, "Save state slot ${slot + 1} restored for ROM ${key.take(12)}")
+    }
+
+    /** Only deletes the selected slot; cartridge SRAM is kept untouched. */
+    fun deleteStateSlot(slot: Int) = synchronized(saveLock) {
+        val key = synchronized(lock) {
+            check(!closed) { "La session a été fermée." }
+            activeRomKey ?: error("Aucun jeu chargé.")
+        }
+        stateStore.delete(key, slot)
+        Log.d(TAG, "Save state slot ${slot + 1} deleted for ROM ${key.take(12)}")
+    }
+
+    fun listStateSlots(): List<GbSlotSummary> = synchronized(saveLock) {
+        val key = synchronized(lock) {
+            check(!closed) { "La session a été fermée." }
+            activeRomKey ?: error("Aucun jeu chargé.")
+        }
+        stateStore.slots(key)
     }
 
     /**
