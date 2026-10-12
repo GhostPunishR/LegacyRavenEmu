@@ -2,6 +2,7 @@ package com.ravenemu.v3.shared
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -34,7 +36,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
 private val Background = Color(0xFF0B0C12)
-private val Surface = Color(0xFF161821)
+private val Surface = Color(0xFF1A1B28)
 private val TextMain = Color(0xFFF5F2FF)
 private val Muted = Color(0xFFAAA2BC)
 private val Accent = Color(0xFFA78BFA)
@@ -67,7 +69,7 @@ fun V3SettingsScreen(
     }
     Column(Modifier.fillMaxSize().background(Background)) {
         Row(
-            Modifier.fillMaxWidth().height(52.dp).background(Surface),
+            Modifier.fillMaxWidth().height(54.dp).background(Surface),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(
@@ -86,9 +88,6 @@ fun V3SettingsScreen(
         ) {
             when (page) {
                 Page.HOME -> {
-                    Text("RavenEmu V3", color = TextMain, fontSize = 17.sp)
-                    Text("Personnalisez le lecteur sans modifier les paramètres internes des cœurs.",
-                        color = Muted, fontSize = 13.sp)
                     CategoryRow("Général", "Pause et diagnostics") { page = Page.GENERAL }
                     CategoryRow("Audio", "Son du jeu et volume") { page = Page.AUDIO }
                     CategoryRow("Vidéo", "Couleurs, luminosité et contraste") { page = Page.VIDEO }
@@ -237,16 +236,33 @@ private fun GroupTitle(title: String) {
 
 @Composable
 private fun CategoryRow(title: String, summary: String, onClick: () -> Unit) {
+    val symbol = when (title) {
+        "Général" -> "✦"
+        "Audio" -> "♫"
+        "Vidéo" -> "▣"
+        "Interface" -> "◈"
+        else -> "ⓘ"
+    }
     Row(
-        Modifier.fillMaxWidth().background(Surface).clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+        Modifier.fillMaxWidth()
+            .border(1.dp, Outline.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
+            .background(Surface, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(13.dp),
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, color = TextMain, fontSize = 16.sp)
+        androidx.compose.foundation.layout.Box(
+            Modifier.size(42.dp)
+                .background(Accent.copy(alpha = 0.13f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center,
+        ) { Text(symbol, color = Accent, fontSize = 22.sp) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, color = TextMain, fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold)
             Text(summary, color = Muted, fontSize = 12.sp)
         }
-        Text("›", color = Accent, fontSize = 24.sp)
+        Text("›", color = Accent, fontSize = 23.sp)
     }
 }
 
