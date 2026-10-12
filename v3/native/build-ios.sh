@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build RavenEmu-Cores for the Apple SDK selected by Xcode.
+# Build RavenCore for the Apple SDK selected by Xcode.
 set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PLATFORM="${PLATFORM_NAME:-iphonesimulator}"
