@@ -34,6 +34,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -42,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 
 private val ControlBorder = Color.White.copy(alpha = 0.64f)
 private val ControlFill = Color.White.copy(alpha = 0.13f)
@@ -55,25 +58,34 @@ private val ControlAccent = Color(0xFFA78BFA)
 fun GbTouchControls(
     onButton: (GbButton, Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    haptics: Boolean = false,
+    scalePercent: Int = 100,
+    verticalGapDp: Int = 46,
+    highContrast: Boolean = false,
 ) {
     // Default portrait geometry follows the user-provided control layout:
     // D-pad at the left, A at the upper-right, B lower and inward, and
     // separated SELECT/START below. Fit the action cluster on narrow screens.
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        val cluster = GbTouchLayout.clusterDp(maxWidth.value).dp
+        val cluster = (GbTouchLayout.clusterDp(maxWidth.value) *
+            scalePercent.coerceIn(80, 115) / 100f)
+            .coerceAtMost((maxWidth.value - 104f).coerceAtLeast(60f)).dp
+        val buttonDiameter = (60f * scalePercent.coerceIn(80, 115) / 100f)
+            .roundToInt().coerceIn(48, 69)
         val actionWidth = minOf(144.dp, (maxWidth - 44.dp - cluster).coerceAtLeast(60.dp))
         val selectStartGap = minOf(50.dp, (maxWidth - 168.dp).coerceAtLeast(8.dp))
         Column(
             Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(46.dp),
+            verticalArrangement = Arrangement.spacedBy(verticalGapDp.coerceIn(20, 80).dp),
         ) {
             Row(
                 Modifier.fillMaxWidth().padding(start = 16.dp, end = 28.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                GbDpad(onButton = onButton, dimension = cluster)
+                GbDpad(onButton = onButton, dimension = cluster,
+                    haptics = haptics, highContrast = highContrast)
                 Box(Modifier.width(actionWidth).height(cluster)) {
                     // A high and close to the right edge; B below and inward,
                     // matching the retouched reference screenshot.
@@ -81,15 +93,17 @@ fun GbTouchControls(
                         button = GbButton.B,
                         label = "B",
                         onButton = onButton,
-                        diameter = 60,
+                        diameter = buttonDiameter,
                         modifier = Modifier.align(Alignment.BottomStart),
+                        haptics = haptics, highContrast = highContrast,
                     )
                     GbMomentaryButton(
                         button = GbButton.A,
                         label = "A",
                         onButton = onButton,
-                        diameter = 60,
+                        diameter = buttonDiameter,
                         modifier = Modifier.align(Alignment.TopEnd),
+                        haptics = haptics, highContrast = highContrast,
                     )
                 }
             }
@@ -101,6 +115,8 @@ fun GbTouchControls(
                 GbMomentaryButton(
                     GbButton.SELECT, "SELECT", onButton, diameter = 40,
                     modifier = Modifier.width(84.dp),
+                    haptics = haptics, highContrast = highContrast,
+                    haptics = haptics, highContrast = highContrast,
                 )
                 Spacer(Modifier.width(selectStartGap))
                 GbMomentaryButton(
@@ -113,9 +129,14 @@ fun GbTouchControls(
 }
 
 @Composable
-private fun GbDpad(onButton: (GbButton, Boolean) -> Unit, dimension: Dp) {
+private fun GbDpad(
+    onButton: (GbButton, Boolean) -> Unit, dimension: Dp,
+    haptics: Boolean, highContrast: Boolean,
+) {
     var held by remember { mutableStateOf(emptySet<GbButton>()) }
     val handler by rememberUpdatedState(onButton)
+    val hapticsEnabled by rememberUpdatedState(haptics)
+    val feedback = LocalHapticFeedback.current
     Canvas(
         Modifier.size(dimension)
             .semantics { contentDescription = "Croix directionnelle"; role = Role.Button }
@@ -127,6 +148,9 @@ private fun GbDpad(onButton: (GbButton, Boolean) -> Unit, dimension: Dp) {
                     fun update(next: Set<GbButton>) {
                         (pressed - next).forEach { handler(it, false) }
                         (next - pressed).forEach { handler(it, true) }
+                        if (pressed.isEmpty() && next.isNotEmpty() && hapticsEnabled) {
+                            feedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
                         pressed = next
                         held = next
                     }
@@ -160,10 +184,13 @@ private fun GbDpad(onButton: (GbButton, Boolean) -> Unit, dimension: Dp) {
         val horizontal = Offset(0f, (size.height - arm) / 2f)
         val verticalSize = Size(arm, size.height)
         val horizontalSize = Size(size.width, arm)
-        drawRoundRect(ControlFill, topLeft = vertical, size = verticalSize, cornerRadius = corner)
-        drawRoundRect(ControlFill, topLeft = horizontal, size = horizontalSize, cornerRadius = corner)
+        drawRoundRect(if (highContrast) Color.White.copy(alpha = 0.27f) else ControlFill,
+            topLeft = vertical, size = verticalSize, cornerRadius = corner)
+        drawRoundRect(if (highContrast) Color.White.copy(alpha = 0.27f) else ControlFill,
+            topLeft = horizontal, size = horizontalSize, cornerRadius = corner)
         val stroke = Stroke(width = 2.dp.toPx())
-        val outline = if (held.isEmpty()) ControlBorder else ControlAccent
+        val outline = if (held.isNotEmpty()) ControlAccent
+            else if (highContrast) Color.White else ControlBorder
         drawRoundRect(outline, topLeft = vertical, size = verticalSize,
             cornerRadius = corner, style = stroke)
         drawRoundRect(outline, topLeft = horizontal, size = horizontalSize,
@@ -178,9 +205,13 @@ private fun GbMomentaryButton(
     onButton: (GbButton, Boolean) -> Unit,
     diameter: Int,
     modifier: Modifier = Modifier,
+    haptics: Boolean = false,
+    highContrast: Boolean = false,
 ) {
     var down by remember { mutableStateOf(false) }
     val handler by rememberUpdatedState(onButton)
+    val hapticsEnabled by rememberUpdatedState(haptics)
+    val feedback = LocalHapticFeedback.current
     val pill = button == GbButton.SELECT || button == GbButton.START
     val shape = if (pill) RoundedCornerShape(50) else CircleShape
     Box(
@@ -188,12 +219,15 @@ private fun GbMomentaryButton(
             .height(diameter.dp)
             .then(if (pill) Modifier else Modifier.width(diameter.dp))
             .semantics { contentDescription = label; role = Role.Button }
-            .border(2.dp, if (down) ControlAccent else ControlBorder, shape)
-            .background(if (down) ControlAccent.copy(alpha = .25f) else ControlFill, shape)
+            .border(2.dp, if (down) ControlAccent
+                else if (highContrast) Color.White else ControlBorder, shape)
+            .background(if (down) ControlAccent.copy(alpha = .25f)
+                else if (highContrast) Color.White.copy(alpha = .27f) else ControlFill, shape)
             .pointerInput(button) {
                 detectTapGestures(onPress = {
                     down = true
                     handler(button, true)
+                    if (hapticsEnabled) feedback.performHapticFeedback(HapticFeedbackType.LongPress)
                     try {
                         tryAwaitRelease()
                     } finally {
@@ -208,7 +242,7 @@ private fun GbMomentaryButton(
             label,
             fontSize = if (pill) 11.sp else 24.sp,
             fontWeight = FontWeight.Medium,
-            color = Color.White.copy(alpha = if (down) 1f else .86f),
+            color = Color.White.copy(alpha = if (down || highContrast) 1f else .86f),
         )
     }
 }
