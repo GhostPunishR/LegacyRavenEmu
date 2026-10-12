@@ -3,21 +3,27 @@ package com.ravenemu.v3.android
 import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import com.ravenemu.v3.shared.GamePlatform
 import com.ravenemu.v3.shared.GbButton
 import com.ravenemu.v3.shared.LoadedGameInfo
 import com.ravenemu.v3.shared.RomImportPolicy
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
+import java.io.File
 
 /**
  * Owns one GB emulation core for the current Activity.
- * The selected file is loaded into memory only, not added to a persistent library.
+ * ROMs are selected on demand; battery-backed game saves survive process restarts.
+ * Native state is always protected by lock, while disk writes use saveLock.
  */
-class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
+class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : Closeable {
     private val lock = Any()
+    private val saveLock = Any()
+    private val batteryStore = GbBatteryStore(File(filesDir, "gb-battery"))
     private var closed = false
     private var active: NativeCore? = null
+    private var activeRomKey: String? = null
     private val heldButtons = mutableSetOf<GbButton>()
 
     /** Must be called off the UI thread. */
@@ -27,28 +33,66 @@ class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
             "Pour cette étape, sélectionnez une ROM Game Boy au format .gb."
         }
         val bytes = readBounded(uri)
+        val romKey = GbBatteryStore.keyForRom(bytes)
+        val savedBattery = batteryStore.read(romKey)
         val replacement = NativeCore(NativeCore.GB)
         var transferred = false
         try {
-            replacement.load(bytes)
+            replacement.load(bytes, savedBattery)
             val result = LoadedGameInfo(
                 filename = filename,
                 platform = GamePlatform.GB,
                 width = replacement.width,
                 height = replacement.height,
             )
-            synchronized(lock) {
-                check(!closed) { "La session a été fermée." }
-                val previous = active
-                heldButtons.clear()
-                active = replacement
-                transferred = true
-                previous?.close()
+            // Never replace a running game before its last battery data
+            // reaches disk. A failure preserves the previous session.
+            synchronized(saveLock) {
+                saveBatteryIfDirtyLocked()
+                synchronized(lock) {
+                    check(!closed) { "La session a été fermée." }
+                    val previous = active
+                    heldButtons.clear()
+                    active = replacement
+                    activeRomKey = romKey
+                    transferred = true
+                    previous?.close()
+                }
             }
             return result
         } finally {
             if (!transferred) replacement.close()
         }
+    }
+
+    /**
+     * Commit changed battery RAM using AtomicFile, then acknowledge exactly
+     * the generation persisted. No disk IO runs while holding the native lock.
+     * Safe to call from a periodic IO worker, ROM replacement, or lifecycle.
+     */
+    fun saveBatteryIfDirty(): Boolean = synchronized(saveLock) {
+        saveBatteryIfDirtyLocked()
+    }
+
+    private fun saveBatteryIfDirtyLocked(): Boolean {
+        val pending = synchronized(lock) {
+            if (closed) return@synchronized null
+            val core = active ?: return@synchronized null
+            val key = activeRomKey ?: return@synchronized null
+            if (!core.batteryDirty()) return@synchronized null
+            val snapshot = core.batterySnapshotWithGeneration() ?: return@synchronized null
+            Triple(core, key, snapshot)
+        } ?: return false
+
+        val (core, key, snapshot) = pending
+        batteryStore.write(key, snapshot.bytes)
+        synchronized(lock) {
+            if (!closed && active === core) {
+                core.acknowledgeBattery(snapshot.generation)
+            }
+        }
+        Log.d(TAG, "Battery saved for ROM ${key.take(12)}")
+        return true
     }
 
     /**
@@ -137,11 +181,24 @@ class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
     }
 
     override fun close() {
-        synchronized(lock) {
-            closed = true
-            heldButtons.clear()
-            active?.close()
-            active = null
+        synchronized(saveLock) {
+            try {
+                saveBatteryIfDirtyLocked()
+            } catch (error: Exception) {
+                Log.e(TAG, "Failed to persist battery on session close", error)
+            } finally {
+                synchronized(lock) {
+                    closed = true
+                    heldButtons.clear()
+                    active?.close()
+                    active = null
+                    activeRomKey = null
+                }
+            }
         }
+    }
+
+    private companion object {
+        const val TAG = "RavenEmuSaves"
     }
 }
