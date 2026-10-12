@@ -89,6 +89,8 @@ private enum class RavenGlyph { SETTINGS, ADD, MORE, SEARCH, BACK }
 fun RavenEmuApp(
     onImportRom: (() -> Unit)? = null,
     loadedGame: LoadedGameInfo? = null,
+    libraryGames: List<GameEntry> = emptyList(),
+    onLaunchLibraryGame: ((String, () -> Unit) -> Unit)? = null,
     importBusy: Boolean = false,
     importError: String? = null,
     onStartVideo: (() -> Unit)? = null,
@@ -110,9 +112,10 @@ fun RavenEmuApp(
     var search by remember { mutableStateOf("") }
     var listMode by remember { mutableStateOf(false) }
     var gameDetails by remember { mutableStateOf<GameEntry?>(null) }
-    val games = if (loadedGame == null) emptyList() else listOf(
-        GameEntry("active", loadedGame.filename, loadedGame.platform),
-    )
+    val games = if (libraryGames.isNotEmpty()) libraryGames
+        else if (loadedGame == null) emptyList() else listOf(
+            GameEntry("active", loadedGame.filename, loadedGame.platform),
+        )
     val pages = LibraryNavigation.pages(games)
     val pagerState = rememberPagerState(pageCount = { pages.size })
 
@@ -239,19 +242,31 @@ fun RavenEmuApp(
                 ) {
                     Text(entry.title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Text(platformLabel(entry.platform), color = RavenSecondary, fontSize = 13.sp)
-                    Text("ROM chargée dans RavenGB.", color = RavenText)
+                    Text("ROM disponible dans la bibliothèque.", color = RavenText)
                     Text(
                         "Vidéo, commandes et audio Game Boy disponibles sur Android. La sauvegarde interne du jeu est automatique et un save state manuel est disponible dans le menu ⋮.",
                         color = RavenMuted,
                         fontSize = 13.sp,
                     )
-                    if (onStartVideo != null && loadedGame != null) {
-                        TextButton(onClick = {
-                            gameDetails = null
-                            onStartVideo()
-                            screen = RavenScreen.PLAYER
-                        }) {
-                            Text("Ouvrir le lecteur GB", color = RavenAccent)
+                    if (onStartVideo != null &&
+                        (onLaunchLibraryGame != null || loadedGame != null)
+                    ) {
+                        TextButton(
+                            onClick = {
+                                gameDetails = null
+                                if (onLaunchLibraryGame != null) {
+                                    onLaunchLibraryGame(entry.id) {
+                                        onStartVideo()
+                                        screen = RavenScreen.PLAYER
+                                    }
+                                } else {
+                                    onStartVideo()
+                                    screen = RavenScreen.PLAYER
+                                }
+                            },
+                            enabled = !importBusy,
+                        ) {
+                            Text("Jouer", color = RavenAccent)
                         }
                     }
                     TextButton(onClick = { gameDetails = null }) {
