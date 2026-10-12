@@ -3,10 +3,14 @@ package com.ravenemu.v3.android
 import android.content.Intent
 import android.net.Uri
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import java.io.File
+import java.io.ByteArrayOutputStream
+import java.text.DateFormat
+import java.util.Date
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -21,10 +25,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import com.ravenemu.v3.shared.GameEntry
 import com.ravenemu.v3.shared.GamePlatform
 import com.ravenemu.v3.shared.GbDisplayFilter
 import com.ravenemu.v3.shared.GbButton
+import com.ravenemu.v3.shared.GbStateSlot
 import com.ravenemu.v3.shared.GbVideoMetrics
 import com.ravenemu.v3.shared.GbVideoMetricsAccumulator
 import com.ravenemu.v3.shared.LoadedGameInfo
@@ -108,10 +114,48 @@ class MainActivity : ComponentActivity() {
             var videoMetrics by remember { mutableStateOf<GbVideoMetrics?>(null) }
             var audioStatus by remember { mutableStateOf<String?>(null) }
             var stateOperationBusy by remember { mutableStateOf(false) }
+            var stateSlotsLoading by remember { mutableStateOf(false) }
+            var stateSlots by remember { mutableStateOf(emptyList<GbStateSlot>()) }
             var restoringState by remember { mutableStateOf(false) }
             var pausedForGameMenu by remember { mutableStateOf(false) }
             var stateRevision by remember { mutableStateOf(0) }
             val scope = rememberCoroutineScope()
+            val refreshSlots: () -> Unit = {
+                stateSlotsLoading = true
+                stateSlots = emptyList()
+                scope.launch {
+                    try {
+                        stateSlots = withContext(Dispatchers.IO) {
+                            val dateFormat = DateFormat.getDateTimeInstance(
+                                DateFormat.MEDIUM, DateFormat.SHORT,
+                            )
+                            gameSession.listStateSlots().map { stored ->
+                                val thumbnail = stored.preview?.let { bytes ->
+                                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                        ?.asImageBitmap()
+                                }
+                                GbStateSlot(
+                                    index = stored.slot,
+                                    savedAt = if (!stored.occupied) null else
+                                        stored.savedAtMillis?.let {
+                                            dateFormat.format(Date(it))
+                                        } ?: "Date inconnue",
+                                    thumbnail = thumbnail,
+                                )
+                            }
+                        }
+                    } catch (error: Exception) {
+                        Log.e("RavenEmuSaves", "Cannot list save slots", error)
+                        Toast.makeText(
+                            applicationContext,
+                            "Impossible de lire les emplacements",
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    } finally {
+                        stateSlotsLoading = false
+                    }
+                }
+            }
             val exportAudio = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.CreateDocument("text/plain"),
             ) { uri ->
@@ -373,6 +417,7 @@ class MainActivity : ComponentActivity() {
                 },
                 onGameMenuVisibilityChange = { open ->
                     if (open) {
+                        refreshSlots()
                         // Preserve a useful report before closing the track.
                         activeAudio?.let {
                             lastAudioReport = it.exportReport()
@@ -382,16 +427,39 @@ class MainActivity : ComponentActivity() {
                     }
                     pausedForGameMenu = open
                 },
-                onSaveState = {
+                stateSlots = stateSlots,
+                stateSlotsLoading = stateSlotsLoading,
+                stateOperationBusy = stateOperationBusy,
+                onSaveState = { slot ->
                     if (!stateOperationBusy && loadedGame != null && videoEnabled) {
                         stateOperationBusy = true
+                        val screenshot = frame?.asAndroidBitmap()
                         scope.launch {
                             try {
-                                withContext(Dispatchers.IO) { gameSession.saveStateSlot() }
+                                withContext(Dispatchers.IO) {
+                                    val preview = screenshot?.let { image ->
+                                        val miniature = Bitmap.createScaledBitmap(
+                                            image, 160, 144, false,
+                                        )
+                                        try {
+                                            ByteArrayOutputStream().use { output ->
+                                                if (miniature.compress(
+                                                        Bitmap.CompressFormat.PNG, 100, output,
+                                                    )
+                                                ) output.toByteArray() else null
+                                            }
+                                        } finally {
+                                            if (miniature !== image) miniature.recycle()
+                                        }
+                                    }
+                                    gameSession.saveStateSlot(slot, preview)
+                                }
                                 Toast.makeText(
-                                    applicationContext, "État sauvegardé (emplacement 1)",
+                                    applicationContext,
+                                    "État sauvegardé (emplacement ${slot + 1})",
                                     Toast.LENGTH_SHORT,
                                 ).show()
+                                refreshSlots()
                             } catch (error: Exception) {
                                 Log.e("RavenEmuSaves", "Save state failed", error)
                                 Toast.makeText(
@@ -405,17 +473,17 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 },
-                onLoadState = {
+                onLoadState = { slot ->
                     if (!stateOperationBusy && loadedGame != null && videoEnabled) {
                         stateOperationBusy = true
-                        restoringState = true // cancel video loop and freshen AudioTrack on resume
+                        restoringState = true
                         activeAudio?.stopNow()
                         gameSession.releaseAllButtons()
                         scope.launch {
                             try {
-                                withContext(Dispatchers.IO) { gameSession.loadStateSlot() }
+                                withContext(Dispatchers.IO) { gameSession.loadStateSlot(slot) }
                                 Toast.makeText(
-                                    applicationContext, "État chargé (emplacement 1)",
+                                    applicationContext, "État chargé (emplacement ${slot + 1})",
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             } catch (error: Exception) {
@@ -426,9 +494,33 @@ class MainActivity : ComponentActivity() {
                                     Toast.LENGTH_LONG,
                                 ).show()
                             } finally {
-                                // Even a very fast load must restart the audio pipeline.
                                 stateRevision++
                                 restoringState = false
+                                stateOperationBusy = false
+                            }
+                        }
+                    }
+                },
+                onDeleteState = { slot ->
+                    if (!stateOperationBusy && loadedGame != null && videoEnabled) {
+                        stateOperationBusy = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { gameSession.deleteStateSlot(slot) }
+                                Toast.makeText(
+                                    applicationContext,
+                                    "Emplacement ${slot + 1} supprimé",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                                refreshSlots()
+                            } catch (error: Exception) {
+                                Log.e("RavenEmuSaves", "Delete state failed", error)
+                                Toast.makeText(
+                                    applicationContext,
+                                    "Suppression impossible : ${error.message ?: "erreur inconnue"}",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            } finally {
                                 stateOperationBusy = false
                             }
                         }
