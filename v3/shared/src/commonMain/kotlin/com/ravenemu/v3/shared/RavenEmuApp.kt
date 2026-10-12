@@ -2,6 +2,9 @@ package com.ravenemu.v3.shared
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,11 +31,14 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +60,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -104,8 +111,12 @@ fun RavenEmuApp(
     videoMetrics: GbVideoMetrics? = null,
     onButtonChange: ((GbButton, Boolean) -> Unit)? = null,
     onExportAudioDiagnostics: (() -> Unit)? = null,
-    onSaveState: (() -> Unit)? = null,
-    onLoadState: (() -> Unit)? = null,
+    onSaveState: ((Int) -> Unit)? = null,
+    onLoadState: ((Int) -> Unit)? = null,
+    onDeleteState: ((Int) -> Unit)? = null,
+    stateSlots: List<GbStateSlot> = emptyList(),
+    stateSlotsLoading: Boolean = false,
+    stateOperationBusy: Boolean = false,
     onGameMenuVisibilityChange: ((Boolean) -> Unit)? = null,
     settings: V3Settings = V3Settings(),
     onSettingsChange: ((V3Settings) -> Unit)? = null,
@@ -225,6 +236,10 @@ fun RavenEmuApp(
                     onExportAudioDiagnostics = onExportAudioDiagnostics,
                     onSaveState = onSaveState,
                     onLoadState = onLoadState,
+                    onDeleteState = onDeleteState,
+                    stateSlots = stateSlots,
+                    stateSlotsLoading = stateSlotsLoading,
+                    stateOperationBusy = stateOperationBusy,
                     onGameMenuVisibilityChange = onGameMenuVisibilityChange,
                     onBack = {
                         onStopVideo?.invoke()
@@ -306,12 +321,17 @@ private fun GbVideoScreen(
     metrics: GbVideoMetrics?,
     onButtonChange: ((GbButton, Boolean) -> Unit)?,
     onExportAudioDiagnostics: (() -> Unit)?,
-    onSaveState: (() -> Unit)?,
-    onLoadState: (() -> Unit)?,
+    onSaveState: ((Int) -> Unit)?,
+    onLoadState: ((Int) -> Unit)?,
+    onDeleteState: ((Int) -> Unit)?,
+    stateSlots: List<GbStateSlot>,
+    stateSlotsLoading: Boolean,
+    stateOperationBusy: Boolean,
     onGameMenuVisibilityChange: ((Boolean) -> Unit)?,
     onBack: () -> Unit,
 ) {
     var gameMenuOpen by remember { mutableStateOf(false) }
+    var confirmation by remember { mutableStateOf<Pair<Int, String>?>(null) }
     fun setGameMenu(open: Boolean) {
         if (gameMenuOpen == open) return
         gameMenuOpen = open
@@ -404,43 +424,99 @@ private fun GbVideoScreen(
     }
 
     if (gameMenuOpen) {
-        // Reuse the same bottom sheet as the ROM launch panel. The Android host
-        // pauses emulation and sound until the player resumes from here.
         ModalBottomSheet(
             onDismissRequest = { setGameMenu(false) },
             containerColor = RavenSurface,
             contentColor = RavenText,
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                    .padding(start = 18.dp, end = 18.dp, bottom = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Menu du jeu", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("Menu du jeu", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 Text(title, color = RavenSecondary, fontSize = 13.sp)
-                Text("Partie en pause", color = RavenMuted, fontSize = 13.sp)
-                if (onSaveState != null) {
-                    FilledTonalButton(
-                        onClick = onSaveState,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Sauvegarder l'état — Emplacement 1")
+                Text("Partie en pause · 4 emplacements de sauvegarde",
+                    color = RavenMuted, fontSize = 12.sp)
+                if (stateSlotsLoading) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Chargement des emplacements…",
+                            color = RavenSecondary, fontSize = 12.sp)
                     }
-                }
-                if (onLoadState != null) {
-                    FilledTonalButton(
-                        onClick = onLoadState,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Charger l'état — Emplacement 1")
+                } else {
+                    for (index in 0 until 4) {
+                        val entry = stateSlots.firstOrNull { it.index == index }
+                        val occupied = entry?.occupied == true
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFF202230),
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Box(
+                                        Modifier.width(100.dp).height(90.dp)
+                                            .clip(RoundedCornerShape(9.dp))
+                                            .background(Color(0xFF10111B))
+                                            .border(1.dp, RavenOutline,
+                                                RoundedCornerShape(9.dp)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        if (entry?.thumbnail != null) {
+                                            Image(entry.thumbnail, "Aperçu de l'emplacement ${index + 1}",
+                                                Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit,
+                                                filterQuality = FilterQuality.None)
+                                        } else {
+                                            Text("GB", color = RavenMuted, fontSize = 18.sp)
+                                        }
+                                    }
+                                    Column(Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("Emplacement ${index + 1}",
+                                            color = RavenText,
+                                            fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                                        Text(entry?.savedAt ?: "Vide",
+                                            color = RavenMuted, fontSize = 12.sp)
+                                    }
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    FilledTonalButton(
+                                        modifier = Modifier.weight(1f),
+                                        enabled = !stateOperationBusy && onSaveState != null,
+                                        onClick = {
+                                            if (occupied) confirmation = index to "overwrite"
+                                            else onSaveState?.invoke(index)
+                                        },
+                                    ) { Text("Sauver", fontSize = 12.sp) }
+                                    OutlinedButton(
+                                        modifier = Modifier.weight(1f),
+                                        enabled = occupied && !stateOperationBusy && onLoadState != null,
+                                        onClick = { onLoadState?.invoke(index) },
+                                    ) { Text("Charger", fontSize = 12.sp) }
+                                    OutlinedButton(
+                                        modifier = Modifier.weight(1f),
+                                        enabled = occupied && !stateOperationBusy && onDeleteState != null,
+                                        onClick = { confirmation = index to "delete" },
+                                    ) { Text("Supprimer", fontSize = 11.sp) }
+                                }
+                            }
+                        }
                     }
                 }
                 if (onExportAudioDiagnostics != null) {
                     OutlinedButton(
                         onClick = onExportAudioDiagnostics,
                         modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Exporter le diagnostic audio")
-                    }
+                    ) { Text("Exporter le diagnostic audio") }
                 }
                 Button(
                     onClick = { setGameMenu(false) },
@@ -448,11 +524,42 @@ private fun GbVideoScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = RavenAccent, contentColor = RavenBackground,
                     ),
-                ) {
-                    Text("Reprendre le jeu")
-                }
+                ) { Text("Reprendre le jeu") }
             }
         }
+    }
+    val action = confirmation
+    if (action != null) {
+        val index = action.first
+        val deleting = action.second == "delete"
+        AlertDialog(
+            onDismissRequest = { confirmation = null },
+            title = { Text(if (deleting) "Supprimer la sauvegarde ?" else "Écraser la sauvegarde ?") },
+            text = {
+                Text(
+                    if (deleting)
+                        "Supprimer définitivement l'emplacement ${index + 1} ? La sauvegarde classique du jeu restera intacte."
+                    else
+                        "Remplacer l'état de l'emplacement ${index + 1} par la partie actuelle ? Cette action est irréversible."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !stateOperationBusy,
+                    onClick = {
+                        confirmation = null
+                        if (deleting) onDeleteState?.invoke(index)
+                        else onSaveState?.invoke(index)
+                    },
+                ) { Text(if (deleting) "Supprimer" else "Écraser") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmation = null }) { Text("Annuler") }
+            },
+            containerColor = RavenSurface,
+            titleContentColor = RavenText,
+            textContentColor = RavenSecondary,
+        )
     }
 }
 
