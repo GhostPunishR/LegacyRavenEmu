@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
             var audioStatus by remember { mutableStateOf<String?>(null) }
             var stateOperationBusy by remember { mutableStateOf(false) }
             var restoringState by remember { mutableStateOf(false) }
+            var pausedForGameMenu by remember { mutableStateOf(false) }
             var stateRevision by remember { mutableStateOf(0) }
             val scope = rememberCoroutineScope()
             val exportAudio = rememberLauncherForActivityResult(
@@ -99,10 +100,20 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(videoEnabled, loadedGame, foreground, restoringState, stateRevision) {
-                frame = null
+            LaunchedEffect(
+                videoEnabled, loadedGame, foreground,
+                restoringState, stateRevision, pausedForGameMenu,
+            ) {
+                if (!videoEnabled || loadedGame == null) {
+                    frame = null
+                    videoMetrics = null
+                    return@LaunchedEffect
+                }
+                // Keep the last image visible behind the ROM-style menu sheet.
+                // A game menu pauses both the native clock and AudioTrack,
+                // preventing UI interaction from building an audio backlog.
+                if (!foreground || restoringState || pausedForGameMenu) return@LaunchedEffect
                 videoMetrics = null
-                if (!videoEnabled || !foreground || loadedGame == null || restoringState) return@LaunchedEffect
 
                 videoError = null
                 audioStatus = null
@@ -250,6 +261,7 @@ class MainActivity : ComponentActivity() {
                     activeAudio?.stopNow()
                     gameSession.releaseAllButtons()
                     videoEnabled = false
+                    pausedForGameMenu = false
                     frame = null
                     videoMetrics = null
                     audioStatus = null
@@ -262,7 +274,9 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 onButtonChange = { button: GbButton, pressed: Boolean ->
-                    if (videoEnabled && foreground) gameSession.setButton(button, pressed)
+                    if (videoEnabled && foreground && !pausedForGameMenu) {
+                        gameSession.setButton(button, pressed)
+                    }
                 },
                 videoFrame = frame,
                 videoError = videoError,
@@ -270,6 +284,17 @@ class MainActivity : ComponentActivity() {
                 onExportAudioDiagnostics = {
                     lastAudioReport = activeAudio?.exportReport() ?: lastAudioReport
                     exportAudio.launch("ravenemu-audio-diagnostic.txt")
+                },
+                onGameMenuVisibilityChange = { open ->
+                    if (open) {
+                        // Preserve a useful report before closing the track.
+                        activeAudio?.let {
+                            lastAudioReport = it.exportReport()
+                            it.stopNow()
+                        }
+                        gameSession.releaseAllButtons()
+                    }
+                    pausedForGameMenu = open
                 },
                 onSaveState = {
                     if (!stateOperationBusy && loadedGame != null && videoEnabled) {
