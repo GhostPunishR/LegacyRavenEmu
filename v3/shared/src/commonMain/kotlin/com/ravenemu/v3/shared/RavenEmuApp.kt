@@ -100,6 +100,7 @@ fun RavenEmuApp(
     onExportAudioDiagnostics: (() -> Unit)? = null,
     onSaveState: (() -> Unit)? = null,
     onLoadState: (() -> Unit)? = null,
+    onGameMenuVisibilityChange: ((Boolean) -> Unit)? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
     var search by remember { mutableStateOf("") }
@@ -219,6 +220,7 @@ fun RavenEmuApp(
                     onExportAudioDiagnostics = onExportAudioDiagnostics,
                     onSaveState = onSaveState,
                     onLoadState = onLoadState,
+                    onGameMenuVisibilityChange = onGameMenuVisibilityChange,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -269,6 +271,7 @@ fun RavenEmuApp(
  * while the iOS app still needs native session integration.
  * No audio output or file-save behavior is implied.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GbVideoScreen(
     title: String,
@@ -279,9 +282,15 @@ private fun GbVideoScreen(
     onExportAudioDiagnostics: (() -> Unit)?,
     onSaveState: (() -> Unit)?,
     onLoadState: (() -> Unit)?,
+    onGameMenuVisibilityChange: ((Boolean) -> Unit)?,
     onBack: () -> Unit,
 ) {
-    var diagnosticsMenuOpen by remember { mutableStateOf(false) }
+    var gameMenuOpen by remember { mutableStateOf(false) }
+    fun setGameMenu(open: Boolean) {
+        if (gameMenuOpen == open) return
+        gameMenuOpen = open
+        onGameMenuVisibilityChange?.invoke(open)
+    }
     Column(Modifier.fillMaxSize().background(Color.Black)) {
         Row(
             Modifier.fillMaxWidth().height(48.dp).background(RavenBackground),
@@ -299,42 +308,11 @@ private fun GbVideoScreen(
                 modifier = Modifier.weight(1f),
             )
             if (onExportAudioDiagnostics != null || onSaveState != null || onLoadState != null) {
-                Box {
-                    TextButton(onClick = { diagnosticsMenuOpen = true }) {
-                        Text("⋮", color = RavenText, fontSize = 22.sp)
-                    }
-                    DropdownMenu(
-                        expanded = diagnosticsMenuOpen,
-                        onDismissRequest = { diagnosticsMenuOpen = false },
-                    ) {
-                        if (onSaveState != null) {
-                            DropdownMenuItem(
-                                text = { Text("Sauvegarder l'état (emplacement 1)") },
-                                onClick = {
-                                    diagnosticsMenuOpen = false
-                                    onSaveState()
-                                },
-                            )
-                        }
-                        if (onLoadState != null) {
-                            DropdownMenuItem(
-                                text = { Text("Charger l'état (emplacement 1)") },
-                                onClick = {
-                                    diagnosticsMenuOpen = false
-                                    onLoadState()
-                                },
-                            )
-                        }
-                        if (onExportAudioDiagnostics != null) {
-                            DropdownMenuItem(
-                                text = { Text("Exporter le diagnostic audio") },
-                                onClick = {
-                                    diagnosticsMenuOpen = false
-                                    onExportAudioDiagnostics()
-                                },
-                            )
-                        }
-                    }
+                IconButton(
+                    onClick = { setGameMenu(true) },
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    RavenIcon(RavenGlyph.MORE, RavenText)
                 }
             }
         }
@@ -394,6 +372,43 @@ private fun GbVideoScreen(
             )
         }
 
+    }
+
+    if (gameMenuOpen) {
+        // Reuse the same bottom sheet as the ROM launch panel. The Android host
+        // pauses emulation and sound until the player resumes from here.
+        ModalBottomSheet(
+            onDismissRequest = { setGameMenu(false) },
+            containerColor = RavenSurface,
+            contentColor = RavenText,
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("Menu du jeu", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(title, color = RavenSecondary, fontSize = 13.sp)
+                Text("Partie en pause", color = RavenMuted, fontSize = 13.sp)
+                if (onSaveState != null) {
+                    TextButton(onClick = onSaveState) {
+                        Text("Sauvegarder l'état — Emplacement 1", color = RavenAccent)
+                    }
+                }
+                if (onLoadState != null) {
+                    TextButton(onClick = onLoadState) {
+                        Text("Charger l'état — Emplacement 1", color = RavenAccent)
+                    }
+                }
+                if (onExportAudioDiagnostics != null) {
+                    TextButton(onClick = onExportAudioDiagnostics) {
+                        Text("Exporter le diagnostic audio", color = RavenAccent)
+                    }
+                }
+                TextButton(onClick = { setGameMenu(false) }) {
+                    Text("Reprendre le jeu", color = RavenAccent)
+                }
+            }
+        }
     }
 }
 
