@@ -165,16 +165,33 @@ internal class GbSaveTransfer(filesDir: File) {
         payload.bytes.forEach { (name, bytes) ->
             require(bytes.size in 1..maxFor(name)) { "Sauvegarde invalide : $name." }
         }
-        val originals = payload.bytes.keys.associateWith { name -> getFile(key, name) }
-        val updated = mutableListOf<String>()
+        // Apply states before their previews. If a new state has no preview,
+        // remove the old, now-misleading thumbnail for that slot.
+        val touched = mutableListOf<String>()
+        if ("battery.sav" in payload.bytes) touched += "battery.sav"
+        for (slot in 0 until GbSaveStateStore.SLOT_COUNT) {
+            val state = "slot$slot.state"
+            val preview = "slot$slot.png"
+            require(preview !in payload.bytes || state in payload.bytes) {
+                "Miniature sans save state."
+            }
+            if (state in payload.bytes) {
+                touched += state
+                touched += preview
+            }
+        }
+        val originals = touched.associateWith { name -> getFile(key, name) }
         try {
-            for ((name, bytes) in payload.bytes) {
-                writeFile(key, name, bytes)
-                updated += name
+            for (name in touched) {
+                val bytes = payload.bytes[name]
+                if (bytes == null) removeFile(key, name)
+                else writeFile(key, name, bytes)
             }
         } catch (error: Exception) {
             try {
-                for (name in updated.asReversed()) {
+                // Restoring state first and preview second also handles the
+                // store's delete(state) operation deleting its preview.
+                for (name in touched) {
                     val before = originals[name]
                     if (before == null) removeFile(key, name)
                     else writeFile(key, name, before)
