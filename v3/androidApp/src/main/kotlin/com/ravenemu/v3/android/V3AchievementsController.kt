@@ -115,7 +115,11 @@ internal class V3AchievementsController(
             val name = event.title.ifBlank { currentUser }
             val token = event.extra
             if (token.isNotEmpty()) {
-                account.save(name, token, event.detail.ifBlank { name }, event.image)
+                // A device with unavailable Keystore can still use this
+                // active session; don't strand the game on token-save failure.
+                runCatching {
+                    account.save(name, token, event.detail.ifBlank { name }, event.image)
+                }
             }
             connected = true
             // V2 uses RetroAchievements' CONSOLE_GAMEBOY=4, not the
