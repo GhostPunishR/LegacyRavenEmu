@@ -34,14 +34,6 @@ internal class GbFolderImporter(
     }
 
     private data class PendingDirectory(val documentId: String, val depth: Int)
-    private data class Child(
-        val uri: Uri,
-        val documentId: String,
-        val name: String,
-        val mime: String,
-        val size: Long?,
-    )
-
     fun importTree(treeUri: Uri, onProgress: (Int) -> Unit = {}): Result {
         val rootId = DocumentsContract.getTreeDocumentId(treeUri)
         require(rootId.isNotEmpty()) { "Dossier Android invalide." }
@@ -82,17 +74,17 @@ internal class GbFolderImporter(
                 Log.w(TAG, "Failed to inspect a subdirectory", error)
                 continue
             }
-            cursor.use {
-                while (it.moveToNext()) {
+            try {
+                while (cursor.moveToNext()) {
                     entriesSeen++
                     if (entriesSeen > MAX_ENTRIES) {
                         limited = true
                         break@mainLoop
                     }
-                    val id = it.getString(0) ?: continue
-                    val name = it.getString(1) ?: continue
-                    val mime = it.getString(2) ?: ""
-                    val size = if (it.isNull(3)) null else it.getLong(3)
+                    val id = cursor.getString(0) ?: continue
+                    val name = cursor.getString(1) ?: continue
+                    val mime = cursor.getString(2) ?: ""
+                    val size = if (cursor.isNull(3)) null else cursor.getLong(3)
                     if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
                         if (id in seenDirectories) continue
                         if (dir.depth >= MAX_DEPTH || seenDirectories.size >= MAX_DIRECTORIES) {
@@ -173,6 +165,8 @@ internal class GbFolderImporter(
                     }
                     onProgress(candidatesSeen)
                 }
+            } finally {
+                cursor.close()
             }
         }
         return Result(
