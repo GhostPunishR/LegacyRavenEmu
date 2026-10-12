@@ -87,7 +87,7 @@ internal class GbFolderImporter(
                     val size = if (cursor.isNull(3)) null else cursor.getLong(3)
                     if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
                         if (id in seenDirectories) continue
-                        if (dir.depth >= MAX_DEPTH || seenDirectories.size >= MAX_DIRECTORIES) {
+                        if (!GbFolderImportPolicy.mayDescend(dir.depth, seenDirectories.size)) {
                             limited = true
                             continue
                         }
@@ -95,7 +95,7 @@ internal class GbFolderImporter(
                         pending.add(PendingDirectory(id, dir.depth + 1))
                         continue
                     }
-                    if (!RomImportPolicy.acceptsGameBoyFile(name)) {
+                    if (!GbFolderImportPolicy.isRomFilename(name)) {
                         otherFiles++
                         continue
                     }
@@ -106,8 +106,7 @@ internal class GbFolderImporter(
                         limited = true
                         break@mainLoop
                     }
-                    if (size != null && (size <= 0 ||
-                            size > RomImportPolicy.maxRomBytes.toLong())) {
+                    if (!GbFolderImportPolicy.isSupportedSize(size)) {
                         invalid++
                         onProgress(candidatesSeen)
                         continue
@@ -204,4 +203,17 @@ internal class GbFolderImporter(
         const val MAX_GAMES = 256
         const val MAX_TOTAL_ROM_BYTES = 256L * 1024L * 1024L
     }
+}
+
+/** Pure SAF candidate rules; covered by local JVM tests. */
+internal object GbFolderImportPolicy {
+    fun isRomFilename(name: String): Boolean = RomImportPolicy.acceptsGameBoyFile(name)
+
+    fun isSupportedSize(reportedBytes: Long?): Boolean =
+        reportedBytes == null || reportedBytes in 1..RomImportPolicy.maxRomBytes.toLong()
+
+    /** Current level starts at zero; accept children only up to depth eight. */
+    fun mayDescend(currentDepth: Int, knownDirectories: Int): Boolean =
+        currentDepth < GbFolderImporter.MAX_DEPTH &&
+            knownDirectories < GbFolderImporter.MAX_DIRECTORIES
 }
