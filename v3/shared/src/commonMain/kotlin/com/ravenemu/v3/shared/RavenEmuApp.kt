@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -74,6 +75,7 @@ private val RavenDanger = Color(0xFFFF928B)
 private enum class RavenScreen { LIBRARY, SETTINGS, ABOUT }
 private enum class RavenGlyph { SETTINGS, ADD, MORE, SEARCH, BACK }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RavenEmuApp(
     onImportRom: (() -> Unit)? = null,
