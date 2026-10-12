@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -287,15 +288,41 @@ private fun GbVideoScreen(
                 fontSize = 16.sp,
             )
         }
-        Box(
-            Modifier.fillMaxWidth().weight(1f).background(Color.Black),
-            contentAlignment = Alignment.Center,
+        // Compact diagnostics stay directly below the title. Their height does
+        // not change while waiting for the first one-second measurement.
+        Row(
+            modifier = Modifier.fillMaxWidth().height(32.dp)
+                .background(RavenSurface).padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
+            Text(
+                "FPS ${metrics?.let { oneDecimal(it.actualFps) } ?: "--"} / ${metrics?.let { oneDecimal(it.targetFps) } ?: "--"}",
+                color = RavenAccent, fontSize = 11.sp, maxLines = 1,
+            )
+            Text(
+                "Moteur ${metrics?.let { oneDecimal(it.coreMs) } ?: "--"} ms",
+                color = RavenSecondary, fontSize = 10.sp, maxLines = 1,
+            )
+            Text(
+                "Conv. ${metrics?.let { oneDecimal(it.conversionMs) } ?: "--"} ms",
+                color = RavenMuted, fontSize = 10.sp, maxLines = 1,
+            )
+        }
+        // Pin the GB picture to the top of its available area rather than
+        // vertically centering it. The remaining space sits below the video,
+        // allowing the thumb controls to remain anchored near the safe bottom.
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            val pictureHeight = minOf(maxHeight, maxWidth * (144f / 160f))
+            val pictureWidth = pictureHeight * (160f / 144f)
             if (frame != null) {
                 Image(
                     bitmap = frame,
                     contentDescription = "Image de la Game Boy",
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.width(pictureWidth).height(pictureHeight),
                     contentScale = ContentScale.Fit,
                     filterQuality = FilterQuality.None,
                 )
@@ -308,37 +335,22 @@ private fun GbVideoScreen(
                 )
             }
         }
-        if (metrics != null) {
-            Text(
-                "Frames calculées : ${oneDecimal(metrics.actualFps)} / ${oneDecimal(metrics.targetFps)} FPS",
-                color = RavenAccent,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
-            )
-            Text(
-                "Moteur : ${oneDecimal(metrics.coreMs)} ms/image | Conversion : ${oneDecimal(metrics.conversionMs)} ms/image",
-                color = RavenMuted,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
-            )
-        }
         if (onButtonChange != null) {
             GbTouchControls(
                 onButton = onButtonChange,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier.padding(vertical = 8.dp),
             )
         }
         Text(
-            "Commandes GB tactiles. Audio et sauvegardes à venir.",
+            "Audio et sauvegardes à venir",
             color = RavenMuted,
-            fontSize = 12.sp,
+            fontSize = 10.sp,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, top = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp, top = 2.dp),
         )
     }
 }
+
 
 @Composable
 private fun LibraryToolbar(

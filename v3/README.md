@@ -18,7 +18,9 @@ Aperçu de la future interface **identique sur Android et iOS**. Le projet vit d
 
 **Étape 4, commandes GB Android :** la croix directionnelle (glissement et diagonales), A, B, Start et Select appellent désormais le cœur natif. Les pressions sont sérialisées avec l'exécution des frames et sont relâchées quand le lecteur est fermé ou que l'application passe en arrière-plan. La prévisualisation est désormais interactive, mais sans audio ni sauvegardes persistantes. L'écran Compose applique les marges système sûres pour éviter que le nom du jeu ou les commandes soient masqués par les barres Android.
 
-**Encore à réaliser :** validation sur téléphone Android des boutons et des marges système, véritables jaquettes et scan des dossiers, écran de réglages complet, audio, sauvegardes disque, import et lecteur iOS, autres consoles et RetroAchievements.
+**Retour Android reçu :** commandes Game Boy fonctionnelles, barres système correctement espacées et image à environ 59,9 FPS calculés. Ajustement suivant : regroupement ergonomique de A/B et dimension de la croix adaptée à la largeur, Start/Select rapprochés et télémétrie FPS/moteur/conversion compacte juste sous le titre. Le viewport Game Boy reste à l'échelle avec pixels sans lissage, et les commandes restent en bas de la zone sûre.
+
+**Encore à réaliser :** validation ergonomique de cette nouvelle disposition sur téléphone Android, véritables jaquettes et scan des dossiers, écran de réglages complet, audio, sauvegardes disque, import et lecteur iOS, autres consoles et RetroAchievements.
 
 ## Architecture
 

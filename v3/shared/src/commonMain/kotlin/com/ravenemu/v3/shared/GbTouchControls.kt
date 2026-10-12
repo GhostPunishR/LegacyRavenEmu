@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +39,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -54,58 +56,65 @@ fun GbTouchControls(
     onButton: (GbButton, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    // Keep both thumb clusters within the safe horizontal bounds, including
+    // narrower phones. Start/Select are centered just beneath both clusters.
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val cluster = GbTouchLayout.clusterDp(maxWidth.value).dp
+        Column(
+            Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            GbDpad(onButton)
-            Box(Modifier.width(144.dp).height(144.dp)) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GbDpad(onButton = onButton, dimension = cluster)
+                Box(Modifier.size(cluster)) {
+                    // A/B follow the diagonal used in the original touch skin,
+                    // but are now closer together and reachable by one thumb.
+                    GbMomentaryButton(
+                        button = GbButton.B,
+                        label = "B",
+                        onButton = onButton,
+                        diameter = 60,
+                        modifier = Modifier.align(Alignment.BottomStart),
+                    )
+                    GbMomentaryButton(
+                        button = GbButton.A,
+                        label = "A",
+                        onButton = onButton,
+                        diameter = 60,
+                        modifier = Modifier.align(Alignment.TopEnd),
+                    )
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 GbMomentaryButton(
-                    button = GbButton.B,
-                    label = "B",
-                    onButton = onButton,
-                    diameter = 66,
-                    modifier = Modifier.align(Alignment.BottomStart),
+                    GbButton.SELECT, "SELECT", onButton, diameter = 40,
+                    modifier = Modifier.width(84.dp),
                 )
+                Spacer(Modifier.width(20.dp))
                 GbMomentaryButton(
-                    button = GbButton.A,
-                    label = "A",
-                    onButton = onButton,
-                    diameter = 66,
-                    modifier = Modifier.align(Alignment.TopEnd),
+                    GbButton.START, "START", onButton, diameter = 40,
+                    modifier = Modifier.width(84.dp),
                 )
             }
-        }
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GbMomentaryButton(
-                GbButton.SELECT, "SELECT", onButton, diameter = 36,
-                modifier = Modifier.width(78.dp),
-            )
-            Spacer(Modifier.width(18.dp))
-            GbMomentaryButton(
-                GbButton.START, "START", onButton, diameter = 36,
-                modifier = Modifier.width(78.dp),
-            )
         }
     }
 }
 
 @Composable
-private fun GbDpad(onButton: (GbButton, Boolean) -> Unit) {
+private fun GbDpad(onButton: (GbButton, Boolean) -> Unit, dimension: Dp) {
     var held by remember { mutableStateOf(emptySet<GbButton>()) }
     val handler by rememberUpdatedState(onButton)
     Canvas(
-        Modifier.size(148.dp)
+        Modifier.size(dimension)
             .semantics { contentDescription = "Croix directionnelle"; role = Role.Button }
             // A stable key avoids cancelling a held gesture at every video frame.
             .pointerInput(Unit) {
@@ -199,4 +208,13 @@ private fun GbMomentaryButton(
             color = Color.White.copy(alpha = if (down) 1f else .86f),
         )
     }
+}
+
+/**
+ * Ergonomic thumb cluster sizing shared by Android and iOS.
+ * Horizontal padding is 16 dp per edge, and no cluster exceeds 132 dp.
+ */
+object GbTouchLayout {
+    fun clusterDp(viewportWidthDp: Float): Float =
+        ((viewportWidthDp - 32f) / 2f).coerceIn(0f, 132f)
 }
