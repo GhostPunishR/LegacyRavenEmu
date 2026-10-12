@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -92,6 +95,7 @@ fun RavenEmuApp(
     videoFrame: ImageBitmap? = null,
     videoError: String? = null,
     videoMetrics: GbVideoMetrics? = null,
+    onButtonChange: ((GbButton, Boolean) -> Unit)? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
     var search by remember { mutableStateOf("") }
@@ -115,7 +119,10 @@ fun RavenEmuApp(
         onSurface = RavenText,
         onPrimary = RavenBackground,
     )) {
-        Column(Modifier.fillMaxSize().background(RavenBackground)) {
+        Column(
+            Modifier.fillMaxSize().background(RavenBackground)
+                .windowInsetsPadding(WindowInsets.safeDrawing),
+        ) {
             when (screen) {
                 RavenScreen.LIBRARY -> {
                     LibraryToolbar(
@@ -194,7 +201,7 @@ fun RavenEmuApp(
                     Text("RavenEmu", color = RavenText, fontSize = 20.sp)
                     Text("Préversion V3 Android / iOS", color = RavenMuted, fontSize = 14.sp)
                     Text(
-                        "La prévisualisation vidéo Game Boy est disponible sur Android. Les commandes et l'audio ne sont pas encore connectés.",
+                        "Le lecteur Game Boy et ses commandes tactiles sont disponibles sur Android. L'audio et les sauvegardes restent à intégrer.",
                         color = RavenMuted,
                         fontSize = 14.sp,
                     )
@@ -204,6 +211,7 @@ fun RavenEmuApp(
                     frame = videoFrame,
                     error = videoError,
                     metrics = videoMetrics,
+                    onButtonChange = onButtonChange,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -226,7 +234,7 @@ fun RavenEmuApp(
                     Text(platformLabel(entry.platform), color = RavenSecondary, fontSize = 13.sp)
                     Text("ROM chargée dans RavenGB.", color = RavenText)
                     Text(
-                        "Cette préversion affiche les images du jeu sans commandes ni audio.",
+                        "La vidéo et les commandes Game Boy sont disponibles sur Android. Audio et sauvegardes à venir.",
                         color = RavenMuted,
                         fontSize = 13.sp,
                     )
@@ -236,7 +244,7 @@ fun RavenEmuApp(
                             onStartVideo()
                             screen = RavenScreen.PLAYER
                         }) {
-                            Text("Afficher l'écran", color = RavenAccent)
+                            Text("Ouvrir le lecteur GB", color = RavenAccent)
                         }
                     }
                     TextButton(onClick = { gameDetails = null }) {
@@ -250,9 +258,9 @@ fun RavenEmuApp(
 
 
 /**
- * First video milestone. The common Compose screen is ready for both systems,
- * while the video producer is implemented only in the Android host so far.
- * No input, audio output or save-file behavior is implied.
+ * Shared GB player. Android supplies native frames and touch input,
+ * while the iOS app still needs native session integration.
+ * No audio output or file-save behavior is implied.
  */
 @Composable
 private fun GbVideoScreen(
@@ -260,6 +268,7 @@ private fun GbVideoScreen(
     frame: ImageBitmap?,
     error: String?,
     metrics: GbVideoMetrics?,
+    onButtonChange: ((GbButton, Boolean) -> Unit)?,
     onBack: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().background(Color.Black)) {
@@ -315,12 +324,18 @@ private fun GbVideoScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
             )
         }
+        if (onButtonChange != null) {
+            GbTouchControls(
+                onButton = onButtonChange,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+            )
+        }
         Text(
-            "Prévisualisation vidéo uniquement. Commandes et audio à venir.",
+            "Commandes GB tactiles. Audio et sauvegardes à venir.",
             color = RavenMuted,
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, top = 4.dp),
         )
     }
 }

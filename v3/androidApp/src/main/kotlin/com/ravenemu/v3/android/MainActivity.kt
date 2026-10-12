@@ -3,6 +3,8 @@ package com.ravenemu.v3.android
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.ravenemu.v3.shared.GbButton
 import com.ravenemu.v3.shared.GbVideoMetrics
 import com.ravenemu.v3.shared.GbVideoMetricsAccumulator
 import com.ravenemu.v3.shared.LoadedGameInfo
@@ -43,11 +46,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         foreground = false
+        gameSession.releaseAllButtons()
         super.onPause()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK),
+        )
         gameSession = AndroidGbSession(contentResolver)
 
         setContent {
@@ -153,9 +161,15 @@ class MainActivity : ComponentActivity() {
                 importError = importError,
                 onStartVideo = { videoEnabled = true },
                 onStopVideo = {
+                    gameSession.releaseAllButtons()
                     videoEnabled = false
                     frame = null
                     videoMetrics = null
+                },
+                onButtonChange = { button: GbButton, pressed: Boolean ->
+                    if (videoEnabled && foreground) {
+                        gameSession.setButton(button, pressed)
+                    }
                 },
                 videoFrame = frame,
                 videoError = videoError,

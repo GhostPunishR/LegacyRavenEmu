@@ -16,7 +16,9 @@ Aperçu de la future interface **identique sur Android et iOS**. Le projet vit d
 
 **Diagnostic performance Android :** les moteurs C++ de la preview sont compilés avec `-O2` même quand l'APK Gradle est en Debug (le build iOS et les autres projets ne changent pas). Le tampon de pixels JNI est réutilisé d'une frame à l'autre. Une mesure sur une fenêtre d'environ une seconde montre les **frames calculées par seconde**, la cible du moteur et les temps moyens de calcul natif et conversion d'image. Ces nombres servent au diagnostic sur appareil réel : ils ne sont pas des FPS garantis à l'écran. Les images Bitmap restent allouées à chaque frame pour ne pas modifier un tampon pendant qu'il est affiché.
 
-**Encore à réaliser :** mesure des FPS et test de fluidité sur un téléphone Android avec l'APK optimisé, véritables jaquettes et scan des dossiers, écran de réglages complet, commandes, audio, sauvegardes disque, import iOS, autres consoles dans le lecteur et RetroAchievements. L'absence de commandes signifie qu'il ne s'agit pas encore d'un jeu jouable.
+**Étape 4, commandes GB Android :** la croix directionnelle (glissement et diagonales), A, B, Start et Select appellent désormais le cœur natif. Les pressions sont sérialisées avec l'exécution des frames et sont relâchées quand le lecteur est fermé ou que l'application passe en arrière-plan. La prévisualisation est désormais interactive, mais sans audio ni sauvegardes persistantes. L'écran Compose applique les marges système sûres pour éviter que le nom du jeu ou les commandes soient masqués par les barres Android.
+
+**Encore à réaliser :** validation sur téléphone Android des boutons et des marges système, véritables jaquettes et scan des dossiers, écran de réglages complet, audio, sauvegardes disque, import et lecteur iOS, autres consoles et RetroAchievements.
 
 ## Architecture
 
@@ -74,4 +76,4 @@ L'import GB Android charge maintenant les ROMs dans le cœur natif, mais l'exéc
 
 Les fichiers Gradle V2 à la racine ne changent pas ; V3 possède son propre `settings.gradle.kts`. Une modification de l'application V2 ou des cœurs ne met pas automatiquement V3 à jour.
 
-Prochaines étapes, dans cet ordre : valider la prévisualisation vidéo GB sur un téléphone Android, puis commandes tactiles, audio, sauvegardes persistantes, import et lecteur iOS, enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.
+Prochaines étapes, dans cet ordre : tester sur un téléphone Android la réactivité de la croix et des boutons GB ainsi que les barres système, puis intégrer audio, sauvegardes persistantes, import et lecteur iOS, enfin GBC/GBA. L'interface doit rester la même sur les deux plateformes, avec adaptation aux tailles d'écran.

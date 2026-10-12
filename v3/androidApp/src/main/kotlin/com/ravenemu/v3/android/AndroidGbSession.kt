@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.ravenemu.v3.shared.GamePlatform
+import com.ravenemu.v3.shared.GbButton
 import com.ravenemu.v3.shared.LoadedGameInfo
 import com.ravenemu.v3.shared.RomImportPolicy
 import java.io.ByteArrayOutputStream
@@ -17,6 +18,7 @@ class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
     private val lock = Any()
     private var closed = false
     private var active: NativeCore? = null
+    private val heldButtons = mutableSetOf<GbButton>()
 
     /** Must be called off the UI thread. */
     fun load(uri: Uri): LoadedGameInfo {
@@ -38,6 +40,7 @@ class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
             synchronized(lock) {
                 check(!closed) { "La session a été fermée." }
                 val previous = active
+                heldButtons.clear()
                 active = replacement
                 transferred = true
                 previous?.close()
@@ -61,6 +64,30 @@ class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
 
     fun refreshRateHz(): Double? = synchronized(lock) {
         if (closed) null else active?.fps
+    }
+
+    /**
+     * Input is ordered on the UI thread and serialized with native frames.
+     * The bridge requires all operations on one native handle to be serialized.
+     */
+    fun setButton(button: GbButton, pressed: Boolean): Boolean = synchronized(lock) {
+        if (closed) return@synchronized false
+        val core = active ?: return@synchronized false
+        if ((button in heldButtons) == pressed) return@synchronized true
+        core.button(button.nativeCode, pressed)
+        if (pressed) heldButtons.add(button) else heldButtons.remove(button)
+        true
+    }
+
+    /** Prevent stuck buttons after screen exit, app pause or cancelled touches. */
+    fun releaseAllButtons() {
+        synchronized(lock) {
+            if (!closed) {
+                val core = active
+                for (button in heldButtons) core?.button(button.nativeCode, false)
+            }
+            heldButtons.clear()
+        }
     }
 
     private fun displayName(uri: Uri): String {
@@ -102,6 +129,7 @@ class AndroidGbSession(private val resolver: ContentResolver) : Closeable {
     override fun close() {
         synchronized(lock) {
             closed = true
+            heldButtons.clear()
             active?.close()
             active = null
         }
