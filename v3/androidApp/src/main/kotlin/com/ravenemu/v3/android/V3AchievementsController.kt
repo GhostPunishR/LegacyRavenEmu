@@ -122,9 +122,13 @@ internal class V3AchievementsController(
                 }
             }
             connected = true
-            // V2 uses RetroAchievements' CONSOLE_GAMEBOY=4, not the
-            // emulator's native system enum (GB=0).
-            currentRom?.let { client?.load(4, it) }
+            // Match V2 0.8.1: RA Game Boy = 4 and CGB-flagged GB = 6.
+            // These differ from RavenEmu's native system enum (GB = 0).
+            currentRom?.let { rom ->
+                val system = if (rom.size > 0x143 &&
+                    (rom[0x143].toInt() and 0x80) != 0) 6 else 4
+                client?.load(system, rom)
+            }
         }
         if (event.kind == "login_error") {
             connected = false
