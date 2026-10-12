@@ -34,21 +34,21 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
         }
         val bytes = readBounded(uri)
         val romKey = GbBatteryStore.keyForRom(bytes)
-        val savedBattery = batteryStore.read(romKey)
         val replacement = NativeCore(NativeCore.GB)
         var transferred = false
         try {
-            replacement.load(bytes, savedBattery)
-            val result = LoadedGameInfo(
-                filename = filename,
-                platform = GamePlatform.GB,
-                width = replacement.width,
-                height = replacement.height,
-            )
-            // Never replace a running game before its last battery data
-            // reaches disk. A failure preserves the previous session.
-            synchronized(saveLock) {
+            return synchronized(saveLock) {
+                // Flush the previous game BEFORE reading this ROM's save: a
+                // re-import of the same ROM must not load a stale snapshot.
                 saveBatteryIfDirtyLocked()
+                val savedBattery = batteryStore.read(romKey)
+                replacement.load(bytes, savedBattery)
+                val result = LoadedGameInfo(
+                    filename = filename,
+                    platform = GamePlatform.GB,
+                    width = replacement.width,
+                    height = replacement.height,
+                )
                 synchronized(lock) {
                     check(!closed) { "La session a été fermée." }
                     val previous = active
@@ -58,8 +58,8 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
                     transferred = true
                     previous?.close()
                 }
+                result
             }
-            return result
         } finally {
             if (!transferred) replacement.close()
         }
@@ -95,10 +95,6 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
         return true
     }
 
-    /**
-     * Writes exactly one native frame into a reusable caller-owned buffer.
-     * Serialize against ROM replacement, import and Activity shutdown.
-     */
     /**
      * Advance exactly one frame, then drain interleaved stereo PCM16 from the
      * same native handle under one lock. No second emulation clock is started.
