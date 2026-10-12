@@ -98,6 +98,8 @@ fun RavenEmuApp(
     videoMetrics: GbVideoMetrics? = null,
     onButtonChange: ((GbButton, Boolean) -> Unit)? = null,
     onExportAudioDiagnostics: (() -> Unit)? = null,
+    onSaveState: (() -> Unit)? = null,
+    onLoadState: (() -> Unit)? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
     var search by remember { mutableStateOf("") }
@@ -203,7 +205,7 @@ fun RavenEmuApp(
                     Text("RavenEmu", color = RavenText, fontSize = 20.sp)
                     Text("Préversion V3 Android / iOS", color = RavenMuted, fontSize = 14.sp)
                     Text(
-                        "Le lecteur Game Boy et l'audio PCM16 sont en test sur Android. La progression enregistrée dans le jeu est conservée sur Android ; les save states viendront ensuite.",
+                        "Le lecteur Game Boy et l'audio PCM16 sont en test sur Android. La progression enregistrée dans le jeu est conservée sur Android. Un save state manuel (emplacement 1) est disponible dans le menu du lecteur.",
                         color = RavenMuted,
                         fontSize = 14.sp,
                     )
@@ -215,6 +217,8 @@ fun RavenEmuApp(
                     metrics = videoMetrics,
                     onButtonChange = onButtonChange,
                     onExportAudioDiagnostics = onExportAudioDiagnostics,
+                    onSaveState = onSaveState,
+                    onLoadState = onLoadState,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -237,7 +241,7 @@ fun RavenEmuApp(
                     Text(platformLabel(entry.platform), color = RavenSecondary, fontSize = 13.sp)
                     Text("ROM chargée dans RavenGB.", color = RavenText)
                     Text(
-                        "Vidéo, commandes et audio Game Boy disponibles sur Android. La sauvegarde interne du jeu est enregistrée automatiquement ; save states à venir.",
+                        "Vidéo, commandes et audio Game Boy disponibles sur Android. La sauvegarde interne du jeu est automatique et un save state manuel est disponible dans le menu ⋮.",
                         color = RavenMuted,
                         fontSize = 13.sp,
                     )
@@ -273,6 +277,8 @@ private fun GbVideoScreen(
     metrics: GbVideoMetrics?,
     onButtonChange: ((GbButton, Boolean) -> Unit)?,
     onExportAudioDiagnostics: (() -> Unit)?,
+    onSaveState: (() -> Unit)?,
+    onLoadState: (() -> Unit)?,
     onBack: () -> Unit,
 ) {
     var diagnosticsMenuOpen by remember { mutableStateOf(false) }
@@ -292,7 +298,7 @@ private fun GbVideoScreen(
                 fontSize = 16.sp,
                 modifier = Modifier.weight(1f),
             )
-            if (onExportAudioDiagnostics != null) {
+            if (onExportAudioDiagnostics != null || onSaveState != null || onLoadState != null) {
                 Box {
                     TextButton(onClick = { diagnosticsMenuOpen = true }) {
                         Text("⋮", color = RavenText, fontSize = 22.sp)
@@ -301,13 +307,33 @@ private fun GbVideoScreen(
                         expanded = diagnosticsMenuOpen,
                         onDismissRequest = { diagnosticsMenuOpen = false },
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Exporter le diagnostic audio") },
-                            onClick = {
-                                diagnosticsMenuOpen = false
-                                onExportAudioDiagnostics()
-                            },
-                        )
+                        if (onSaveState != null) {
+                            DropdownMenuItem(
+                                text = { Text("Sauvegarder l'état (emplacement 1)") },
+                                onClick = {
+                                    diagnosticsMenuOpen = false
+                                    onSaveState()
+                                },
+                            )
+                        }
+                        if (onLoadState != null) {
+                            DropdownMenuItem(
+                                text = { Text("Charger l'état (emplacement 1)") },
+                                onClick = {
+                                    diagnosticsMenuOpen = false
+                                    onLoadState()
+                                },
+                            )
+                        }
+                        if (onExportAudioDiagnostics != null) {
+                            DropdownMenuItem(
+                                text = { Text("Exporter le diagnostic audio") },
+                                onClick = {
+                                    diagnosticsMenuOpen = false
+                                    onExportAudioDiagnostics()
+                                },
+                            )
+                        }
                     }
                 }
             }
