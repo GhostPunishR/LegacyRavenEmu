@@ -61,6 +61,14 @@ class NativeCore(system: Int) : AutoCloseable {
         check(nativeLoadState(requireOpen(), data)) { nativeLastError() }
     }
 
+    /** Only observational RA memory access; call on the session's native lock. */
+    fun readAchievementMemory(address: Int, output: ByteArray): Int {
+        require(address >= 0 && output.size <= 0x58000)
+        return nativeAchievementMemory(requireOpen(), address, output).also {
+            check(it in 0..output.size) { "Invalid achievement memory read" }
+        }
+    }
+
     fun batterySnapshot(): ByteArray {
         val size = nativeBatterySize(requireOpen())
         if (size == 0) return ByteArray(0)
@@ -110,6 +118,9 @@ class NativeCore(system: Int) : AutoCloseable {
     private external fun nativeReadAudio(pointer: Long, output: ShortArray): Int
     private external fun nativeButton(pointer: Long, button: Int, pressed: Boolean): Boolean
     private external fun nativeReset(pointer: Long): Boolean
+    private external fun nativeAchievementMemory(
+        pointer: Long, address: Int, output: ByteArray,
+    ): Int
     private external fun nativeStateSize(pointer: Long): Int
     private external fun nativeSaveState(pointer: Long, output: ByteArray): Boolean
     private external fun nativeLoadState(pointer: Long, input: ByteArray): Boolean
