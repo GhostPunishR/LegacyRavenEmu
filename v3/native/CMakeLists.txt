@@ -10,7 +10,7 @@ set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(RAVENEMU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(ravenemu_cores
     GIT_REPOSITORY https://github.com/GhostPunishR/RavenEmu-Cores.git
-    GIT_TAG 6bdc9d4a7adfeca2eb1ec97a6ee7be833ebd284e
+    GIT_TAG 34234f6a3ddc488714575c53b7a01bf1f2d7b49d
     GIT_SHALLOW FALSE
 )
 FetchContent_MakeAvailable(ravenemu_cores)
