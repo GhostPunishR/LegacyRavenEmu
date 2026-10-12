@@ -3,6 +3,7 @@ package com.ravenemu.v3.android
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -52,6 +53,14 @@ class MainActivity : ComponentActivity() {
         foreground = false
         activeAudio?.stopNow()
         gameSession.releaseAllButtons()
+        // A lifecycle stop can terminate the process soon after this callback;
+        // commit changed SRAM before returning rather than relying on a job.
+        try {
+            gameSession.saveBatteryIfDirty()
+        } catch (error: Exception) {
+            Log.e("RavenEmuSaves", "Cannot save game on pause", error)
+            Toast.makeText(this, "Échec de la sauvegarde du jeu", Toast.LENGTH_LONG).show()
+        }
         super.onPause()
     }
 
@@ -61,7 +70,7 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.BLACK),
         )
-        gameSession = AndroidGbSession(contentResolver)
+        gameSession = AndroidGbSession(contentResolver, filesDir)
 
         setContent {
             var loadedGame by remember { mutableStateOf<LoadedGameInfo?>(null) }
@@ -102,6 +111,7 @@ class MainActivity : ComponentActivity() {
                 // More than one GB frame of interleaved stereo, reused per frame.
                 val samples = ShortArray(4096)
                 var due = System.nanoTime()
+                var lastBatteryCheckNanos = due
                 var output: AndroidGbAudioOutput? = null
 
                 try {
@@ -157,8 +167,19 @@ class MainActivity : ComponentActivity() {
                                 output?.close()
                                 output = null
                             }
+                            val now = System.nanoTime()
+                            if (now - lastBatteryCheckNanos >= 5_000_000_000L) {
+                                lastBatteryCheckNanos = now
+                                scope.launch(Dispatchers.IO) {
+                                    try {
+                                        gameSession.saveBatteryIfDirty()
+                                    } catch (error: Exception) {
+                                        Log.e("RavenEmuSaves", "Battery autosave failed", error)
+                                    }
+                                }
+                            }
                             val sample = stats.record(
-                                System.nanoTime(),
+                                now,
                                 captured.coreTimeNanos,
                                 captured.conversionTimeNanos,
                             )
@@ -229,6 +250,13 @@ class MainActivity : ComponentActivity() {
                     frame = null
                     videoMetrics = null
                     audioStatus = null
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            gameSession.saveBatteryIfDirty()
+                        } catch (error: Exception) {
+                            Log.e("RavenEmuSaves", "Battery save on player exit failed", error)
+                        }
+                    }
                 },
                 onButtonChange = { button: GbButton, pressed: Boolean ->
                     if (videoEnabled && foreground) gameSession.setButton(button, pressed)
