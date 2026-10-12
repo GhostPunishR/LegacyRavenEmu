@@ -56,24 +56,27 @@ fun GbTouchControls(
     onButton: (GbButton, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Keep both thumb clusters within the safe horizontal bounds, including
-    // narrower phones. Start/Select are centered just beneath both clusters.
+    // Default portrait geometry follows the user-provided control layout:
+    // D-pad at the left, A at the upper-right, B lower and inward, and
+    // separated SELECT/START below. Fit the action cluster on narrow screens.
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val cluster = GbTouchLayout.clusterDp(maxWidth.value).dp
+        val actionWidth = minOf(144.dp, (maxWidth - 44.dp - cluster).coerceAtLeast(60.dp))
+        val selectStartGap = minOf(50.dp, (maxWidth - 168.dp).coerceAtLeast(8.dp))
         Column(
             Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(46.dp),
         ) {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 28.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 GbDpad(onButton = onButton, dimension = cluster)
-                Box(Modifier.size(cluster)) {
-                    // A/B follow the diagonal used in the original touch skin,
-                    // but are now closer together and reachable by one thumb.
+                Box(Modifier.width(actionWidth).height(cluster)) {
+                    // A high and close to the right edge; B below and inward,
+                    // matching the retouched reference screenshot.
                     GbMomentaryButton(
                         button = GbButton.B,
                         label = "B",
@@ -99,7 +102,7 @@ fun GbTouchControls(
                     GbButton.SELECT, "SELECT", onButton, diameter = 40,
                     modifier = Modifier.width(84.dp),
                 )
-                Spacer(Modifier.width(20.dp))
+                Spacer(Modifier.width(selectStartGap))
                 GbMomentaryButton(
                     GbButton.START, "START", onButton, diameter = 40,
                     modifier = Modifier.width(84.dp),
@@ -212,7 +215,8 @@ private fun GbMomentaryButton(
 
 /**
  * Ergonomic thumb cluster sizing shared by Android and iOS.
- * Horizontal padding is 16 dp per edge, and no cluster exceeds 132 dp.
+ * D-pad has 16 dp left padding and its dimension never exceeds 132 dp.
+ * The action cluster is inset 28 dp from the right edge on wide phones.
  */
 object GbTouchLayout {
     fun clusterDp(viewportWidthDp: Float): Float =
