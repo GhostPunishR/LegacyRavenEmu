@@ -133,6 +133,12 @@ fun RavenEmuApp(
     stateSlotsLoading: Boolean = false,
     stateOperationBusy: Boolean = false,
     onGameMenuVisibilityChange: ((Boolean) -> Unit)? = null,
+    retroSnapshot: V3RetroSnapshot = V3RetroSnapshot(),
+    retroBusy: Boolean = false,
+    onRetroLogin: ((String, String) -> Unit)? = null,
+    onRetroDisconnect: (() -> Unit)? = null,
+    onRetroRetry: (() -> Unit)? = null,
+    retroNotice: String? = null,
     settings: V3Settings = V3Settings(),
     onSettingsChange: ((V3Settings) -> Unit)? = null,
     appVersion: String = "V3 Preview",
@@ -234,6 +240,11 @@ fun RavenEmuApp(
                     appVersion = appVersion,
                     onOpenLink = onOpenLink,
                     aboutOnly = false,
+                    retroSnapshot = retroSnapshot,
+                    retroBusy = retroBusy,
+                    onRetroLogin = onRetroLogin,
+                    onRetroDisconnect = onRetroDisconnect,
+                    onRetroRetry = onRetroRetry,
                     onBack = { screen = RavenScreen.LIBRARY },
                 )
                 RavenScreen.ABOUT -> V3SettingsScreen(
@@ -259,6 +270,13 @@ fun RavenEmuApp(
                     stateSlotsLoading = stateSlotsLoading,
                     stateOperationBusy = stateOperationBusy,
                     onGameMenuVisibilityChange = onGameMenuVisibilityChange,
+                    retroSnapshot = retroSnapshot,
+                    retroBusy = retroBusy,
+                    onRetroLogin = onRetroLogin,
+                    onRetroDisconnect = onRetroDisconnect,
+                    onRetroRetry = onRetroRetry,
+                    onOpenLink = onOpenLink,
+                    retroNotice = retroNotice,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -505,9 +523,17 @@ private fun GbVideoScreen(
     stateSlotsLoading: Boolean,
     stateOperationBusy: Boolean,
     onGameMenuVisibilityChange: ((Boolean) -> Unit)?,
+    retroSnapshot: V3RetroSnapshot,
+    retroBusy: Boolean,
+    onRetroLogin: ((String, String) -> Unit)?,
+    onRetroDisconnect: (() -> Unit)?,
+    onRetroRetry: (() -> Unit)?,
+    onOpenLink: ((String) -> Unit)?,
+    retroNotice: String?,
     onBack: () -> Unit,
 ) {
     var gameMenuOpen by remember { mutableStateOf(false) }
+    var retroPanelOpen by remember { mutableStateOf(false) }
     var selectedSlot by remember { mutableStateOf(0) }
     var confirmation by remember { mutableStateOf<Pair<Int, String>?>(null) }
     fun setGameMenu(open: Boolean) {
@@ -585,6 +611,21 @@ private fun GbVideoScreen(
                     textAlign = TextAlign.Center,
                 )
             }
+            if (retroNotice != null) {
+                Row(
+                    Modifier.align(Alignment.TopCenter)
+                        .padding(top = 10.dp, start = 12.dp, end = 12.dp)
+                        .background(RavenSurface, RoundedCornerShape(12.dp))
+                        .border(1.dp, RavenAccent, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("★", color = RavenAccent, fontSize = 21.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(retroNotice, color = RavenText, fontSize = 12.sp,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
         }
         if (onButtonChange != null) {
             GbTouchControls(
@@ -612,7 +653,26 @@ private fun GbVideoScreen(
                     .padding(start = 18.dp, end = 18.dp, bottom = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                if (retroPanelOpen) {
+                    TextButton(onClick = { retroPanelOpen = false }) {
+                        Text("‹ Retour au menu du jeu", color = RavenAccent)
+                    }
+                    V3RetroAchievementsContent(
+                        snapshot = retroSnapshot,
+                        loginBusy = retroBusy,
+                        onLogin = onRetroLogin,
+                        onDisconnect = onRetroDisconnect,
+                        onRetry = onRetroRetry,
+                        onOpenLink = onOpenLink,
+                    )
+                } else {
                 Text("Menu du jeu", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                if (onRetroLogin != null) {
+                    OutlinedButton(
+                        onClick = { retroPanelOpen = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("RetroAchievements  ·  ${retroSnapshot.status}") }
+                }
                 Text(title, color = RavenSecondary, fontSize = 13.sp)
                 Text("Partie en pause · 4 emplacements de sauvegarde",
                     color = RavenMuted, fontSize = 12.sp)
@@ -743,6 +803,7 @@ private fun GbVideoScreen(
                         containerColor = RavenAccent, contentColor = RavenBackground,
                     ),
                 ) { Text("Reprendre le jeu") }
+                }
             }
         }
     }
