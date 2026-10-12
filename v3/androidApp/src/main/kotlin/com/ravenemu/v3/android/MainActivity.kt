@@ -521,7 +521,10 @@ class MainActivity : ComponentActivity() {
                             }
                             loadedGame = info
                             activeGameId = stored.id
-                            retro.attachRom(rom)
+                            try { retro.attachRom(rom) }
+                            catch (error: Exception) {
+                                Log.w("RavenEmuRetro", "RA identify failed after import", error)
+                            }
                             libraryGames = withContext(Dispatchers.IO) {
                                 romLibrary.list().map {
                                     GameEntry(it.id, it.filename, GamePlatform.GB)
@@ -911,7 +914,10 @@ class MainActivity : ComponentActivity() {
                                     }
                                     loadedGame = result
                                     activeGameId = id
-                                    retro.attachRom(rom)
+                                    try { retro.attachRom(rom) }
+                                    catch (error: Exception) {
+                                        Log.w("RavenEmuRetro", "RA identify failed on launch", error)
+                                    }
                                 }
                                 onReady()
                             } catch (error: Exception) {
@@ -1021,7 +1027,10 @@ class MainActivity : ComponentActivity() {
                         scope.launch {
                             try {
                                 withContext(Dispatchers.IO) { gameSession.loadStateSlot(slot) }
-                                retro.resetProgress()
+                                try { retro.resetProgress() }
+                                catch (error: Exception) {
+                                    Log.w("RavenEmuRetro", "RA reset after state load failed", error)
+                                }
                                 Toast.makeText(
                                     applicationContext, "État chargé (emplacement ${slot + 1})",
                                     Toast.LENGTH_SHORT,
