@@ -47,6 +47,14 @@ internal class V3AchievementsController(
         start(username.trim(), password, false)
     }
 
+    suspend fun retry() = withContext(dispatcher) {
+        if (!stopped) {
+            val identity = account.read()
+            if (identity != null) start(identity.username, identity.token, true)
+            else publish(V3RetroSnapshot(status = "Connectez votre compte RetroAchievements."))
+        }
+    }
+
     suspend fun attachRom(rom: ByteArray) = withContext(dispatcher) {
         if (stopped) return@withContext
         val id = GbBatteryStore.keyForRom(rom)
