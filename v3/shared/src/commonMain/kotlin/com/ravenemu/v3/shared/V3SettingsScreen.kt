@@ -60,6 +60,7 @@ fun V3SettingsScreen(
     appVersion: String,
     onOpenLink: ((String) -> Unit)?,
     retroSnapshot: V3RetroSnapshot = V3RetroSnapshot(),
+    retroImages: Map<String, androidx.compose.ui.graphics.ImageBitmap> = emptyMap(),
     retroBusy: Boolean = false,
     onRetroLogin: ((String, String) -> Unit)? = null,
     onRetroDisconnect: (() -> Unit)? = null,
@@ -110,6 +111,7 @@ fun V3SettingsScreen(
                 Page.RETRO -> {
                     V3RetroAchievementsContent(
                         snapshot = retroSnapshot,
+                        images = retroImages,
                         loginBusy = retroBusy,
                         onLogin = onRetroLogin,
                         onDisconnect = onRetroDisconnect,
