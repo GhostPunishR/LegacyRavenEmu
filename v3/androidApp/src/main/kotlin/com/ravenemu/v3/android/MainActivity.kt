@@ -2,6 +2,7 @@ package com.ravenemu.v3.android
 
 import android.content.Intent
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
@@ -31,6 +32,7 @@ import com.ravenemu.v3.shared.GamePlatform
 import com.ravenemu.v3.shared.GbDisplayFilter
 import com.ravenemu.v3.shared.GbButton
 import com.ravenemu.v3.shared.GbStateSlot
+import com.ravenemu.v3.shared.GbSaveImportReview
 import com.ravenemu.v3.shared.GbVideoMetrics
 import com.ravenemu.v3.shared.GbVideoMetricsAccumulator
 import com.ravenemu.v3.shared.LoadedGameInfo
@@ -88,6 +90,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settingsStore = remember { AndroidV3SettingsStore(applicationContext) }
             val romLibrary = remember { GbRomLibrary(File(filesDir, "gb-library"), contentResolver) }
+            val saveTransfer = remember { GbSaveTransfer(filesDir) }
             val coverStore = remember { GbCoverStore(File(filesDir, "gb-covers"), contentResolver) }
             val autoCoverDownloader = remember { GbAutoCoverDownloader() }
             val coverPreferences = remember {
@@ -156,6 +159,13 @@ class MainActivity : ComponentActivity() {
             var loadedGame by remember { mutableStateOf<LoadedGameInfo?>(null) }
             var loading by remember { mutableStateOf(false) }
             var importError by remember { mutableStateOf<String?>(null) }
+            var saveTransferBusy by remember { mutableStateOf(false) }
+            var pendingExport by remember { mutableStateOf<Pair<String, String>?>(null) }
+            var pendingImportGame by remember { mutableStateOf<String?>(null) }
+            var pendingSavePayload by remember {
+                mutableStateOf<GbSaveTransfer.ImportPayload?>(null)
+            }
+            var saveImportReview by remember { mutableStateOf<GbSaveImportReview?>(null) }
             var videoEnabled by remember { mutableStateOf(false) }
             var frame by remember { mutableStateOf<ImageBitmap?>(null) }
             var videoError by remember { mutableStateOf<String?>(null) }
@@ -423,6 +433,111 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val exportBackup = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.CreateDocument("application/zip"),
+            ) { uri ->
+                val request = pendingExport
+                pendingExport = null
+                if (uri != null && request != null && !saveTransferBusy) {
+                    saveTransferBusy = true
+                    scope.launch {
+                        try {
+                            withContext(Dispatchers.IO) {
+                                // The active core may still own unsaved battery RAM
+                                // after leaving the player; flush before exporting.
+                                gameSession.saveBatteryIfDirty()
+                                contentResolver.openOutputStream(uri)?.use {
+                                    saveTransfer.exportBundle(request.first, it)
+                                } ?: error("Destination d'export inaccessible.")
+                            }
+                            Toast.makeText(applicationContext,
+                                "Sauvegardes exportées", Toast.LENGTH_SHORT).show()
+                        } catch (error: Exception) {
+                            Log.e("RavenEmuTransfer", "Unable to export full backup", error)
+                            Toast.makeText(applicationContext,
+                                "Export impossible : ${error.message ?: "erreur inconnue"}",
+                                Toast.LENGTH_LONG).show()
+                        } finally {
+                            saveTransferBusy = false
+                        }
+                    }
+                }
+            }
+            val exportBattery = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
+            ) { uri ->
+                val request = pendingExport
+                pendingExport = null
+                if (uri != null && request != null && !saveTransferBusy) {
+                    saveTransferBusy = true
+                    scope.launch {
+                        try {
+                            withContext(Dispatchers.IO) {
+                                gameSession.saveBatteryIfDirty()
+                                contentResolver.openOutputStream(uri)?.use {
+                                    saveTransfer.exportBattery(request.first, it)
+                                } ?: error("Destination d'export inaccessible.")
+                            }
+                            Toast.makeText(applicationContext,
+                                "Fichier .sav exporté", Toast.LENGTH_SHORT).show()
+                        } catch (error: Exception) {
+                            Log.e("RavenEmuTransfer", "Unable to export .sav", error)
+                            Toast.makeText(applicationContext,
+                                "Export .sav impossible : ${error.message ?: "erreur inconnue"}",
+                                Toast.LENGTH_LONG).show()
+                        } finally {
+                            saveTransferBusy = false
+                        }
+                    }
+                }
+            }
+            val importSavePicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocument(),
+            ) { uri ->
+                val id = pendingImportGame
+                pendingImportGame = null
+                if (uri != null && id != null && !saveTransferBusy) {
+                    saveTransferBusy = true
+                    scope.launch {
+                        try {
+                            val (payload, conflicts) = withContext(Dispatchers.IO) {
+                                check(romLibrary.list().any { it.id == id }) {
+                                    "Ce jeu n'est plus dans la bibliothèque."
+                                }
+                                val filename = contentResolver.query(
+                                    uri, arrayOf(OpenableColumns.DISPLAY_NAME),
+                                    null, null, null,
+                                )?.use { cursor ->
+                                    if (cursor.moveToFirst() && !cursor.isNull(0))
+                                        cursor.getString(0) else null
+                                } ?: error("Nom de fichier inaccessible.")
+                                val candidate = contentResolver.openInputStream(uri)?.use {
+                                    saveTransfer.previewImport(it, id, filename)
+                                } ?: error("Sauvegarde inaccessible.")
+                                candidate to saveTransfer.conflicts(candidate)
+                            }
+                            val gameName = libraryGames.firstOrNull { it.id == id }?.title
+                                ?: "Jeu Game Boy"
+                            pendingSavePayload = payload
+                            saveImportReview = GbSaveImportReview(
+                                gameTitle = gameName,
+                                hasBattery = payload.hasBattery,
+                                slots = payload.stateSlots.map { it + 1 },
+                                conflicts = conflicts,
+                                rawSav = payload.rawBattery,
+                            )
+                        } catch (error: Exception) {
+                            Log.e("RavenEmuTransfer", "Invalid save import", error)
+                            Toast.makeText(applicationContext,
+                                "Import refusé : ${error.message ?: "fichier invalide"}",
+                                Toast.LENGTH_LONG).show()
+                        } finally {
+                            saveTransferBusy = false
+                        }
+                    }
+                }
+            }
+
             RavenEmuApp(
                 settings = userSettings,
                 onSettingsChange = { updated ->
@@ -447,6 +562,82 @@ class MainActivity : ComponentActivity() {
                 },
                 loadedGame = loadedGame,
                 libraryGames = libraryGames,
+                saveTransferBusy = saveTransferBusy,
+                saveImportReview = saveImportReview,
+                onCancelSaveImport = {
+                    saveImportReview = null
+                    pendingSavePayload = null
+                },
+                onConfirmSaveImport = {
+                    val payload = pendingSavePayload
+                    if (payload != null && !saveTransferBusy && !videoEnabled) {
+                        // Drop the review before any disk mutation, and never
+                        // apply a package if the target game was removed.
+                        pendingSavePayload = null
+                        saveImportReview = null
+                        saveTransferBusy = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    check(romLibrary.list().any { it.id == payload.romKey }) {
+                                        "La ROM associée n'existe plus."
+                                    }
+                                    gameSession.releaseForSaveImport(payload.romKey)
+                                    saveTransfer.apply(payload)
+                                }
+                                if (activeGameId == payload.romKey) {
+                                    activeGameId = null
+                                    loadedGame = null
+                                }
+                                Toast.makeText(applicationContext,
+                                    "Sauvegardes importées avec succès",
+                                    Toast.LENGTH_SHORT).show()
+                            } catch (error: Exception) {
+                                Log.e("RavenEmuTransfer", "Save import failed", error)
+                                if (activeGameId == payload.romKey) {
+                                    activeGameId = null
+                                    loadedGame = null
+                                }
+                                Toast.makeText(applicationContext,
+                                    "Import impossible : ${error.message ?: "erreur inconnue"}",
+                                    Toast.LENGTH_LONG).show()
+                            } finally {
+                                saveTransferBusy = false
+                            }
+                        }
+                    }
+                },
+                onExportGameBackup = { id ->
+                    if (!saveTransferBusy && !videoEnabled && libraryGames.any { it.id == id }) {
+                        val gameName = libraryGames.first { it.id == id }.title
+                            .substringBeforeLast('.')
+                            .replace(Regex("[^A-Za-z0-9_-]+"), "-")
+                            .take(48)
+                            .ifBlank { "GameBoy" }
+                        pendingExport = id to "zip"
+                        exportBackup.launch("$gameName-ravenemu-saves.zip")
+                    }
+                },
+                onExportBatterySave = { id ->
+                    if (!saveTransferBusy && !videoEnabled && libraryGames.any { it.id == id }) {
+                        val gameName = libraryGames.first { it.id == id }.title
+                            .substringBeforeLast('.')
+                            .replace(Regex("[^A-Za-z0-9_-]+"), "-")
+                            .take(48)
+                            .ifBlank { "GameBoy" }
+                        pendingExport = id to "sav"
+                        exportBattery.launch("$gameName.sav")
+                    }
+                },
+                onImportGameSave = { id ->
+                    if (!saveTransferBusy && !videoEnabled && libraryGames.any { it.id == id }) {
+                        pendingSavePayload = null
+                        saveImportReview = null
+                        pendingImportGame = id
+                        importSavePicker.launch(arrayOf("application/zip",
+                            "application/octet-stream", "*/*"))
+                    }
+                },
                 libraryCovers = libraryCovers,
                 coverBusy = coverBusy || autoCoverLoading,
                 onChooseCover = { id ->
