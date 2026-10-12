@@ -7,7 +7,9 @@ import android.media.AudioManager
 import android.media.AudioTrack
 import android.util.Log
 import com.ravenemu.v3.shared.GbPcmQueue
+import kotlin.math.PI
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.roundToInt
 
 /**
@@ -41,10 +43,13 @@ class AndroidGbAudioOutput(
     private var droppedSamples = 0L
     private var startupBlocks = 0
     private var firstSoundRecorded = false
+    private var firstNativeSoundRecorded = false
+    private var firstNonzeroBlock = -1
+    private var stoppedDiagnostics: String? = null
     private var lastLoggedSecond = -1L
     private val startNanos = System.nanoTime()
     private val report = StringBuilder("RavenEmu V3 GB audio startup diagnostic\n")
-    private val fadeFrames = (outputRate / 20).coerceAtLeast(1) // ~50 ms beginning at first audible PCM
+    private val fadeFrames = (outputRate * 180 / 1000).coerceAtLeast(1) // smooth 180 ms startup fade after silence
     private var rampFrame = 0
     private var closed = false
 
@@ -99,7 +104,14 @@ class AndroidGbAudioOutput(
             require(count in 0..samples.size && count % CHANNELS == 0) {
                 "Échantillons PCM stéréo invalides."
             }
-            if (startupBlocks < 12) logPcm("native", samples, count)
+            if (!firstNativeSoundRecorded && (0 until count).any { samples[it].toInt() != 0 }) {
+                firstNativeSoundRecorded = true
+                record("first_nonzero_native block=$startupBlocks")
+                logPcm("first_nonzero_native", samples, count)
+            }
+            if (startupBlocks < 12 ||
+                (firstNonzeroBlock >= 0 && startupBlocks <= firstNonzeroBlock + 20)
+            ) logPcm("native", samples, count)
             val needed = resampler.maxOutput(count, correctionForDrift())
             if (needed > resampled.size) resampled = ShortArray(needed)
             val produced = resampler.resample(
@@ -111,13 +123,14 @@ class AndroidGbAudioOutput(
             fadeIn(resampled, produced)
             if (!firstSoundRecorded && produced > 0 && resampled.take(produced).any { it.toInt() != 0 }) {
                 firstSoundRecorded = true
+                firstNonzeroBlock = startupBlocks
                 record("first_nonzero_audio block=$startupBlocks elapsedMs=${(System.nanoTime() - startNanos) / 1_000_000} nativeCount=$count outputCount=$produced")
                 logPcm("first_nonzero_output", resampled, produced)
             }
-            if (startupBlocks < 12) {
-                logPcm("output", resampled, produced)
-                startupBlocks++
-            }
+            if (startupBlocks < 12 ||
+                (firstNonzeroBlock >= 0 && startupBlocks <= firstNonzeroBlock + 20)
+            ) logPcm("output", resampled, produced)
+            startupBlocks++
             droppedSamples += queue.append(resampled, produced).toLong()
 
             // A partial non-blocking write stays in the bounded FIFO and is
@@ -162,20 +175,24 @@ class AndroidGbAudioOutput(
         var jump = 0
         var previousLeft = 0
         var previousRight = 0
+        var sumLeft = 0L
+        var sumRight = 0L
         for (i in 0 until count step CHANNELS) {
             val left = samples[i].toInt()
             val right = samples[i + 1].toInt()
+            sumLeft += left
+            sumRight += right
             peak = maxOf(peak, kotlin.math.abs(left), kotlin.math.abs(right))
             if (i != 0) jump = maxOf(jump, kotlin.math.abs(left - previousLeft), kotlin.math.abs(right - previousRight))
             previousLeft = left
             previousRight = right
         }
-        record("startup block=$startupBlocks stage=$stage samples=$count firstL=${if (count > 0) samples[0] else 0} firstR=${if (count > 1) samples[1] else 0} peak=$peak maxJump=$jump")
+        record("startup block=$startupBlocks stage=$stage samples=$count firstL=${if (count > 0) samples[0] else 0} firstR=${if (count > 1) samples[1] else 0} peak=$peak maxJump=$jump meanL=${if (count > 0) sumLeft / (count / 2) else 0} meanR=${if (count > 0) sumRight / (count / 2) else 0}")
     }
 
     private fun record(message: String) {
         Log.d(TAG, message)
-        if (report.length < 16000) report.append(message).append('\n')
+        if (report.length < 24000) report.append(message).append('\n')
     }
 
     fun exportReport(): String = synchronized(lock) {
@@ -184,7 +201,7 @@ class AndroidGbAudioOutput(
 
     /** Live diagnostics to distinguish device underruns from bounded FIFO overflow. */
     fun diagnostics(): String = synchronized(lock) {
-        "Audio: underruns=${track.underrunCount}, pertesPCM=${droppedSamples / CHANNELS} frames, " +
+        stoppedDiagnostics ?: "Audio: underruns=${track.underrunCount}, pertesPCM=${droppedSamples / CHANNELS} frames, " +
             "written=$writtenFrames played=${track.playbackHeadPosition.toLong() and MASK_32}, " +
             "file=${queue.size / CHANNELS} PCM, " +
             "latence~=${((writtenFrames - (track.playbackHeadPosition.toLong() and MASK_32)).coerceAtLeast(0L) * 1000L / outputRate)}ms"
@@ -201,7 +218,8 @@ class AndroidGbAudioOutput(
             val right = samples[index + 1].toInt()
             if (rampFrame == 0 && left == 0 && right == 0) continue
             if (rampFrame >= fadeFrames) break
-            val gain = rampFrame.toDouble() / fadeFrames
+            val phase = rampFrame.toDouble() / fadeFrames
+            val gain = 0.5 - 0.5 * cos(PI * phase)
             samples[index] = (left * gain).roundToInt().coerceIn(-32768, 32767).toShort()
             samples[index + 1] = (right * gain).roundToInt().coerceIn(-32768, 32767).toShort()
             if (rampFrame == 0) record("fade_in_started block=$startupBlocks")
@@ -213,6 +231,7 @@ class AndroidGbAudioOutput(
     fun stopNow() {
         synchronized(lock) {
             if (closed) return
+            stoppedDiagnostics = diagnostics()
             closed = true
             try {
                 track.pause()
