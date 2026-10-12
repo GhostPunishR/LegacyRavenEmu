@@ -88,13 +88,28 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settingsStore = remember { AndroidV3SettingsStore(applicationContext) }
             val romLibrary = remember { GbRomLibrary(File(filesDir, "gb-library"), contentResolver) }
+            val coverStore = remember { GbCoverStore(File(filesDir, "gb-covers"), contentResolver) }
+            var libraryCovers by remember { mutableStateOf(emptyMap<String, ImageBitmap>()) }
+            var coverBusy by remember { mutableStateOf(false) }
+            var pendingCoverId by remember { mutableStateOf<String?>(null) }
             var libraryGames by remember { mutableStateOf(emptyList<GameEntry>()) }
             var activeGameId by remember { mutableStateOf<String?>(null) }
             LaunchedEffect(romLibrary) {
                 try {
-                    libraryGames = withContext(Dispatchers.IO) {
-                        romLibrary.list().map { GameEntry(it.id, it.filename, GamePlatform.GB) }
+                    val (games, covers) = withContext(Dispatchers.IO) {
+                        val entries = romLibrary.list()
+                        val pictures = entries.mapNotNull { entry ->
+                            try {
+                                coverStore.read(entry.id)?.asImageBitmap()?.let { entry.id to it }
+                            } catch (error: Exception) {
+                                Log.w("RavenEmuLibrary", "Cannot read cover for ${entry.id.take(12)}", error)
+                                null
+                            }
+                        }.toMap()
+                        entries.map { GameEntry(it.id, it.filename, GamePlatform.GB) } to pictures
                     }
+                    libraryGames = games
+                    libraryCovers = covers
                 } catch (error: Exception) {
                     Log.e("RavenEmuLibrary", "Cannot open library index", error)
                 }
@@ -335,6 +350,40 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val coverPicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocument(),
+            ) { uri ->
+                val id = pendingCoverId
+                pendingCoverId = null
+                if (uri != null && id != null && !coverBusy) {
+                    coverBusy = true
+                    scope.launch {
+                        try {
+                            val cover = withContext(Dispatchers.IO) {
+                                check(romLibrary.list().any { it.id == id }) {
+                                    "Ce jeu n'est plus présent dans la bibliothèque."
+                                }
+                                coverStore.save(id, uri).asImageBitmap()
+                            }
+                            libraryCovers = libraryCovers + (id to cover)
+                            Toast.makeText(
+                                applicationContext, "Jaquette enregistrée",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        } catch (error: Exception) {
+                            Log.e("RavenEmuLibrary", "Unable to save custom cover", error)
+                            Toast.makeText(
+                                applicationContext,
+                                "Jaquette non enregistrée : ${error.message ?: "image invalide"}",
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        } finally {
+                            coverBusy = false
+                        }
+                    }
+                }
+            }
+
             RavenEmuApp(
                 settings = userSettings,
                 onSettingsChange = { updated ->
@@ -359,6 +408,33 @@ class MainActivity : ComponentActivity() {
                 },
                 loadedGame = loadedGame,
                 libraryGames = libraryGames,
+                libraryCovers = libraryCovers,
+                coverBusy = coverBusy,
+                onChooseCover = { id ->
+                    if (!coverBusy && libraryGames.any { it.id == id }) {
+                        pendingCoverId = id
+                        coverPicker.launch(arrayOf("image/*"))
+                    }
+                },
+                onRemoveCover = { id ->
+                    if (!coverBusy && libraryGames.any { it.id == id }) {
+                        coverBusy = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { coverStore.delete(id) }
+                                libraryCovers = libraryCovers - id
+                            } catch (error: Exception) {
+                                Log.e("RavenEmuLibrary", "Unable to remove cover", error)
+                                Toast.makeText(
+                                    applicationContext, "Impossible de retirer la jaquette",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            } finally {
+                                coverBusy = false
+                            }
+                        }
+                    }
+                },
                 onLaunchLibraryGame = { id, onReady ->
                     if (!loading && !videoEnabled) {
                         loading = true
