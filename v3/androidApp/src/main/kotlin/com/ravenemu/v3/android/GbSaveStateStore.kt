@@ -4,54 +4,114 @@ import android.util.AtomicFile
 import java.io.File
 import java.io.FileNotFoundException
 
-/**
- * One explicit save-state slot per ROM, independent from in-game battery saves.
- * The core validates the embedded ROM hash and state format during restoration.
+/** Four GB save-state slots per ROM (numbered 1 to 4 in the UI).
+ *
+ * Slot 1 deliberately retains the original `<hash>.slot0.state` filename:
+ * no migration is needed, and previously validated saves remain readable.
+ * Previews are stored separately and are never required to restore a state.
  */
 internal class GbSaveStateStore(private val directory: File) {
-    fun read(romKey: String): ByteArray? {
-        // AtomicFile.openRead can recover its backup after an interrupted
-        // write, even when the primary file is missing. Do not pre-check it.
-        return try {
-            AtomicFile(fileFor(romKey)).openRead().use { stream ->
-                val bytes = stream.readBytes()
-                require(bytes.size in 1..MAX_STATE_BYTES) {
-                    "État de sauvegarde invalide ou trop volumineux."
-                }
-                bytes
-            }
-        } catch (_: FileNotFoundException) {
-            null
-        }
+    fun read(romKey: String, slot: Int = 0): ByteArray? =
+        readAtomic(fileFor(romKey, slot), MAX_STATE_BYTES)
+
+    fun write(romKey: String, bytes: ByteArray, slot: Int = 0) {
+        writeAtomic(fileFor(romKey, slot), bytes, MAX_STATE_BYTES)
     }
 
-    fun write(romKey: String, bytes: ByteArray) {
-        require(bytes.size in 1..MAX_STATE_BYTES) {
-            "État de sauvegarde invalide ou trop volumineux."
-        }
-        check(directory.isDirectory || directory.mkdirs()) {
-            "Impossible de créer le dossier des save states."
-        }
-        val atomic = AtomicFile(fileFor(romKey))
-        val stream = atomic.startWrite()
-        try {
-            stream.write(bytes)
-            atomic.finishWrite(stream)
-        } catch (error: Exception) {
-            atomic.failWrite(stream)
-            throw error
-        }
+    fun readPreview(romKey: String, slot: Int): ByteArray? =
+        readAtomic(previewFileFor(romKey, slot), MAX_PREVIEW_BYTES)
+
+    fun writePreview(romKey: String, slot: Int, bytes: ByteArray) {
+        writeAtomic(previewFileFor(romKey, slot), bytes, MAX_PREVIEW_BYTES)
     }
 
-    internal fun fileFor(romKey: String): File {
+    fun deletePreview(romKey: String, slot: Int) {
+        AtomicFile(previewFileFor(romKey, slot)).delete()
+    }
+
+    fun delete(romKey: String, slot: Int) {
+        // The preview is optional and cannot keep a deleted save state alive.
+        AtomicFile(fileFor(romKey, slot)).delete()
+        deletePreview(romKey, slot)
+    }
+
+    fun slots(romKey: String): List<GbSlotSummary> = (0 until SLOT_COUNT).map { slot ->
+        val state = read(romKey, slot)
+        val primary = fileFor(romKey, slot)
+        val backup = File(primary.path + ".bak")
+        GbSlotSummary(
+            slot = slot,
+            occupied = state != null,
+            savedAtMillis = if (state == null) null else
+                (if (primary.exists()) primary else backup).lastModified()
+                    .takeIf { it > 0L },
+            preview = if (state == null) null else try {
+                readPreview(romKey, slot)
+            } catch (_: Exception) {
+                null // A corrupt optional preview must not hide a valid state.
+            },
+        )
+    }
+
+    internal fun fileFor(romKey: String, slot: Int = 0): File {
+        validate(romKey, slot)
+        return File(directory, "$romKey.slot$slot.state")
+    }
+
+    internal fun previewFileFor(romKey: String, slot: Int): File {
+        validate(romKey, slot)
+        return File(directory, "$romKey.slot$slot.png")
+    }
+
+    private fun validate(romKey: String, slot: Int) {
+        require(slot in 0 until SLOT_COUNT) { "Emplacement de sauvegarde invalide." }
         require(romKey.length == 64 &&
             romKey.all { it in '0'..'9' || it in 'a'..'f' }) {
             "Identifiant de ROM invalide."
         }
-        return File(directory, "$romKey.slot0.state")
+    }
+
+    private fun readAtomic(file: File, maxBytes: Int): ByteArray? = try {
+        AtomicFile(file).openRead().use { input ->
+            // Bound the read before allocating arbitrarily large user data.
+            val result = input.readNBytes(maxBytes + 1)
+            require(result.size in 1..maxBytes) {
+                "Fichier de sauvegarde invalide ou trop volumineux."
+            }
+            result
+        }
+    } catch (_: FileNotFoundException) {
+        null
+    }
+
+    private fun writeAtomic(file: File, bytes: ByteArray, maxBytes: Int) {
+        require(bytes.size in 1..maxBytes) {
+            "Fichier de sauvegarde invalide ou trop volumineux."
+        }
+        check(directory.isDirectory || directory.mkdirs()) {
+            "Impossible de créer le dossier des save states."
+        }
+        val atomic = AtomicFile(file)
+        val output = atomic.startWrite()
+        try {
+            output.write(bytes)
+            atomic.finishWrite(output)
+        } catch (error: Exception) {
+            atomic.failWrite(output)
+            throw error
+        }
     }
 
     companion object {
+        const val SLOT_COUNT = 4
         private const val MAX_STATE_BYTES = 4 * 1024 * 1024
+        private const val MAX_PREVIEW_BYTES = 512 * 1024
     }
 }
+
+internal data class GbSlotSummary(
+    val slot: Int,
+    val occupied: Boolean,
+    val savedAtMillis: Long?,
+    val preview: ByteArray?,
+)
