@@ -44,7 +44,7 @@ class AndroidGbAudioOutput(
     private var lastLoggedSecond = -1L
     private val startNanos = System.nanoTime()
     private val report = StringBuilder("RavenEmu V3 GB audio startup diagnostic\n")
-    private val fadeFrames = (outputRate / 20).coerceAtLeast(1) // ~50 ms fade, without delaying playback
+    private val fadeFrames = (outputRate / 20).coerceAtLeast(1) // ~50 ms beginning at first audible PCM
     private var rampFrame = 0
     private var closed = false
 
@@ -190,15 +190,21 @@ class AndroidGbAudioOutput(
             "latence~=${((writtenFrames - (track.playbackHeadPosition.toLong() and MASK_32)).coerceAtLeast(0L) * 1000L / outputRate)}ms"
     }
 
-    /** Start from silence even if the native APU already has nonzero samples. */
+    /**
+     * The ROM can produce hundreds of milliseconds of silence before its first
+     * audible sample. Start the fade at the first nonzero stereo frame rather
+     * than consuming the whole fade over silence.
+     */
     private fun fadeIn(samples: ShortArray, count: Int) {
         for (index in 0 until count step CHANNELS) {
+            val left = samples[index].toInt()
+            val right = samples[index + 1].toInt()
+            if (rampFrame == 0 && left == 0 && right == 0) continue
             if (rampFrame >= fadeFrames) break
             val gain = rampFrame.toDouble() / fadeFrames
-            for (channel in 0 until CHANNELS) {
-                samples[index + channel] = (samples[index + channel] * gain)
-                    .roundToInt().coerceIn(-32768, 32767).toShort()
-            }
+            samples[index] = (left * gain).roundToInt().coerceIn(-32768, 32767).toShort()
+            samples[index + 1] = (right * gain).roundToInt().coerceIn(-32768, 32767).toShort()
+            if (rampFrame == 0) record("fade_in_started block=$startupBlocks")
             rampFrame++
         }
     }
