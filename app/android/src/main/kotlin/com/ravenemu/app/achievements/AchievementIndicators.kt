@@ -16,19 +16,17 @@ import android.widget.TextView
  * remain visible until the SDK explicitly sends a HIDE event.
  */
 internal class AchievementIndicators(private val activity: Activity) : AutoCloseable {
-    private val active = linkedMapOf<String, String>()
+    private val active = AchievementIndicatorState()
     private var panel: LinearLayout? = null
 
     fun update(kind: String, id: String, title: String, detail: String) {
-        val key = kind.substringBeforeLast('_') + ":" + id
-        if (kind.endsWith("_hide")) active.remove(key)
-        else active[key] = listOf(title, detail).filter { it.isNotBlank() }.joinToString(" • ")
+        active.update(kind, id, title, detail)
         render()
     }
 
     private fun render() {
         if (activity.isFinishing || activity.isDestroyed) return
-        if (active.isEmpty()) {
+        if (active.labels.isEmpty()) {
             closePanel()
             return
         }
@@ -52,7 +50,7 @@ internal class AchievementIndicators(private val activity: Activity) : AutoClose
             panel = this
         }
         widget.removeAllViews()
-        active.values.take(4).forEach { label ->
+        active.labels.take(4).forEach { label ->
             widget.addView(TextView(activity).apply {
                 text = label
                 setTextColor(Color.WHITE)
@@ -71,3 +69,4 @@ internal class AchievementIndicators(private val activity: Activity) : AutoClose
         closePanel()
     }
 }
+

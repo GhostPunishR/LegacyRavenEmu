@@ -20,36 +20,37 @@ import javax.crypto.spec.GCMParameterSpec
  * The request contains an account token and is ALWAYS AES-GCM encrypted at rest
  * using a non-exportable Android Keystore key. It is never backed up.
  * This journal does not create awards: the native SDK generates every entry.
- * Replay uses the identical authenticated request only after that account logs in.
+ * Replay preserves the SDK award payload and uses the newly authenticated token.
  */
 internal class AchievementOfflineQueue(context: Context) {
     data class Award(val account: String, val url: String, val post: String, val contentType: String)
     private val file = AtomicFile(File(context.noBackupFilesDir, "retroachievements.unsent-awards"))
 
-    @Synchronized
-    fun remember(account: String, url: String, post: String, contentType: String): Boolean {
-        if (account.isBlank() || !AchievementAwardPolicy.isSdkAward(url, post)) return false
-        if (contentType.length !in 1..128) return false
+    private val guard = AwardJournalGuard.forFile(file.baseFile.absolutePath)
+    private val lease = guard.open()
+    fun isCurrent(): Boolean = lease.access(false) { true }
+
+    fun remember(account: String, url: String, post: String, contentType: String): Boolean = lease.access(false) {
+        if (account.isBlank() || !AchievementAwardPolicy.isSdkAward(url, post)) return@access false
+        if (contentType.length !in 1..128) return@access false
         val entry = Award(account, url, post, contentType)
         val entries = read()
-        if (entries.contains(entry)) return true
-        if (entries.size >= MAX_PENDING) return false
+        if (entries.contains(entry)) return@access true
+        if (entries.size >= MAX_PENDING) return@access false
         write(entries + entry)
-        return true
+        return@access true
     }
 
-    @Synchronized
-    fun forAccount(account: String): List<Award> =
+    fun forAccount(account: String): List<Award> = lease.access(emptyList()) {
         read().filter { it.account.equals(account, ignoreCase = true) }
+    }
 
-    @Synchronized
-    fun acknowledge(entry: Award) {
+    fun acknowledge(entry: Award) = lease.access(Unit) {
         val entries = read()
         if (entry in entries) write(entries - entry)
     }
 
-    @Synchronized
-    fun clear() = file.delete()
+    fun clear() = guard.clear { file.delete() }
 
     private fun read(): List<Award> {
         val ciphertext = try {
@@ -118,3 +119,4 @@ internal class AchievementOfflineQueue(context: Context) {
         val AAD = "RavenEmu authenticated Softcore awards v1".toByteArray(Charsets.UTF_8)
     }
 }
+

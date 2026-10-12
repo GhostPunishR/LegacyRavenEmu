@@ -42,3 +42,6 @@ Les tests n’utilisent ni compte ni ROM commerciale : ROMs synthétiques, serve
 Avant validation sur appareil : connecter un compte de test, ouvrir une ROM reconnue, obtenir un succès, vérifier sa présence sur le site, essayer pause/reprise, restauration d’état, coupure puis retour du réseau, fermeture pendant une requête et déconnexion. Les envois Softcore journalisés persistent maintenant après fermeture ; la reprise sur réseau réel doit encore être validée. Aucun résultat de test synthétique ne valide à lui seul le service en production ou la compatibilité d’un jeu commercial.
 
 Le [plan Hardcore](HARDCORE.md) décrit les protections et la validation restantes ; le mode reste désactivé.
+
+Le journal partage un verrou par fichier entre les clients et la déconnexion. La purge révoque les anciens clients : leurs callbacks tardifs ne peuvent pas réécrire le journal. Les requêtes héritées sont renvoyées avec le jeton de la connexion authentifiée courante, sans modifier les autres paramètres signés par le SDK ; les échecs sont retentés avec un délai progressif de 5 à 120 secondes, tant que la session reste ouverte. Les nouvelles requêtes de la partie restent sous la responsabilité des retries rcheevos.
+

@@ -479,6 +479,7 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
     }
 
     private fun reconnectAchievements() {
+        achievementIndicators.close()
         val rom = achievementRom ?: return
         val account = com.ravenemu.app.achievements.AchievementAccount(this).read()
         session?.post { target ->
@@ -515,7 +516,10 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
             achievements = null
             hardcoreSessionActive = false
             runOnUiThread {
-                if (!isFinishing && !isDestroyed) achievementPopup.show("RetroAchievements indisponible pour cette session")
+                if (!isFinishing && !isDestroyed) {
+                    achievementIndicators.close()
+                    achievementPopup.show("RetroAchievements indisponible pour cette session")
+                }
             }
         }
     }
@@ -989,5 +993,6 @@ class EmulationActivity : RavenActivity(), EmulationSession.Callbacks {
                 .putExtra(EXTRA_RESUME_SLOT, resumeSlot)
     }
 }
+
 
 

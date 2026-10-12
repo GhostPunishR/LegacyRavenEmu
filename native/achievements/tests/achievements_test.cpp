@@ -210,6 +210,14 @@ void ui_events() {
           adapter.events[3] == "42", "measured progress event mapping");
     adapter.events.clear();
 
+    event.type = RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_HIDE;
+    event.achievement = nullptr; // Actual timer event from rcheevos 12.5.0.
+    event_handler(&event, adapter.rc);
+    check(adapter.events.size() == 5 && adapter.events[0] == "progress_hide",
+          "global progress hide must survive a null achievement pointer");
+    adapter.events.clear();
+    event.achievement = &achievement;
+
     event.type = RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_HIDE;
     event_handler(&event, adapter.rc);
     check(adapter.events.size() == 5 && adapter.events[0] == "challenge_hide",
@@ -250,3 +258,4 @@ void ui_events() {
 
 }
 int main() { memory_maps(); sdk_unlock(); adapter_shutdown(); ui_events(); }
+

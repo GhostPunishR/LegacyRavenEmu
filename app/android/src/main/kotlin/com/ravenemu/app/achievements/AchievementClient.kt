@@ -9,6 +9,7 @@ import com.ravenemu.nativebridge.NativeAchievementsBridge as Native
 import java.net.URL
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.ssl.HttpsURLConnection
 
@@ -28,6 +29,10 @@ internal class AchievementClient(
     private var username: String? = null
     private var warnedAboutOfflineStorage = false
     private val http = Executors.newFixedThreadPool(2) { Thread(it, "RavenEmu-RA-HTTP").apply { isDaemon = true } }
+    private val replayWorker = Executors.newSingleThreadScheduledExecutor {
+        Thread(it, "RavenEmu-RA-Replay").apply { isDaemon = true }
+    }
+    private var replayStarted = false
     private val memory = core?.let { target ->
         Native.Memory { address, count ->
             val bytes = ByteArray(count)
@@ -65,7 +70,7 @@ internal class AchievementClient(
             when (it[0]) {
                 "login" -> {
                     status = "Chargement des succès…"
-                    resendStoredAwards()
+                    resendStoredAwards(it[1], it[3])
                 }
                 "game", "online" -> status = "Connecté • Mode normal (Softcore)"
                 "login_error", "game_error", "offline" -> status = it[1]
@@ -101,17 +106,31 @@ internal class AchievementClient(
     }
 
     /** Replay only previously captured SDK awards, after the same account logged in. */
-    private fun resendStoredAwards() {
-        val account = username ?: return
+    private fun resendStoredAwards(account: String, token: String) {
         val queue = offlineAwards ?: return
-        http.execute {
-            val pending = runCatching { queue.forAccount(account) }.getOrDefault(emptyList())
-            for (entry in pending) {
-                if (closed.get()) break
-                val result = send(entry.url, entry.post, entry.contentType)
-                if (awardAccepted(result)) runCatching { queue.acknowledge(entry) }
+        if (replayStarted) return
+        replayStarted = true
+        // Capture before loading this session's game, so the SDK and replay
+        // worker never both own retries for newly generated awards.
+        val pending = runCatching { queue.forAccount(account) }.getOrDefault(emptyList())
+        val replay = AwardReplay(pending)
+        replayWorker.execute(object : Runnable {
+            override fun run() {
+                val delay = replay.attempt({ !closed.get() && queue.isCurrent() }) { entry ->
+                    val post = AchievementAwardPolicy.authenticatedReplay(entry.url, entry.post, account, token)
+                    if (post == null) false
+                    else {
+                        val result = send(entry.url, post, entry.contentType)
+                        if (awardAccepted(result)) runCatching { queue.acknowledge(entry); true }.getOrDefault(false)
+                        else false
+                    }
+                }
+                if (delay != null && !closed.get() && queue.isCurrent()) {
+                    // Shutdown can race this scheduling; it must not escape the worker.
+                    runCatching { replayWorker.schedule(this, delay, TimeUnit.MILLISECONDS) }
+                }
             }
-        }
+        })
     }
 
     private fun awardAccepted(response: Response): Boolean {
@@ -165,8 +184,10 @@ internal class AchievementClient(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
+        replayWorker.shutdownNow()
         http.shutdownNow()
         responses.clear()
         Native.destroy(handle)
     }
 }
+

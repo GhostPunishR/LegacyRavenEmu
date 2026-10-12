@@ -139,17 +139,18 @@ void event_handler(const rc_client_event_t* event, rc_client_t* rc) {
         c.event("notice", "Tous les succès obtenus !");
     else if (event->type == RC_CLIENT_EVENT_RESET)
         c.event("hardcore_reset", "Redémarrage requis pour le mode Hardcore");
-    else if (event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_SHOW ||
+    else if (event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_HIDE) {
+        // The SDK timer sends a global HIDE with no achievement pointer.
+        c.event("progress_hide", "");
+    } else if (event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_SHOW ||
              event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_HIDE ||
              event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_SHOW ||
-             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_UPDATE ||
-             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_HIDE) {
+             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_UPDATE) {
         if (!event->achievement) return;
         const auto& a = *event->achievement;
         const char* kind =
             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_SHOW ? "challenge_show" :
             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_HIDE ? "challenge_hide" :
-            event->type == RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_HIDE ? "progress_hide" :
             "progress_show";
         c.event(kind, a.title, a.measured_progress, std::to_string(a.id).c_str(), achievement_image(a).c_str());
     } else if (event->type == RC_CLIENT_EVENT_LEADERBOARD_TRACKER_SHOW ||
@@ -322,3 +323,4 @@ JNIEXPORT void JNICALL JNI_RA(respond)(JNIEnv* env, jclass, jlong h, jint id, jb
     });
 }
 }
+
