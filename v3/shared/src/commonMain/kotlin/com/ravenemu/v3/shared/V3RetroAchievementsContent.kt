@@ -1,6 +1,10 @@
 package com.ravenemu.v3.shared
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -44,6 +48,7 @@ private val raSurface = Color(0xFF191B28)
 @Composable
 fun V3RetroAchievementsContent(
     snapshot: V3RetroSnapshot,
+    images: Map<String, ImageBitmap> = emptyMap(),
     loginBusy: Boolean,
     onLogin: ((String, String) -> Unit)?,
     onDisconnect: (() -> Unit)?,
@@ -102,10 +107,22 @@ fun V3RetroAchievementsContent(
                     .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(snapshot.displayName.ifBlank { snapshot.username },
-                    color = raText, fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold)
-                Text("@${snapshot.username}", color = raMuted, fontSize = 12.sp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    val avatar = images[snapshot.avatarUrl]
+                    if (avatar != null) {
+                        Image(avatar, "Avatar RetroAchievements",
+                            Modifier.size(58.dp), contentScale = ContentScale.Fit)
+                    }
+                    Column {
+                        Text(snapshot.displayName.ifBlank { snapshot.username },
+                            color = raText, fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold)
+                        Text("@${snapshot.username}", color = raMuted, fontSize = 12.sp)
+                    }
+                }
                 Text("Softcore : ${snapshot.softcorePoints} points  ·  Hardcore : ${snapshot.hardcorePoints} points",
                     color = raAccent, fontSize = 12.sp)
                 if (snapshot.gameTitle.isNotBlank()) {
@@ -159,8 +176,14 @@ fun V3RetroAchievementsContent(
                     ) {
                         Row(
                             Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
+                            val badge = images[achievement.badgeUrl]
+                            if (badge != null) {
+                                Image(badge, "Badge du succès",
+                                    Modifier.size(42.dp), contentScale = ContentScale.Fit)
+                            }
                             Text(achievement.title, modifier = Modifier.weight(1f),
                                 color = raText, fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
@@ -189,9 +212,17 @@ fun V3RetroAchievementsContent(
                     androidx.compose.material3.AlertDialog(
                         onDismissRequest = { selected = null },
                         title = { Text(achievement.title) },
-                        text = { Text(achievement.description +
-                            "\n\n${achievement.points} points · " +
-                            if (achievement.unlocked) "Débloqué" else "À obtenir") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                images[achievement.badgeUrl]?.let { badge ->
+                                    Image(badge, "Badge du succès",
+                                        Modifier.size(88.dp), contentScale = ContentScale.Fit)
+                                }
+                                Text(achievement.description +
+                                    "\n\n${achievement.points} points · " +
+                                    (if (achievement.unlocked) "Débloqué" else "À obtenir"))
+                            }
+                        },
                         confirmButton = {
                             TextButton(onClick = { selected = null }) { Text("Fermer") }
                         },
