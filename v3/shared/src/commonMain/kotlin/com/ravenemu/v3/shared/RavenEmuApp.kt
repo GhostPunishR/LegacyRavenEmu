@@ -203,7 +203,7 @@ fun RavenEmuApp(
                     Text("RavenEmu", color = RavenText, fontSize = 20.sp)
                     Text("Préversion V3 Android / iOS", color = RavenMuted, fontSize = 14.sp)
                     Text(
-                        "Le lecteur Game Boy, ses commandes et l'audio PCM16 sont en test sur Android. Les sauvegardes seront intégrées ensuite.",
+                        "Le lecteur Game Boy et l'audio PCM16 sont en test sur Android. La progression enregistrée dans le jeu est conservée sur Android ; les save states viendront ensuite.",
                         color = RavenMuted,
                         fontSize = 14.sp,
                     )
@@ -237,7 +237,7 @@ fun RavenEmuApp(
                     Text(platformLabel(entry.platform), color = RavenSecondary, fontSize = 13.sp)
                     Text("ROM chargée dans RavenGB.", color = RavenText)
                     Text(
-                        "Vidéo, commandes et audio Game Boy disponibles en préversion sur Android. Sauvegardes à venir.",
+                        "Vidéo, commandes et audio Game Boy disponibles sur Android. La sauvegarde interne du jeu est enregistrée automatiquement ; save states à venir.",
                         color = RavenMuted,
                         fontSize = 13.sp,
                     )
