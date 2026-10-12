@@ -99,6 +99,10 @@ private enum class RavenGlyph { SETTINGS, ADD, MORE, SEARCH, BACK }
 @Composable
 fun RavenEmuApp(
     onImportRom: (() -> Unit)? = null,
+    onImportFolder: (() -> Unit)? = null,
+    folderImportSummary: GbFolderImportSummary? = null,
+    folderImportProgress: String? = null,
+    onDismissFolderImportSummary: (() -> Unit)? = null,
     loadedGame: LoadedGameInfo? = null,
     libraryGames: List<GameEntry> = emptyList(),
     libraryCovers: Map<String, ImageBitmap> = emptyMap(),
@@ -170,6 +174,7 @@ fun RavenEmuApp(
                         onSettings = { screen = RavenScreen.SETTINGS },
                         onAdd = { onImportRom?.invoke() },
                         onToggleView = { listMode = !listMode },
+                        onImportFolder = onImportFolder,
                         onAbout = { screen = RavenScreen.ABOUT },
                     )
                     SearchField(query = search, onChange = { search = it })
@@ -180,7 +185,8 @@ fun RavenEmuApp(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                            Text("Chargement de la ROM...", fontSize = 12.sp, color = RavenMuted)
+                            Text(folderImportProgress ?: "Chargement de la ROM...",
+                                fontSize = 12.sp, color = RavenMuted)
                         }
                     }
                     if (importError != null) {
@@ -389,6 +395,41 @@ fun RavenEmuApp(
                     }
                 }
             }
+        }
+        val folderSummary = folderImportSummary
+        if (folderSummary != null) {
+            AlertDialog(
+                onDismissRequest = { onDismissFolderImportSummary?.invoke() },
+                title = { Text("Importation du dossier terminée") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("Jeux ajoutés : ${folderSummary.added}")
+                        Text("Doublons ignorés : ${folderSummary.duplicate}")
+                        Text("ROM invalides : ${folderSummary.invalid}")
+                        if (folderSummary.unreadable > 0) {
+                            Text("Fichiers ou dossiers illisibles : ${folderSummary.unreadable}")
+                        }
+                        Text("Autres fichiers ignorés : ${folderSummary.otherFiles}",
+                            color = RavenMuted, fontSize = 13.sp)
+                        Text("Dossiers parcourus : ${folderSummary.scannedFolders}",
+                            color = RavenMuted, fontSize = 13.sp)
+                        if (folderSummary.limited) {
+                            Text("Parcours arrêté par une limite de sécurité ou de stockage. Les jeux déjà ajoutés sont conservés.",
+                                color = RavenDanger, fontSize = 13.sp)
+                        }
+                        Text("Les jeux existants, leurs sauvegardes et la partie en cours n'ont pas été modifiés.",
+                            color = RavenSecondary, fontSize = 12.sp)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { onDismissFolderImportSummary?.invoke() }) {
+                        Text("Terminer", color = RavenAccent)
+                    }
+                },
+                containerColor = RavenSurface,
+                titleContentColor = RavenText,
+                textContentColor = RavenText,
+            )
         }
         val review = saveImportReview
         if (review != null) {
@@ -749,6 +790,7 @@ private fun LibraryToolbar(
     onSettings: () -> Unit,
     onAdd: () -> Unit,
     onToggleView: () -> Unit,
+    onImportFolder: (() -> Unit)?,
     onAbout: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -791,6 +833,13 @@ private fun LibraryToolbar(
                         text = { Text(if (listMode) "Vue grille" else "Vue liste", color = RavenText) },
                         onClick = { menuOpen = false; onToggleView() },
                     )
+                    if (onImportFolder != null) {
+                        DropdownMenuItem(
+                            text = { Text("Importer un dossier", color = RavenText) },
+                            enabled = importEnabled,
+                            onClick = { menuOpen = false; onImportFolder() },
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("À propos", color = RavenText) },
                         onClick = { menuOpen = false; onAbout() },
