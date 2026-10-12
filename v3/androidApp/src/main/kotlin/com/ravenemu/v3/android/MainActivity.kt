@@ -189,6 +189,31 @@ class MainActivity : ComponentActivity() {
             var stateRevision by remember { mutableStateOf(0) }
             val scope = rememberCoroutineScope()
             var retroSnapshot by remember { mutableStateOf(V3RetroSnapshot()) }
+            val retroBadgeStore = remember { V3RetroBadgeStore(applicationContext) }
+            var retroImages by remember {
+                mutableStateOf(emptyMap<String, ImageBitmap>())
+            }
+            LaunchedEffect(retroSnapshot.avatarUrl,
+                retroSnapshot.entries.map { it.badgeUrl }.distinct()) {
+                val urls = (listOf(retroSnapshot.avatarUrl) +
+                    retroSnapshot.entries.map { it.badgeUrl })
+                    .filter { it.isNotBlank() }.distinct().take(120)
+                for (batch in urls.chunked(12)) {
+                    val toLoad = batch.filter { it !in retroImages }
+                    if (toLoad.isEmpty()) continue
+                    val images = withContext(Dispatchers.IO) {
+                        toLoad.mapNotNull { raw ->
+                            try {
+                                retroBadgeStore.load(raw)?.asImageBitmap()?.let { raw to it }
+                            } catch (error: Exception) {
+                                Log.w("RavenEmuRetro", "Badge unavailable", error)
+                                null
+                            }
+                        }.toMap()
+                    }
+                    retroImages = retroImages + images
+                }
+            }
             var retroBusy by remember { mutableStateOf(false) }
             var retroNotice by remember { mutableStateOf<String?>(null) }
             val retro = remember {
@@ -658,6 +683,7 @@ class MainActivity : ComponentActivity() {
 
             RavenEmuApp(
                 retroSnapshot = retroSnapshot,
+                retroImages = retroImages,
                 retroBusy = retroBusy,
                 retroNotice = retroNotice,
                 onRetroLogin = { username, password ->
