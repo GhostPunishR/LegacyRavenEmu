@@ -81,6 +81,8 @@ class MainActivity : ComponentActivity() {
             var videoError by remember { mutableStateOf<String?>(null) }
             var videoMetrics by remember { mutableStateOf<GbVideoMetrics?>(null) }
             var audioStatus by remember { mutableStateOf<String?>(null) }
+            var stateOperationBusy by remember { mutableStateOf(false) }
+            var restoringState by remember { mutableStateOf(false) }
             val scope = rememberCoroutineScope()
             val exportAudio = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.CreateDocument("text/plain"),
@@ -96,10 +98,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(videoEnabled, loadedGame, foreground) {
+            LaunchedEffect(videoEnabled, loadedGame, foreground, restoringState) {
                 frame = null
                 videoMetrics = null
-                if (!videoEnabled || !foreground || loadedGame == null) return@LaunchedEffect
+                if (!videoEnabled || !foreground || loadedGame == null || restoringState) return@LaunchedEffect
 
                 videoError = null
                 audioStatus = null
@@ -267,6 +269,56 @@ class MainActivity : ComponentActivity() {
                 onExportAudioDiagnostics = {
                     lastAudioReport = activeAudio?.exportReport() ?: lastAudioReport
                     exportAudio.launch("ravenemu-audio-diagnostic.txt")
+                },
+                onSaveState = {
+                    if (!stateOperationBusy && loadedGame != null && videoEnabled) {
+                        stateOperationBusy = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { gameSession.saveStateSlot() }
+                                Toast.makeText(
+                                    applicationContext, "État sauvegardé (emplacement 1)",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            } catch (error: Exception) {
+                                Log.e("RavenEmuSaves", "Save state failed", error)
+                                Toast.makeText(
+                                    applicationContext,
+                                    "Échec du save state : ${error.message ?: "erreur inconnue"}",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            } finally {
+                                stateOperationBusy = false
+                            }
+                        }
+                    }
+                },
+                onLoadState = {
+                    if (!stateOperationBusy && loadedGame != null && videoEnabled) {
+                        stateOperationBusy = true
+                        restoringState = true // cancel video loop and freshen AudioTrack on resume
+                        activeAudio?.stopNow()
+                        gameSession.releaseAllButtons()
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { gameSession.loadStateSlot() }
+                                Toast.makeText(
+                                    applicationContext, "État chargé (emplacement 1)",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            } catch (error: Exception) {
+                                Log.e("RavenEmuSaves", "Load state failed", error)
+                                Toast.makeText(
+                                    applicationContext,
+                                    "Chargement impossible : ${error.message ?: "erreur inconnue"}",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            } finally {
+                                restoringState = false
+                                stateOperationBusy = false
+                            }
+                        }
+                    }
                 },
             )
         }
