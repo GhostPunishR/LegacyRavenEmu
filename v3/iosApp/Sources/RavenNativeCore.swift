@@ -60,5 +60,34 @@ final class RavenNativeCore {
         ravenemu_v3_set_button(handle, id, pressed ? 1 : 0) != 0
     }
 
+    func saveState() -> Data? {
+        guard let handle else { return nil }
+        let capacity = Int(ravenemu_v3_state_size(handle))
+        guard capacity > 0 else { return nil }
+        var bytes = [UInt8](repeating: 0, count: capacity)
+        let ok = bytes.withUnsafeMutableBufferPointer {
+            ravenemu_v3_save_state(handle, $0.baseAddress, $0.count) != 0
+        }
+        return ok ? Data(bytes) : nil
+    }
+
+    func loadState(_ state: Data) -> Bool {
+        guard let handle else { return false }
+        return state.withUnsafeBytes {
+            ravenemu_v3_load_state(handle, $0.bindMemory(to: UInt8.self).baseAddress, state.count) != 0
+        }
+    }
+
+    func batterySnapshot() -> Data? {
+        guard let handle else { return nil }
+        let capacity = Int(ravenemu_v3_battery_size(handle))
+        guard capacity > 0 else { return nil }
+        var bytes = [UInt8](repeating: 0, count: capacity)
+        let ok = bytes.withUnsafeMutableBufferPointer {
+            ravenemu_v3_copy_battery(handle, $0.baseAddress, $0.count) != 0
+        }
+        return ok ? Data(bytes) : nil
+    }
+
     func reset() -> Bool { ravenemu_v3_reset(handle) != 0 }
 }

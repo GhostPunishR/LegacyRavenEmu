@@ -43,6 +43,24 @@ class NativeCore(system: Int) : AutoCloseable {
         check(nativeReset(requireOpen())) { nativeLastError() }
     }
 
+    fun saveState(): ByteArray {
+        val data = ByteArray(nativeStateSize(requireOpen()))
+        check(data.isNotEmpty() && nativeSaveState(requireOpen(), data)) { nativeLastError() }
+        return data
+    }
+
+    fun loadState(data: ByteArray) {
+        check(nativeLoadState(requireOpen(), data)) { nativeLastError() }
+    }
+
+    fun batterySnapshot(): ByteArray {
+        val size = nativeBatterySize(requireOpen())
+        if (size == 0) return ByteArray(0)
+        return ByteArray(size).also {
+            check(nativeCopyBattery(requireOpen(), it)) { nativeLastError() }
+        }
+    }
+
     private fun requireOpen(): Long = pointer.also {
         check(it != 0L) { "Native emulator is closed" }
     }
@@ -65,6 +83,11 @@ class NativeCore(system: Int) : AutoCloseable {
     private external fun nativeReadAudio(pointer: Long, output: ShortArray): Int
     private external fun nativeButton(pointer: Long, button: Int, pressed: Boolean): Boolean
     private external fun nativeReset(pointer: Long): Boolean
+    private external fun nativeStateSize(pointer: Long): Int
+    private external fun nativeSaveState(pointer: Long, output: ByteArray): Boolean
+    private external fun nativeLoadState(pointer: Long, input: ByteArray): Boolean
+    private external fun nativeBatterySize(pointer: Long): Int
+    private external fun nativeCopyBattery(pointer: Long, output: ByteArray): Boolean
     private external fun nativeLastError(): String
 
     companion object {

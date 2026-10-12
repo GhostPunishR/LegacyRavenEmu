@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <limits>
 
 namespace {
 ravenemu_v3_bridge* handle(jlong pointer) {
@@ -103,5 +104,51 @@ Java_com_ravenemu_v3_android_NativeCore_nativeReset(JNIEnv*, jobject, jlong poin
 JNIEXPORT jstring JNICALL
 Java_com_ravenemu_v3_android_NativeCore_nativeLastError(JNIEnv* env, jobject) {
     return env->NewStringUTF(ravenemu_v3_last_error());
+}
+JNIEXPORT jint JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeStateSize(JNIEnv*, jobject, jlong pointer) {
+    const auto n = ravenemu_v3_state_size(handle(pointer));
+    return n <= static_cast<size_t>(std::numeric_limits<jint>::max()) ? static_cast<jint>(n) : 0;
+}
+JNIEXPORT jboolean JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeSaveState(
+    JNIEnv* env, jobject, jlong pointer, jbyteArray output
+) {
+    if (!output) return JNI_FALSE;
+    auto* bytes = env->GetByteArrayElements(output, nullptr);
+    if (!bytes) return JNI_FALSE;
+    const auto ok = ravenemu_v3_save_state(handle(pointer),
+        reinterpret_cast<uint8_t*>(bytes), static_cast<size_t>(env->GetArrayLength(output)));
+    env->ReleaseByteArrayElements(output, bytes, ok ? 0 : JNI_ABORT);
+    return ok ? JNI_TRUE : JNI_FALSE;
+}
+JNIEXPORT jboolean JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeLoadState(
+    JNIEnv* env, jobject, jlong pointer, jbyteArray input
+) {
+    if (!input) return JNI_FALSE;
+    auto* bytes = env->GetByteArrayElements(input, nullptr);
+    if (!bytes) return JNI_FALSE;
+    const auto ok = ravenemu_v3_load_state(handle(pointer),
+        reinterpret_cast<const uint8_t*>(bytes), static_cast<size_t>(env->GetArrayLength(input)));
+    env->ReleaseByteArrayElements(input, bytes, JNI_ABORT);
+    return ok ? JNI_TRUE : JNI_FALSE;
+}
+JNIEXPORT jint JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeBatterySize(JNIEnv*, jobject, jlong pointer) {
+    const auto n = ravenemu_v3_battery_size(handle(pointer));
+    return n <= static_cast<size_t>(std::numeric_limits<jint>::max()) ? static_cast<jint>(n) : 0;
+}
+JNIEXPORT jboolean JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeCopyBattery(
+    JNIEnv* env, jobject, jlong pointer, jbyteArray output
+) {
+    if (!output) return JNI_FALSE;
+    auto* bytes = env->GetByteArrayElements(output, nullptr);
+    if (!bytes) return JNI_FALSE;
+    const auto ok = ravenemu_v3_copy_battery(handle(pointer),
+        reinterpret_cast<uint8_t*>(bytes), static_cast<size_t>(env->GetArrayLength(output)));
+    env->ReleaseByteArrayElements(output, bytes, ok ? 0 : JNI_ABORT);
+    return ok ? JNI_TRUE : JNI_FALSE;
 }
 } // extern C
