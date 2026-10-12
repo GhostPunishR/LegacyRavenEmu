@@ -31,6 +31,12 @@ internal class GbSaveTransfer(filesDir: File) {
 
     fun hasBattery(key: String): Boolean = battery.read(validKey(key)) != null
 
+    fun hasAnySave(key: String): Boolean {
+        validKey(key)
+        return battery.read(key) != null ||
+            (0 until GbSaveStateStore.SLOT_COUNT).any { states.read(key, it) != null }
+    }
+
     fun exportBattery(key: String, output: OutputStream) {
         val bytes = battery.read(validKey(key))
             ?: error("Ce jeu n'a pas encore de sauvegarde .sav.")
