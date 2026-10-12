@@ -97,7 +97,6 @@ fun RavenEmuApp(
     videoError: String? = null,
     videoMetrics: GbVideoMetrics? = null,
     onButtonChange: ((GbButton, Boolean) -> Unit)? = null,
-    audioStatus: String? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }
     var search by remember { mutableStateOf("") }
@@ -214,7 +213,6 @@ fun RavenEmuApp(
                     error = videoError,
                     metrics = videoMetrics,
                     onButtonChange = onButtonChange,
-                    audioStatus = audioStatus,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -272,7 +270,6 @@ private fun GbVideoScreen(
     error: String?,
     metrics: GbVideoMetrics?,
     onButtonChange: ((GbButton, Boolean) -> Unit)?,
-    audioStatus: String?,
     onBack: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().background(Color.Black)) {
@@ -344,13 +341,7 @@ private fun GbVideoScreen(
                 modifier = Modifier.padding(vertical = 8.dp),
             )
         }
-        Text(
-            audioStatus ?: "Audio GB en préparation. Sauvegardes à venir.",
-            color = RavenMuted,
-            fontSize = 10.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp, top = 2.dp),
-        )
+
     }
 }
 
