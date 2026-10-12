@@ -331,6 +331,7 @@ private fun GbVideoScreen(
     onBack: () -> Unit,
 ) {
     var gameMenuOpen by remember { mutableStateOf(false) }
+    var selectedSlot by remember { mutableStateOf(0) }
     var confirmation by remember { mutableStateOf<Pair<Int, String>?>(null) }
     fun setGameMenu(open: Boolean) {
         if (gameMenuOpen == open) return
@@ -438,81 +439,116 @@ private fun GbVideoScreen(
                 Text(title, color = RavenSecondary, fontSize = 13.sp)
                 Text("Partie en pause · 4 emplacements de sauvegarde",
                     color = RavenMuted, fontSize = 12.sp)
+                // Compact switcher: only the selected slot is expanded.
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    for (index in 0 until 4) {
+                        val occupied = stateSlots.firstOrNull { it.index == index }?.occupied == true
+                        val active = selectedSlot == index
+                        Box(
+                            Modifier.weight(1f).height(44.dp)
+                                .background(
+                                    if (active) RavenAccent else Color(0xFF292A38),
+                                    RoundedCornerShape(12.dp),
+                                )
+                                .clickable { selectedSlot = index },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text("${index + 1}",
+                                    color = if (active) RavenBackground else RavenText,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold)
+                                if (occupied) {
+                                    Box(Modifier.size(5.dp).background(
+                                        if (active) RavenBackground else RavenAccent, CircleShape))
+                                }
+                            }
+                        }
+                    }
+                }
                 if (stateSlotsLoading) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Row(
+                        Modifier.fillMaxWidth().height(96.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(12.dp))
-                        Text("Chargement des emplacements…",
-                            color = RavenSecondary, fontSize = 12.sp)
+                        Text("Chargement des emplacements…", color = RavenMuted, fontSize = 12.sp)
                     }
                 } else {
-                    for (index in 0 until 4) {
-                        val entry = stateSlots.firstOrNull { it.index == index }
-                        val occupied = entry?.occupied == true
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFF202230),
-                            ),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.fillMaxWidth(),
+                    val entry = stateSlots.firstOrNull { it.index == selectedSlot }
+                    val occupied = entry?.occupied == true
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF202230)),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            Column(Modifier.fillMaxWidth().padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Box(
+                                    Modifier.width(94.dp).height(84.dp)
+                                        .clip(RoundedCornerShape(9.dp))
+                                        .background(Color(0xFF10111B))
+                                        .border(1.dp, RavenOutline, RoundedCornerShape(9.dp)),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    Box(
-                                        Modifier.width(100.dp).height(90.dp)
-                                            .clip(RoundedCornerShape(9.dp))
-                                            .background(Color(0xFF10111B))
-                                            .border(1.dp, RavenOutline,
-                                                RoundedCornerShape(9.dp)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        if (entry?.thumbnail != null) {
-                                            Image(entry.thumbnail, "Aperçu de l'emplacement ${index + 1}",
-                                                Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Fit,
-                                                filterQuality = FilterQuality.None)
-                                        } else {
-                                            Text("GB", color = RavenMuted, fontSize = 18.sp)
-                                        }
-                                    }
-                                    Column(Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text("Emplacement ${index + 1}",
-                                            color = RavenText,
-                                            fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                                        Text(entry?.savedAt ?: "Vide",
-                                            color = RavenMuted, fontSize = 12.sp)
+                                    if (entry?.thumbnail != null) {
+                                        Image(entry.thumbnail,
+                                            "Aperçu de l'emplacement ${selectedSlot + 1}",
+                                            Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit,
+                                            filterQuality = FilterQuality.None)
+                                    } else {
+                                        Text("GB", color = RavenMuted, fontSize = 16.sp)
                                     }
                                 }
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    FilledTonalButton(
-                                        modifier = Modifier.weight(1f),
-                                        enabled = !stateOperationBusy && onSaveState != null,
-                                        onClick = {
-                                            if (occupied) confirmation = index to "overwrite"
-                                            else onSaveState?.invoke(index)
-                                        },
-                                    ) { Text("Sauver", fontSize = 12.sp) }
-                                    OutlinedButton(
-                                        modifier = Modifier.weight(1f),
-                                        enabled = occupied && !stateOperationBusy && onLoadState != null,
-                                        onClick = {
-                                            onLoadState?.invoke(index)
-                                            // The host stops AudioTrack before restoring the
-                                            // core. Dismiss so the resumed image is fresh.
-                                            setGameMenu(false)
-                                        },
-                                    ) { Text("Charger", fontSize = 12.sp) }
-                                    OutlinedButton(
-                                        modifier = Modifier.weight(1f),
-                                        enabled = occupied && !stateOperationBusy && onDeleteState != null,
-                                        onClick = { confirmation = index to "delete" },
-                                    ) { Text("Supprimer", fontSize = 11.sp) }
+                                Column(
+                                    Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                                ) {
+                                    Text("Emplacement ${selectedSlot + 1}",
+                                        color = RavenText, fontWeight = FontWeight.SemiBold,
+                                        fontSize = 15.sp)
+                                    Text(entry?.savedAt ?: "Vide",
+                                        color = RavenMuted, fontSize = 12.sp)
                                 }
+                            }
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                FilledTonalButton(
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !stateOperationBusy && onSaveState != null,
+                                    onClick = {
+                                        if (occupied) confirmation = selectedSlot to "overwrite"
+                                        else onSaveState?.invoke(selectedSlot)
+                                    },
+                                ) { Text("Sauver", fontSize = 12.sp) }
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    enabled = occupied && !stateOperationBusy && onLoadState != null,
+                                    onClick = {
+                                        onLoadState?.invoke(selectedSlot)
+                                        setGameMenu(false)
+                                    },
+                                ) { Text("Charger", fontSize = 12.sp) }
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    enabled = occupied && !stateOperationBusy && onDeleteState != null,
+                                    onClick = { confirmation = selectedSlot to "delete" },
+                                ) { Text("Supprimer", fontSize = 11.sp) }
                             }
                         }
                     }
@@ -592,17 +628,9 @@ private fun LibraryToolbar(
             textAlign = TextAlign.Center,
         )
         Row(Modifier.align(Alignment.CenterStart).padding(start = 4.dp)) {
+            // Exact V2 toolbar icon, white and borderless; + and ⋮ unchanged.
             IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)) {
-                Box(
-                    Modifier.size(39.dp)
-                        .border(1.dp, RavenAccent.copy(alpha = 0.48f),
-                            RoundedCornerShape(12.dp))
-                        .background(RavenAccent.copy(alpha = 0.13f),
-                            RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    RavenIcon(RavenGlyph.SETTINGS, RavenAccent)
-                }
+                V2Icon(V2IconType.SETTINGS, RavenText)
             }
         }
         Row(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) {
