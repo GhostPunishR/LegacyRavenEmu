@@ -33,7 +33,17 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
         require(RomImportPolicy.acceptsGameBoyFile(filename)) {
             "Pour cette étape, sélectionnez une ROM Game Boy au format .gb."
         }
-        val bytes = readBounded(uri)
+        return loadBytes(filename, readBounded(uri))
+    }
+
+    /** Load either a just-imported ROM or a private persistent library copy. */
+    fun loadBytes(filename: String, bytes: ByteArray): LoadedGameInfo {
+        require(RomImportPolicy.acceptsGameBoyFile(filename)) {
+            "La ROM doit être au format .gb."
+        }
+        require(bytes.size in 1..RomImportPolicy.maxRomBytes) {
+            "Taille de ROM invalide."
+        }
         val romKey = GbBatteryStore.keyForRom(bytes)
         val replacement = NativeCore(NativeCore.GB)
         var transferred = false
