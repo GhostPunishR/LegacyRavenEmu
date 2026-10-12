@@ -1,5 +1,7 @@
 package com.ravenemu.v3.android
 
+import android.content.Intent
+import android.net.Uri
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
@@ -18,11 +20,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.ravenemu.v3.shared.GbDisplayFilter
 import com.ravenemu.v3.shared.GbButton
 import com.ravenemu.v3.shared.GbVideoMetrics
 import com.ravenemu.v3.shared.GbVideoMetricsAccumulator
 import com.ravenemu.v3.shared.LoadedGameInfo
 import com.ravenemu.v3.shared.RavenEmuApp
+import com.ravenemu.v3.shared.V3Settings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -73,6 +77,13 @@ class MainActivity : ComponentActivity() {
         gameSession = AndroidGbSession(contentResolver, filesDir)
 
         setContent {
+            val settingsStore = remember { AndroidV3SettingsStore(applicationContext) }
+            var userSettings by remember { mutableStateOf(settingsStore.read()) }
+            val appVersion = remember {
+                runCatching {
+                    packageManager.getPackageInfo(packageName, 0).versionName
+                }.getOrNull() ?: "0.1.0-preview"
+            }
             var loadedGame by remember { mutableStateOf<LoadedGameInfo?>(null) }
             var loading by remember { mutableStateOf(false) }
             var importError by remember { mutableStateOf<String?>(null) }
@@ -118,6 +129,7 @@ class MainActivity : ComponentActivity() {
                 videoError = null
                 audioStatus = null
                 val currentGame = loadedGame ?: return@LaunchedEffect
+                val playbackSettings = userSettings
                 val targetFps = (gameSession.refreshRateHz() ?: 59.7).coerceIn(1.0, 120.0)
                 val periodNanos = (1_000_000_000.0 / targetFps).roundToLong()
                 val stats = GbVideoMetricsAccumulator(targetFps)
@@ -132,7 +144,10 @@ class MainActivity : ComponentActivity() {
                     try {
                         val rate = gameSession.audioRateHz()
                             ?: throw IllegalStateException("Aucune piste audio GB active.")
-                        output = AndroidGbAudioOutput(applicationContext, rate, targetFps)
+                        output = AndroidGbAudioOutput(
+                            applicationContext, rate, targetFps,
+                            playbackSettings.audioEnabled, playbackSettings.audioVolume,
+                        )
                         activeAudio = output
                         lastAudioReport = "Session audio démarrée; diagnostic en cours.\n"
                         audioStatus = "Audio GB optimisé (préversion)"
@@ -161,6 +176,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                                 val conversionStart = System.nanoTime()
+                                GbDisplayFilter.apply(pixels, playbackSettings)
                                 val image = Bitmap.createBitmap(
                                     pixels, currentGame.width, currentGame.height,
                                     Bitmap.Config.ARGB_8888,
@@ -250,6 +266,24 @@ class MainActivity : ComponentActivity() {
             }
 
             RavenEmuApp(
+                settings = userSettings,
+                onSettingsChange = { updated ->
+                    userSettings = updated.normalized()
+                    settingsStore.write(userSettings)
+                },
+                appVersion = appVersion,
+                onOpenLink = { url ->
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            .addCategory(Intent.CATEGORY_BROWSABLE))
+                    } catch (error: Exception) {
+                        Log.e("RavenEmuSettings", "Cannot open information link", error)
+                        Toast.makeText(
+                            applicationContext, "Impossible d'ouvrir le lien",
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                },
                 onImportRom = {
                     if (!loading) documentPicker.launch(arrayOf("*/*"))
                 },
