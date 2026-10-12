@@ -26,7 +26,21 @@ internal class GbCoverStore(
         val image = resolver.openInputStream(uri)?.use { input ->
             readBounded(input, MAX_SOURCE_BYTES)
         } ?: error("Impossible d'ouvrir cette image.")
+        return saveBytes(id, image)
+    }
 
+    /** Auto-downloaded PNGs are subject to the same bounds as manual images. */
+    fun saveDownloadedIfMissing(id: String, image: ByteArray): Bitmap? = synchronized(this) {
+        // Manual covers have priority, including changes while a network
+        // request is in flight.
+        if (read(id) != null) return@synchronized null
+        saveBytes(id, image)
+    }
+
+    private fun saveBytes(id: String, image: ByteArray): Bitmap {
+        require(image.isNotEmpty() && image.size <= MAX_SOURCE_BYTES) {
+            "Image trop volumineuse."
+        }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(image, 0, image.size, bounds)
         require(bounds.outWidth in 1..MAX_SOURCE_DIMENSION &&
