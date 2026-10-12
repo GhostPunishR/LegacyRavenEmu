@@ -500,7 +500,12 @@ private fun GbVideoScreen(
                                     OutlinedButton(
                                         modifier = Modifier.weight(1f),
                                         enabled = occupied && !stateOperationBusy && onLoadState != null,
-                                        onClick = { onLoadState?.invoke(index) },
+                                        onClick = {
+                                            onLoadState?.invoke(index)
+                                            // The host stops AudioTrack before restoring the
+                                            // core. Dismiss so the resumed image is fresh.
+                                            setGameMenu(false)
+                                        },
                                     ) { Text("Charger", fontSize = 12.sp) }
                                     OutlinedButton(
                                         modifier = Modifier.weight(1f),
