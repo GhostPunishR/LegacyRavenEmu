@@ -28,7 +28,11 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -251,7 +255,7 @@ fun RavenEmuApp(
                     if (onStartVideo != null &&
                         (onLaunchLibraryGame != null || loadedGame != null)
                     ) {
-                        TextButton(
+                        Button(
                             onClick = {
                                 gameDetails = null
                                 if (onLaunchLibraryGame != null) {
@@ -265,12 +269,20 @@ fun RavenEmuApp(
                                 }
                             },
                             enabled = !importBusy,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RavenAccent,
+                                contentColor = RavenBackground,
+                            ),
                         ) {
-                            Text("Jouer", color = RavenAccent)
+                            Text("Jouer")
                         }
                     }
-                    TextButton(onClick = { gameDetails = null }) {
-                        Text("Fermer", color = RavenAccent)
+                    OutlinedButton(
+                        onClick = { gameDetails = null },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Fermer")
                     }
                 }
             }
@@ -407,22 +419,37 @@ private fun GbVideoScreen(
                 Text(title, color = RavenSecondary, fontSize = 13.sp)
                 Text("Partie en pause", color = RavenMuted, fontSize = 13.sp)
                 if (onSaveState != null) {
-                    TextButton(onClick = onSaveState) {
-                        Text("Sauvegarder l'état — Emplacement 1", color = RavenAccent)
+                    FilledTonalButton(
+                        onClick = onSaveState,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Sauvegarder l'état — Emplacement 1")
                     }
                 }
                 if (onLoadState != null) {
-                    TextButton(onClick = onLoadState) {
-                        Text("Charger l'état — Emplacement 1", color = RavenAccent)
+                    FilledTonalButton(
+                        onClick = onLoadState,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Charger l'état — Emplacement 1")
                     }
                 }
                 if (onExportAudioDiagnostics != null) {
-                    TextButton(onClick = onExportAudioDiagnostics) {
-                        Text("Exporter le diagnostic audio", color = RavenAccent)
+                    OutlinedButton(
+                        onClick = onExportAudioDiagnostics,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Exporter le diagnostic audio")
                     }
                 }
-                TextButton(onClick = { setGameMenu(false) }) {
-                    Text("Reprendre le jeu", color = RavenAccent)
+                Button(
+                    onClick = { setGameMenu(false) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RavenAccent, contentColor = RavenBackground,
+                    ),
+                ) {
+                    Text("Reprendre le jeu")
                 }
             }
         }
