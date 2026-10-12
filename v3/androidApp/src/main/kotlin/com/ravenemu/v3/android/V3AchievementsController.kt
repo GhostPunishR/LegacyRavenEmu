@@ -118,7 +118,9 @@ internal class V3AchievementsController(
                 account.save(name, token, event.detail.ifBlank { name }, event.image)
             }
             connected = true
-            currentRom?.let { client?.load(NativeCore.GB, it) }
+            // V2 uses RetroAchievements' CONSOLE_GAMEBOY=4, not the
+            // emulator's native system enum (GB=0).
+            currentRom?.let { client?.load(4, it) }
         }
         if (event.kind == "login_error") {
             connected = false
