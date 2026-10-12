@@ -256,7 +256,7 @@ private fun GroupTitle(title: String) {
 @Composable
 private fun CategoryRow(title: String, summary: String, onClick: () -> Unit) {
     val icon = when (title) {
-        "RetroAchievements" -> V2IconType.ABOUT
+        "RetroAchievements" -> V2IconType.RETROACHIEVEMENTS
         "Général" -> V2IconType.GENERAL
         "Audio" -> V2IconType.AUDIO
         "Vidéo" -> V2IconType.VIDEO
