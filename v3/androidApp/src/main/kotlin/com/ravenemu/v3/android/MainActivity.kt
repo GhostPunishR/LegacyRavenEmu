@@ -39,6 +39,7 @@ import com.ravenemu.v3.shared.GbVideoMetricsAccumulator
 import com.ravenemu.v3.shared.LoadedGameInfo
 import com.ravenemu.v3.shared.RavenEmuApp
 import com.ravenemu.v3.shared.V3Settings
+import com.ravenemu.v3.shared.V3RetroSnapshot
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -56,6 +57,7 @@ private data class CapturedGbFrame(
 
 class MainActivity : ComponentActivity() {
     private lateinit var gameSession: AndroidGbSession
+    private var retroController: V3AchievementsController? = null
     private var foreground by mutableStateOf(false)
     private var activeAudio: AndroidGbAudioOutput? = null
     private var lastAudioReport: String = "Aucune session audio enregistrée.\n"
@@ -186,6 +188,49 @@ class MainActivity : ComponentActivity() {
             var pausedForGameMenu by remember { mutableStateOf(false) }
             var stateRevision by remember { mutableStateOf(0) }
             val scope = rememberCoroutineScope()
+            var retroSnapshot by remember { mutableStateOf(V3RetroSnapshot()) }
+            var retroBusy by remember { mutableStateOf(false) }
+            var retroNotice by remember { mutableStateOf<String?>(null) }
+            val retro = remember {
+                V3AchievementsController(
+                    applicationContext, gameSession,
+                    onSnapshot = { snapshot -> retroSnapshot = snapshot },
+                    onEvent = { event ->
+                        if (event.kind == "achievement") {
+                            retroNotice = "Succès débloqué · ${event.title} (${event.extra} pts)"
+                        }
+                        if (event.kind == "login_error" || event.kind == "login") {
+                            retroBusy = false
+                        }
+                    },
+                ).also { retroController = it }
+            }
+            LaunchedEffect(retro) {
+                try {
+                    retro.restore()
+                } catch (error: Exception) {
+                    Log.w("RavenEmuRetro", "Token restore failed", error)
+                    retroSnapshot = retroSnapshot.copy(
+                        error = "Connexion RetroAchievements indisponible.",
+                    )
+                }
+            }
+            LaunchedEffect(retroNotice) {
+                if (retroNotice != null) {
+                    delay(4800)
+                    retroNotice = null
+                }
+            }
+            LaunchedEffect(retro, videoEnabled, pausedForGameMenu, foreground) {
+                while (isActive && (!videoEnabled || pausedForGameMenu || !foreground)) {
+                    try {
+                        retro.idle()
+                    } catch (error: Exception) {
+                        Log.w("RavenEmuRetro", "Background rcheevos tick failed", error)
+                    }
+                    delay(400)
+                }
+            }
             val refreshSlots: () -> Unit = {
                 stateSlotsLoading = true
                 stateSlots = emptyList()
@@ -314,6 +359,14 @@ class MainActivity : ComponentActivity() {
                                 )
                             } ?: break
 
+                            // The official SDK evaluates each emulated frame
+                            // using observational reads, on its dedicated
+                            // thread. Network requests never block this call.
+                            try {
+                                retro.frame()
+                            } catch (error: Exception) {
+                                Log.w("RavenEmuRetro", "rcheevos frame unavailable", error)
+                            }
                             frame = captured.bitmap
                             if (captured.audioFailure != null) {
                                 audioStatus = "Audio interrompu : ${captured.audioFailure}"
@@ -434,15 +487,16 @@ class MainActivity : ComponentActivity() {
                     importError = null
                     scope.launch {
                         try {
-                            val (info, stored) = withContext(Dispatchers.IO) {
+                            val (info, stored, rom) = withContext(Dispatchers.IO) {
                                 val (name, bytes) = romLibrary.readSelected(uri)
                                 // Validate with native RavenGB before indexing the cartridge.
                                 val info = gameSession.loadBytes(name, bytes)
                                 val stored = romLibrary.add(name, bytes)
-                                info to stored
+                                Triple(info, stored, bytes)
                             }
                             loadedGame = info
                             activeGameId = stored.id
+                            retro.attachRom(rom)
                             libraryGames = withContext(Dispatchers.IO) {
                                 romLibrary.list().map {
                                     GameEntry(it.id, it.filename, GamePlatform.GB)
@@ -603,6 +657,50 @@ class MainActivity : ComponentActivity() {
             }
 
             RavenEmuApp(
+                retroSnapshot = retroSnapshot,
+                retroBusy = retroBusy,
+                retroNotice = retroNotice,
+                onRetroLogin = { username, password ->
+                    if (!retroBusy) {
+                        retroBusy = true
+                        scope.launch {
+                            try {
+                                retro.login(username, password)
+                            } catch (error: Exception) {
+                                Log.w("RavenEmuRetro", "Login could not start", error)
+                                retroSnapshot = retroSnapshot.copy(
+                                    error = error.message ?: "Connexion impossible",
+                                )
+                                retroBusy = false
+                            }
+                        }
+                    }
+                },
+                onRetroDisconnect = {
+                    scope.launch {
+                        try { retro.disconnect() }
+                        catch (error: Exception) {
+                            retroSnapshot = retroSnapshot.copy(
+                                error = error.message ?: "Déconnexion impossible",
+                            )
+                        }
+                        retroBusy = false
+                    }
+                },
+                onRetroRetry = {
+                    if (!retroBusy) {
+                        retroBusy = true
+                        scope.launch {
+                            try { retro.retry() }
+                            catch (error: Exception) {
+                                retroSnapshot = retroSnapshot.copy(
+                                    error = error.message ?: "Réessai impossible",
+                                )
+                                retroBusy = false
+                            }
+                        }
+                    }
+                },
                 settings = userSettings,
                 onSettingsChange = { updated ->
                     userSettings = updated.normalized()
@@ -781,11 +879,13 @@ class MainActivity : ComponentActivity() {
                                 if (activeGameId != id || loadedGame == null) {
                                     val entry = libraryGames.firstOrNull { it.id == id }
                                         ?: error("Ce jeu n'est plus dans la bibliothèque.")
-                                    val result = withContext(Dispatchers.IO) {
-                                        gameSession.loadBytes(entry.title, romLibrary.readRom(id))
+                                    val (result, rom) = withContext(Dispatchers.IO) {
+                                        val rom = romLibrary.readRom(id)
+                                        gameSession.loadBytes(entry.title, rom) to rom
                                     }
                                     loadedGame = result
                                     activeGameId = id
+                                    retro.attachRom(rom)
                                 }
                                 onReady()
                             } catch (error: Exception) {
@@ -895,6 +995,7 @@ class MainActivity : ComponentActivity() {
                         scope.launch {
                             try {
                                 withContext(Dispatchers.IO) { gameSession.loadStateSlot(slot) }
+                                retro.resetProgress()
                                 Toast.makeText(
                                     applicationContext, "État chargé (emplacement ${slot + 1})",
                                     Toast.LENGTH_SHORT,
@@ -945,6 +1046,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         activeAudio?.stopNow()
+        retroController?.close()
         gameSession.close()
         super.onDestroy()
     }
