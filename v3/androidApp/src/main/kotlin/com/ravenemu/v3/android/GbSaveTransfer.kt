@@ -196,7 +196,7 @@ internal class GbSaveTransfer(filesDir: File) {
 
     private fun removeFile(key: String, name: String) {
         when {
-            name == "battery.sav" -> error("Suppression .sav non autorisée.")
+            name == "battery.sav" -> battery.delete(key)
             name.endsWith(".state") -> states.delete(key, slotOf(name))
             name.endsWith(".png") -> states.deletePreview(key, slotOf(name))
             else -> error("Nom de sauvegarde invalide.")
