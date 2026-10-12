@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import java.io.File
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -20,6 +21,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.ravenemu.v3.shared.GameEntry
+import com.ravenemu.v3.shared.GamePlatform
 import com.ravenemu.v3.shared.GbDisplayFilter
 import com.ravenemu.v3.shared.GbButton
 import com.ravenemu.v3.shared.GbVideoMetrics
@@ -78,6 +81,18 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val settingsStore = remember { AndroidV3SettingsStore(applicationContext) }
+            val romLibrary = remember { GbRomLibrary(File(filesDir, "gb-library"), contentResolver) }
+            var libraryGames by remember { mutableStateOf(emptyList<GameEntry>()) }
+            var activeGameId by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(romLibrary) {
+                try {
+                    libraryGames = withContext(Dispatchers.IO) {
+                        romLibrary.list().map { GameEntry(it.id, it.filename, GamePlatform.GB) }
+                    }
+                } catch (error: Exception) {
+                    Log.e("RavenEmuLibrary", "Cannot open library index", error)
+                }
+            }
             var userSettings by remember { mutableStateOf(settingsStore.read()) }
             val appVersion = remember {
                 runCatching {
@@ -253,8 +268,19 @@ class MainActivity : ComponentActivity() {
                     importError = null
                     scope.launch {
                         try {
-                            loadedGame = withContext(Dispatchers.IO) {
-                                gameSession.load(uri)
+                            val (info, stored) = withContext(Dispatchers.IO) {
+                                val (name, bytes) = romLibrary.readSelected(uri)
+                                // Validate with native RavenGB before indexing the cartridge.
+                                val info = gameSession.loadBytes(name, bytes)
+                                val stored = romLibrary.add(name, bytes)
+                                info to stored
+                            }
+                            loadedGame = info
+                            activeGameId = stored.id
+                            libraryGames = withContext(Dispatchers.IO) {
+                                romLibrary.list().map {
+                                    GameEntry(it.id, it.filename, GamePlatform.GB)
+                                }
                             }
                         } catch (exception: Exception) {
                             importError = exception.message ?: "Échec du chargement de la ROM."
@@ -288,6 +314,32 @@ class MainActivity : ComponentActivity() {
                     if (!loading) documentPicker.launch(arrayOf("*/*"))
                 },
                 loadedGame = loadedGame,
+                libraryGames = libraryGames,
+                onLaunchLibraryGame = { id, onReady ->
+                    if (!loading && !videoEnabled) {
+                        loading = true
+                        importError = null
+                        scope.launch {
+                            try {
+                                if (activeGameId != id || loadedGame == null) {
+                                    val entry = libraryGames.firstOrNull { it.id == id }
+                                        ?: error("Ce jeu n'est plus dans la bibliothèque.")
+                                    val result = withContext(Dispatchers.IO) {
+                                        gameSession.loadBytes(entry.title, romLibrary.readRom(id))
+                                    }
+                                    loadedGame = result
+                                    activeGameId = id
+                                }
+                                onReady()
+                            } catch (error: Exception) {
+                                Log.e("RavenEmuLibrary", "Cannot load stored GB ROM", error)
+                                importError = error.message ?: "Impossible de lancer ce jeu."
+                            } finally {
+                                loading = false
+                            }
+                        }
+                    }
+                },
                 importBusy = loading,
                 importError = importError,
                 onStartVideo = { videoEnabled = true },
