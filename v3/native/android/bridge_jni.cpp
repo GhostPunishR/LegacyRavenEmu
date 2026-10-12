@@ -179,4 +179,19 @@ Java_com_ravenemu_v3_android_NativeCore_nativeCopyBattery(
     env->ReleaseByteArrayElements(output, bytes, ok ? 0 : JNI_ABORT);
     return ok ? JNI_TRUE : JNI_FALSE;
 }
+JNIEXPORT jint JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeAchievementMemory(
+    JNIEnv* env, jobject, jlong pointer, jint address, jbyteArray output
+) {
+    if (!output || address < 0) return 0;
+    const jsize capacity = env->GetArrayLength(output);
+    if (capacity <= 0 || capacity > 0x58000) return 0;
+    auto* bytes = env->GetByteArrayElements(output, nullptr);
+    if (!bytes) return 0;
+    const auto count = ravenemu_v3_read_achievement_memory(
+        handle(pointer), static_cast<std::uint32_t>(address),
+        reinterpret_cast<std::uint8_t*>(bytes), static_cast<std::size_t>(capacity));
+    env->ReleaseByteArrayElements(output, bytes, count ? 0 : JNI_ABORT);
+    return static_cast<jint>(count);
+}
 } // extern C
