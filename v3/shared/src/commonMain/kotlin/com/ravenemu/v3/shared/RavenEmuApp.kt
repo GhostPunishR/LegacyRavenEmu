@@ -84,7 +84,7 @@ import kotlin.math.roundToInt
  * Reimplemented with shared Compose so Android and iOS show the same screens.
  */
 private val RavenBackground = Color(0xFF0B0C12)
-private val RavenSurface = Color(0xFF161821)
+private val RavenSurface = Color(0xFF191B28)
 private val RavenAccent = Color(0xFFA78BFA)
 private val RavenText = Color(0xFFF5F2FF)
 private val RavenSecondary = Color(0xFFCBC4DC)
@@ -580,7 +580,7 @@ private fun LibraryToolbar(
             title,
             Modifier.align(Alignment.Center).padding(horizontal = 104.dp),
             fontSize = 20.sp,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             color = RavenText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -588,7 +588,16 @@ private fun LibraryToolbar(
         )
         Row(Modifier.align(Alignment.CenterStart).padding(start = 4.dp)) {
             IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)) {
-                RavenIcon(RavenGlyph.SETTINGS, RavenText)
+                Box(
+                    Modifier.size(39.dp)
+                        .border(1.dp, RavenAccent.copy(alpha = 0.48f),
+                            RoundedCornerShape(12.dp))
+                        .background(RavenAccent.copy(alpha = 0.13f),
+                            RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    RavenIcon(RavenGlyph.SETTINGS, RavenAccent)
+                }
             }
         }
         Row(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) {
@@ -633,8 +642,10 @@ private fun SearchField(query: String, onChange: (String) -> Unit) {
         cursorBrush = SolidColor(RavenAccent),
         modifier = Modifier.fillMaxWidth()
             .padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
-            .height(42.dp)
-            .background(RavenSurface, RoundedCornerShape(12.dp))
+            .height(44.dp)
+            .border(1.dp, RavenOutline.copy(alpha = 0.8f),
+                RoundedCornerShape(14.dp))
+            .background(RavenSurface, RoundedCornerShape(14.dp))
             .padding(horizontal = 12.dp),
         decorationBox = { field ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -678,8 +689,11 @@ private fun LibraryPageContent(
         ) {
             items(entries, key = { it.id }) { entry ->
                 Row(
-                    Modifier.fillMaxWidth().clickable { onSelect(entry) }
-                        .padding(vertical = 8.dp),
+                    Modifier.fillMaxWidth()
+                        .background(RavenSurface.copy(alpha = 0.75f),
+                            RoundedCornerShape(10.dp))
+                        .clickable { onSelect(entry) }
+                        .padding(horizontal = 10.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CoverPlaceholder(
@@ -721,13 +735,23 @@ private fun LibraryPageContent(
 /* No invented artwork. A neutral placeholder is used until covers are migrated. */
 @Composable
 private fun CoverPlaceholder(platform: GamePlatform, modifier: Modifier) {
-    Box(modifier.background(RavenSurface), contentAlignment = Alignment.Center) {
-        Text(
-            platform.name,
-            color = RavenMuted.copy(alpha = 0.6f),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-        )
+    Box(
+        modifier.border(1.dp, RavenOutline.copy(alpha = 0.75f),
+            RoundedCornerShape(10.dp))
+            .background(RavenSurface, RoundedCornerShape(10.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Box(Modifier.width(24.dp).height(3.dp)
+                .background(RavenAccent.copy(alpha = 0.65f), CircleShape))
+            Text(
+                platform.name,
+                color = RavenSecondary.copy(alpha = 0.85f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 
