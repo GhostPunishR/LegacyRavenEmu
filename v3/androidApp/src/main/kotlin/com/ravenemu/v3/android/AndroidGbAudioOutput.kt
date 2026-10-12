@@ -40,6 +40,9 @@ class AndroidGbAudioOutput(
     private var writtenFrames = 0L
     private var droppedSamples = 0L
     private var startupBlocks = 0
+    private var firstSoundRecorded = false
+    private var lastLoggedSecond = -1L
+    private val startNanos = System.nanoTime()
     private val report = StringBuilder("RavenEmu V3 GB audio startup diagnostic\n")
     private val fadeFrames = (outputRate / 20).coerceAtLeast(1) // ~50 ms fade, without delaying playback
     private var rampFrame = 0
@@ -106,6 +109,11 @@ class AndroidGbAudioOutput(
                 governor.rateScale,
             )
             fadeIn(resampled, produced)
+            if (!firstSoundRecorded && produced > 0 && resampled.take(produced).any { it.toInt() != 0 }) {
+                firstSoundRecorded = true
+                record("first_nonzero_audio block=$startupBlocks elapsedMs=${(System.nanoTime() - startNanos) / 1_000_000} nativeCount=$count outputCount=$produced")
+                logPcm("first_nonzero_output", resampled, produced)
+            }
             if (startupBlocks < 12) {
                 logPcm("output", resampled, produced)
                 startupBlocks++
@@ -132,6 +140,11 @@ class AndroidGbAudioOutput(
                     record("AudioTrack.play: startupBlocks=$startupBlocks queuedFrames=$writtenFrames underruns=${track.underrunCount}")
                     track.play()
                 }
+            }
+            val second = (System.nanoTime() - startNanos) / 1_000_000_000L
+            if (second != lastLoggedSecond && second <= 120) {
+                lastLoggedSecond = second
+                record("t=${second}s written=$writtenFrames played=${track.playbackHeadPosition.toLong() and MASK_32} underruns=${track.underrunCount} pendingPCM=${queue.size / CHANNELS} dropped=${droppedSamples / CHANNELS} state=${track.playState}")
             }
         }
     }
@@ -172,6 +185,7 @@ class AndroidGbAudioOutput(
     /** Live diagnostics to distinguish device underruns from bounded FIFO overflow. */
     fun diagnostics(): String = synchronized(lock) {
         "Audio: underruns=${track.underrunCount}, pertesPCM=${droppedSamples / CHANNELS} frames, " +
+            "written=$writtenFrames played=${track.playbackHeadPosition.toLong() and MASK_32}, " +
             "file=${queue.size / CHANNELS} PCM, " +
             "latence~=${((writtenFrames - (track.playbackHeadPosition.toLong() and MASK_32)).coerceAtLeast(0L) * 1000L / outputRate)}ms"
     }
