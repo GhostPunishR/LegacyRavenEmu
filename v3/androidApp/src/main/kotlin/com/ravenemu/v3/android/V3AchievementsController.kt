@@ -127,7 +127,11 @@ internal class V3AchievementsController(
         }
         val snapshot = client?.snapshot() ?: V3RetroSnapshot()
         publish(snapshot.copy(error = if (event.kind.endsWith("_error")) event.title else null))
-        main.post { onEvent(event) }
+        // The SDK login event includes a secret token; it is saved above
+        // and never forwarded to Compose, toasts or diagnostics.
+        val publicEvent = if (event.kind == "login") event.copy(extra = "")
+            else event
+        main.post { if (!stopped) onEvent(publicEvent) }
     }
 
     private fun poll(frame: Boolean) {
