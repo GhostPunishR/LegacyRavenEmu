@@ -93,9 +93,9 @@ class MainActivity : ComponentActivity() {
                     try {
                         val rate = gameSession.audioRateHz()
                             ?: throw IllegalStateException("Aucune piste audio GB active.")
-                        output = AndroidGbAudioOutput(rate, targetFps)
+                        output = AndroidGbAudioOutput(applicationContext, rate, targetFps)
                         activeAudio = output
-                        audioStatus = "Audio GB activé (préversion)"
+                        audioStatus = "Audio GB optimisé (préversion)"
                     } catch (error: Exception) {
                         audioStatus = "Audio indisponible : ${error.message ?: "Erreur AudioTrack"}"
                     }
