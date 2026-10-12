@@ -3,6 +3,7 @@ package com.ravenemu.v3.android
 import android.util.AtomicFile
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.ByteArrayOutputStream
 
 /** Four GB save-state slots per ROM (numbered 1 to 4 in the UI).
  *
@@ -73,12 +74,22 @@ internal class GbSaveStateStore(private val directory: File) {
 
     private fun readAtomic(file: File, maxBytes: Int): ByteArray? = try {
         AtomicFile(file).openRead().use { input ->
-            // Bound the read before allocating arbitrarily large user data.
-            val result = input.readNBytes(maxBytes + 1)
-            require(result.size in 1..maxBytes) {
-                "Fichier de sauvegarde invalide ou trop volumineux."
+            // Compatible with Android 8: never read more than the limit.
+            val buffer = ByteArray(8192)
+            val output = ByteArrayOutputStream()
+            var count = 0
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                if (read == 0) continue
+                require(read <= maxBytes - count) {
+                    "Fichier de sauvegarde trop volumineux."
+                }
+                output.write(buffer, 0, read)
+                count += read
             }
-            result
+            require(count > 0) { "Fichier de sauvegarde vide." }
+            output.toByteArray()
         }
     } catch (_: FileNotFoundException) {
         null
