@@ -1,46 +1,38 @@
 # Affichage et audio
 
-## Profils Game Boy
+Les réglages partagés sont présents dans l'interface Compose. Leur application au lecteur et leur persistance sont raccordées sur Android ; le lecteur iOS complet reste à connecter.
 
-Le moteur monochrome produit quatre niveaux. Le renderer applique ensuite un profil d'écran:
+## Vidéo
 
-- Game Boy DMG;
-- Game Boy Pocket;
-- noir et blanc.
+Dans **Paramètres → Vidéo** :
 
-Le profil peut être changé sans modifier le fonctionnement interne du jeu.
+| Réglage | Effet |
+|---|---|
+| Original | Préserve les couleurs produites par le moteur |
+| DMG vert | Profil monochrome vert, uniquement pour Game Boy |
+| Pocket gris | Profil monochrome gris, uniquement pour Game Boy |
+| Luminosité | Ajustement de -50 à +50 |
+| Contraste | Ajustement de 50 à 150 % |
+| Rétablir l'affichage d'origine | Original, luminosité 0 et contraste 100 % |
 
-## Réglages avancés
+Les jeux GBC et GBA restent en couleur. Luminosité et contraste s'appliquent aux trois consoles.
 
-RavenEmu propose:
-
-- luminosité;
-- contraste;
-- correction colorimétrique LCD;
-- conservation du ratio natif;
-- mise à l'échelle entière;
-- filtrage nearest-neighbor.
-
-Les corrections avancées n'ont pas d'effet par défaut. Les sorties Game Boy Color et Game Boy Advance sont affichées en couleur.
-
-## Format d'image
-
-La Game Boy et la Game Boy Color utilisent une image de 160 par 144 pixels. La Game Boy Advance utilise une image de 240 par 160 pixels.
-
-Conserver le ratio évite une image étirée. La mise à l'échelle entière améliore la netteté lorsque la taille de l'écran le permet.
+Le lecteur respecte les dimensions fournies par le moteur et affiche l'image sans lissage : **160 × 144** pour GB/GBC, **240 × 160** pour GBA. Les anciens menus de correction LCD avancée de la V2 ne sont pas disponibles dans ces réglages.
 
 ## Audio
 
-Les moteurs produisent du PCM transmis à la couche audio Android. La synchronisation audio participe à la cadence normale de l'émulation.
+Dans **Paramètres → Audio**, activez ou coupez le son et réglez son volume de 0 à 100 %. Couper le son ne désactive pas l'horloge d'émulation.
 
-La chaîne comporte trois étages. Le mixage des cœurs prélève la **moyenne** de chaque canal sur la durée d'un échantillon, et non sa valeur instantanée: les canaux d'une console changent d'état bien plus vite que le débit de sortie, et un prélèvement instantané ferait redescendre leurs harmoniques dans l'audible sous forme de sifflements. Le passage au débit de sortie de l'appareil est ensuite fait par un filtre à bande limitée, qui laisse la bande utile intacte au lieu de ternir l'aigu. Enfin, l'écart inévitable entre l'horloge du jeu et celle du téléphone est rattrapé en continu par une correction de débit inférieure à un demi pour cent, trop petite pour s'entendre, qui évite les blancs périodiques dus au vidage de la sortie.
+Le moteur fournit de l'audio stéréo PCM16. Android le joue via `AudioTrack`, avec rééchantillonnage à bande limitée, préremplissage et régulation de dérive. Le jeu et le son sont suspendus quand l'application passe en arrière-plan ou que le panneau de jeu est ouvert.
 
-Si le son craque:
+Les corrections audio doivent être évaluées à l'écoute sur appareil. Une compilation réussie ne prouve pas la qualité du son.
 
-- fermez les applications lourdes;
-- vérifiez la fréquence du problème avec la surcouche de performance;
-- testez sans économie d'énergie Android;
-- utilisez le dernier APK Test;
-- consultez [[Dépannage|Depannage]].
+## Diagnostics
 
-Un problème audio sur Game Boy Advance peut venir d'une performance insuffisante plutôt que du mixage lui-même.
+Dans **Paramètres → Général**, **Afficher les performances** active les mesures du lecteur : frames calculées par seconde, cible du moteur, temps de calcul natif et de conversion vidéo.
+
+Ces valeurs sont des diagnostics, **pas une garantie de FPS affichés à l'écran**. Le menu du jeu propose aussi **Exporter le diagnostic audio**. Vérifiez le contenu avant de joindre un export à un rapport public.
+
+Pour les craquements, décalages ou lenteurs, consultez [[Dépannage|Depannage]].
+
+Sources : [réglages](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/shared/src/commonMain/kotlin/com/ravenemu/v3/shared/V3SettingsScreen.kt) et [sortie audio Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/v3/android/AndroidGbAudioOutput.kt).

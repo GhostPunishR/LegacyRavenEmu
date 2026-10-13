@@ -1,58 +1,40 @@
 # Matrice de compatibilité des jeux
 
-Cette page rassemble des résultats reproductibles pour les jeux testés avec RavenEmu. Elle ne contient aucun lien de téléchargement et ne doit recevoir aucune ROM, aucun BIOS ni aucune sauvegarde protégée.
+Cette page concerne les tests de la **version multiplateforme** sur Android. Les résultats V2 ou ceux d'un moteur RavenCore construit séparément ne sont pas des validations du lecteur actuel.
 
-La prise en charge générale des consoles est décrite dans [[Consoles et compatibilité|Consoles-et-compatibilite]].
+Aucun jeu testé n'est encore renseigné dans cette matrice. Cela ne signifie pas que tous les jeux sont incompatibles : aucun résultat suffisamment documenté n'a été inscrit ici.
 
 ## Statuts
 
 | Statut | Signification |
 |---|---|
 | Non testé | Aucun résultat vérifiable |
-| Démarre | Le jeu atteint un écran identifiable |
-| Jouable avec problèmes | La progression est possible avec des défauts importants |
-| Jouable | Les fonctions principales sont utilisables |
-| Terminé | Une partie complète a été validée |
-| Incompatible | Le jeu ne démarre pas ou bloque immédiatement |
+| Démarre | Un écran de jeu identifiable est atteint |
+| Jouable avec problèmes | Progression possible, avec défauts importants |
+| Jouable | Principales fonctions utilisables pendant le test décrit |
+| Terminé | Partie complète validée |
+| Incompatible | Échec reproductible de démarrage ou blocage immédiat |
 
-## Résultats validés
+## Résultats
 
-Aucun jeu ne doit être ajouté sans version RavenEmu, appareil, région ou révision et résultat reproductible.
+| Console | Jeu et région/révision | SHA-256 ROM | Commit RavenEmu | Appareil et Android | Vidéo/audio | Sauvegarde/états | Statut | Issue |
+|---|---|---|---|---|---|---|---|---|
 
-| Console | Jeu | Région ou révision | Empreinte SHA-256 | Version RavenEmu | Appareil et Android | Vidéo | Audio | Sauvegarde | Statut | Issue |
-|---|---|---|---|---|---|---|---|---|---|---|
+## Protocole
 
-## Protocole de test
+1. Utilisez un build identifié de `multiplateforme.yml` et notez son **commit exact**. Le nom de version de prévisualisation seul ne distingue pas nécessairement deux builds.
+2. Notez le modèle de l'appareil, la version Android, la console et la région/révision de la ROM.
+3. Calculez le SHA-256 localement sans publier le fichier du jeu.
+4. Testez démarrage, commandes, vidéo et audio ; indiquez la durée de l'essai.
+5. Testez la sauvegarde normale, un état, puis la reprise après fermeture de l'application.
+6. Si un défaut apparaît, essayez aussi un démarrage sans ancien état.
+7. Précisez si RetroAchievements, les jaquettes en ligne ou des réglages particuliers sont actifs.
+8. Ouvrez une issue reproductible et liez-la au résultat.
 
-1. Utiliser la dernière version concernée de RavenEmu.
-2. Noter le numéro de version ou le commit exact.
-3. Identifier la console, la région et la révision du jeu.
-4. Calculer une empreinte SHA-256 sans partager le fichier.
-5. Tester le démarrage, les commandes, la vidéo, l’audio et la sauvegarde.
-6. Recommencer sans charger un ancien état instantané si un blocage apparaît.
-7. Ouvrir un rapport de bug pour tout défaut reproductible.
-8. Ajouter le lien de l’issue dans la matrice.
+Les mesures de frames calculées ne sont pas des FPS d'écran garantis. Un succès RetroAchievements nécessite une vérification séparée de sa reconnaissance et de sa synchronisation côté serveur.
 
-## Informations à fournir
+## Publier un rapport
 
-- modèle de l’appareil ;
-- version Android ;
-- version ou commit RavenEmu ;
-- console et révision du jeu ;
-- empreinte SHA-256 ;
-- durée approximative du test ;
-- statut atteint ;
-- problèmes vidéo, audio ou de commandes ;
-- résultat de la sauvegarde en jeu ;
-- utilisation éventuelle d’un état instantané.
+Utilisez les [formulaires d'issues](https://github.com/GhostPunishR/RavenEmu/issues/new/choose). Ne joignez aucune ROM, aucun BIOS, aucune sauvegarde personnelle ni aucun jeton. Retirez les chemins et identifiants privés des journaux et captures.
 
-## Règles de publication
-
-- ne jamais joindre une ROM ou un BIOS ;
-- ne pas publier une sauvegarde contenant des données protégées ;
-- retirer les chemins et identifiants personnels des captures et journaux ;
-- distinguer un défaut du moteur d’un fichier corrompu ;
-- ne pas déclarer un jeu terminé sans test complet ;
-- utiliser uniquement des copies autorisées ou des homebrews légalement distribués.
-
-Utilisez le [formulaire de rapport de bug](https://github.com/GhostPunishR/RavenEmu/issues/new/choose) pour proposer un résultat ou signaler une régression.
+Voir [[Consoles et compatibilité|Consoles-et-compatibilite]], [[RetroAchievements]] et [[Dépannage|Depannage]].

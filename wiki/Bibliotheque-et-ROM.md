@@ -1,47 +1,53 @@
 # Bibliothèque et ROM
 
-## Accès aux fichiers
+La bibliothèque persistante décrite ici est raccordée à l'hôte Android de la version multiplateforme. La persistance iOS reste à implémenter.
 
-RavenEmu s'appuie sur le Storage Access Framework d'Android. Vous choisissez explicitement les dossiers accessibles. L'application ne demande pas une permission globale sur tout le stockage.
+## Import d'un fichier
 
-## Analyse de la bibliothèque
+Le bouton **+** ouvre le sélecteur de documents Android. Les extensions `.gb`, `.gbc` et `.gba` sont acceptées. Les fichiers vides, invalides ou de plus de **32 Mio** sont refusés.
 
-Pour chaque fichier reconnu, RavenEmu utilise:
+Chaque ROM correctement chargée est copiée dans l'espace privé de l'application. L'index conserve ses métadonnées et sa console. Son empreinte **SHA-256** identifie le contenu : importer la même ROM ne crée pas de doublon, même si son nom change.
 
-- les informations de l'en-tête de cartouche;
-- les empreintes CRC32, SHA-1 et SHA-256;
-- la console détectée;
-- le nom du fichier.
+Le choix GB/GBC utilise l'octet `0x143` de l'en-tête : `0x80` ou `0xC0` sélectionnent Game Boy Color. Voir [[Consoles et compatibilité|Consoles-et-compatibilite]].
 
-Rien n'est téléchargé et aucune base extérieure n'est nécessaire.
+## Import d'un dossier
 
-## Organisation
+Dans la bibliothèque, ouvrez **⋮ → Importer un dossier** et choisissez un répertoire. Les ROM sont validées avec un cœur temporaire sans remplacer le jeu actif.
 
-La bibliothèque propose:
+Le parcours est borné à :
 
-- une page par console, que l'on fait défiler horizontalement. Les cartouches Game Boy monochromes et couleur ont chacune la leur, et une page « Tous les jeux » ouvre la marche dès qu'il y a plus d'une console. Une console sans jeu n'a pas de page;
-- recherche, dans un champ permanent sous la barre;
-- tri par titre ou par taille;
-- vue grille ou liste;
-- détection des fichiers ajoutés, déplacés ou supprimés;
-- pochettes choisies par l'utilisateur ou placées près des jeux.
+| Limite | Valeur |
+|---|---|
+| Éléments | 4 000 |
+| Dossiers | 128 |
+| Profondeur | 8 niveaux |
+| ROM candidates | 256 |
+| Données lues | 256 Mio |
 
-Si aucune pochette n'est disponible, RavenEmu peut afficher une jaquette générée localement.
+Le bilan distingue jeux ajoutés, doublons, ROM invalides, éléments illisibles et fichiers ignorés. Une limite atteinte est signalée. Importez un sous-dossier séparément si nécessaire.
 
-En vue grille, le titre emprunte sa couleur à la pochette qu'il accompagne, éclaircie si besoin pour rester lisible sur le fond sombre.
+L'application n'obtient pas d'accès global au stockage ni d'autorisation permanente sur le dossier : elle garde ses propres copies. Déplacer ou supprimer l'original ne retire donc pas automatiquement le jeu importé.
 
-## Bonnes pratiques
+## Parcourir les jeux
 
-- conservez des noms de fichiers stables;
-- gardez les jeux et les sauvegardes dans des emplacements sauvegardés;
-- évitez de retirer l'accès Android au dossier;
-- relancez l'actualisation après un déplacement important;
-- conservez une copie externe de vos sauvegardes.
+- recherche permanente ;
+- vue grille ou liste ;
+- pages pour les consoles qui contiennent des jeux ;
+- navigation par balayage et pictogrammes de console ;
+- fiche de jeu avec **Jouer**, jaquette et actions de transfert de sauvegardes.
 
-## Confidentialité
+Ne supposez pas que les tris, surveillances de dossiers ou options de la V2 sont présents dans cette version.
 
-RavenEmu n'envoie pas les ROM, les empreintes ou les pochettes vers un service distant. La bibliothèque reste locale.
+## Jaquettes
 
-## Fichier absent de la bibliothèque
+Dans la fiche, **Image manuelle (facultatif)** ou **Changer l'image** permet de choisir une image. Elle est redimensionnée et copiée dans le stockage privé ; elle reste visible après redémarrage. **Retirer la jaquette** ne supprime ni ROM ni sauvegarde.
 
-Consultez [[Dépannage|Depannage]] pour vérifier l'autorisation du dossier, le format et l'actualisation de l'index.
+L'option **Paramètres → Général → Jaquettes en ligne** cherche les images manquantes sur `thumbnails.libretro.com`. Elle est **désactivée par défaut**. Une image manuelle est conservée ; une jaquette retirée n'est pas téléchargée de nouveau automatiquement pour ce jeu.
+
+Sans correspondance ou sans réseau, le jeu conserve un emplacement neutre. Aucun téléchargement de ROM n'est effectué. Voir [[Légalité et confidentialité|Legalite-et-confidentialite]].
+
+## Conservation
+
+La copie de la ROM, l'index, les jaquettes et les sauvegardes internes disparaissent après désinstallation ou effacement des données. Sauvegardez vos originaux et [[exportez votre progression|Sauvegardes-et-etats]].
+
+Source : [bibliothèque Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/v3/android/GbRomLibrary.kt).

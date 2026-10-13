@@ -1,51 +1,36 @@
 # Commandes
 
-## Commandes tactiles
+Cette page décrit le lecteur Android de la version multiplateforme.
 
-La disposition tactile peut être adaptée à votre appareil et à chaque console:
+## Boutons disponibles
 
-- position;
-- taille;
-- opacité;
-- visibilité;
-- profils portrait et paysage;
-- réglages par jeu;
-- diagonales et multitouch;
-- vibration.
+| Console | Commandes tactiles |
+|---|---|
+| Game Boy et Game Boy Color | Croix directionnelle, A, B, Start et Select |
+| Game Boy Advance | Les mêmes commandes, avec L et R |
 
-La Game Boy Advance ajoute les gâchettes `L` et `R`.
+La croix prend en charge le glissement et les diagonales. Les boutons sont relâchés quand le lecteur est fermé ou que l'application passe en arrière-plan.
 
-Les panneaux `.deltaskin` importés localement sont décrits dans
-[[Skins de contrôleur|Skins-de-controleur]]. Ils restent séparés des
-profils de disposition classiques.
+## Réglages actuels
 
-## Modifier une disposition
+Ouvrez **Paramètres → Interface** :
 
-1. Ouvrez les réglages des commandes.
-2. Choisissez la console et l'orientation.
-3. Déplacez et redimensionnez les boutons.
-4. Réglez leur opacité.
-5. Enregistrez le profil.
-6. Testez le résultat dans un jeu.
+- **Retour haptique** : vibration à la pression ;
+- **Taille des commandes** : de 80 à 115 % ;
+- **Espacement vertical** : de 20 à 80 dp ;
+- **Style des boutons** : Classique ou Contraste élevé ;
+- **Réinitialiser les commandes** : retour aux réglages par défaut.
 
-Gardez les boutons importants éloignés des gestes système Android et des bords arrondis de l'écran.
+Les réglages sont conservés sur Android. Le déplacement libre des boutons et les profils avancés de la V2 ne sont pas encore migrés. Le menu **⋮** du lecteur donne accès aux états, au diagnostic audio et à RetroAchievements.
 
-## Manettes physiques
+## Fonctions non annoncées
 
-RavenEmu accepte les manettes reconnues par Android. Connectez la manette avant de lancer un jeu, puis vérifiez les entrées dans les réglages.
+Le lecteur actuel est raccordé aux commandes tactiles. Aucun parcours de configuration des manettes physiques n'est implémenté dans ce nouvel hôte Android ; ne reprenez pas les instructions de la V2 pour les utiliser.
 
-En cas de problème:
+L'import et le rendu de skins `.deltaskin` restent à migrer. Voir [[Skins de contrôleur|Skins-de-controleur]]. Aucune option d'avance rapide n'est exposée dans les réglages actuels.
 
-- reconnectez la manette;
-- vérifiez son mode Android;
-- fermez puis relancez le jeu;
-- désactivez les applications qui interceptent les boutons;
-- testez la manette dans une autre application Android.
+## Pause
 
-## Vitesse d'émulation
+La pause automatique est fixe : le jeu et le son sont suspendus en arrière-plan et pendant l'ouverture du panneau de jeu. Elle n'est pas désactivable dans les paramètres.
 
-RavenEmu tourne à la cadence de la console et ne propose aucun moyen de l'accélérer. Une partie accélérée n'est plus la console reproduite, et le son en porte la marque le premier.
-
-## Profil par jeu
-
-Un profil par jeu permet de conserver une disposition adaptée sans modifier le profil général de la console.
+Source : [réglages partagés](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/shared/src/commonMain/kotlin/com/ravenemu/v3/shared/V3SettingsScreen.kt).

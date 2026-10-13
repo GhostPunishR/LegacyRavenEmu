@@ -1,47 +1,40 @@
 # Feuille de route
 
-Cette page présente les priorités générales. Les issues et pull requests restent la source la plus précise pour le travail en cours.
+Cette page décrit la version multiplateforme, sans date de livraison promise. Les [issues](https://github.com/GhostPunishR/RavenEmu/issues) et [pull requests](https://github.com/GhostPunishR/RavenEmu/pulls) donnent le détail des travaux en cours.
 
-## Réalisé
+## Intégré dans la bêta Android
 
-- moteur Game Boy;
-- compatibilité Game Boy Color;
-- ordonnancement GB/GBC par M-cycle et PPU à fetcher/FIFO BG/OBJ séparés;
-- portes CPU VRAM/OAM/CRAM liées aux phases PPU, y compris les frontières
-  d'activation LCD et l'échantillonnage en double vitesse;
-- modes DMG, CGB natif et compatibilité CGB explicites;
-- audio, vidéo, timers et principaux contrôleurs de cartouche, dont MBC1M,
-  MMM01, MBC6, MBC7, HuC1 et HuC3;
-- endpoints locaux déterministes pour série et infrarouge;
-- boot ROM GB/GBC optionnelle dans l'API C++ et harness de conformité externe
-  piloté par manifeste, avec contrôle SHA-256 et rapport JSON;
-- bibliothèque locale avec empreintes et pochettes;
-- contrôles tactiles configurables et manettes physiques;
-- profils d'écran monochrome;
-- sauvegardes `.sav` et états instantanés;
-- moteur Game Boy Advance intégré;
-- APK Test publié automatiquement, signé par une clé dédiée et stable, avec empreintes et provenance vérifiables.
+- Interface Compose partagée avec l'hôte iOS.
+- Import de fichiers et dossiers `.gb`, `.gbc`, `.gba`.
+- Bibliothèque persistante, recherche, grille/liste et navigation par console.
+- Passerelle vers les moteurs RavenCore, rendu vidéo, audio et commandes tactiles avec L/R en GBA.
+- Sauvegardes de cartouche et quatre emplacements d'état avec miniatures.
+- Export ZIP ou `.sav` et import avec contrôle/confirmation.
+- Jaquettes manuelles et recherche en ligne facultative, désactivée par défaut.
+- Réglages audio, vidéo, commandes et diagnostics.
+- Intégration RetroAchievements Softcore : compte, tableau de bord, badges et suivi de succès.
 
-## Priorités actuelles
+« Intégré » décrit le raccordement dans le code. Cela ne remplace pas une validation sur appareil.
 
-- étendre les tests sur appareils Android;
-- améliorer les performances Game Boy Advance;
-- valider davantage de jeux avec des copies obtenues légalement;
-- valider et affiner les cas PPU/APU les plus dépendants de la révision
-  matérielle à l'aide de suites librement utilisables;
-- exposer la sélection du modèle et la boot ROM utilisateur dans l'hôte Android;
-- fournir des backends link/IR hors du cœur;
-- ajouter progressivement les contrôleurs de cartouche restants, en commençant
-  par TAMA5, sans faux support;
-- compléter les fonctions vidéo et audio GBA;
-- renforcer les outils de diagnostic;
-- documenter les résultats de compatibilité.
+## À valider sur téléphone
 
-## Pistes futures
+| Sujet | Validation attendue |
+|---|---|
+| Audio | Écoute au démarrage, pendant la partie et après reprise/chargement d'état |
+| Sauvegardes | Sauvegarde normale, quatre états, reprise après redémarrage, export puis import |
+| Game Boy Color et Game Boy Advance | Compatibilité, vidéo, audio et performances sur plusieurs appareils |
+| RetroAchievements | Authentification, ROM reconnue, badges et déblocage confirmé côté serveur |
 
-- effets vidéo au milieu d'une ligne;
-- détails audio matériels supplémentaires;
-- BIOS Game Boy Advance fourni par l'utilisateur avec validation stricte;
-- nouvelles consoles sous forme de modules indépendants.
+## Travaux restants
 
-Une piste n'est pas une promesse de date ou de version. Ouvrez une [issue](https://github.com/GhostPunishR/RavenEmu/issues) pour discuter d'une proposition avant son développement.
+- Raccorder import, stockage et lecteur jouable iOS.
+- Migrer les skins Delta et le déplacement libre des commandes.
+- Étendre la matrice de résultats reproductibles et traiter les défauts observés.
+
+Les fonctions de la V2 ou de la dernière version de RavenCore ne sont pas automatiquement des fonctions du build multiplateforme livré.
+
+## Distribution
+
+Le workflow `multiplateforme.yml` est la CI de construction active. Il produit `ravenemu-android-beta`. L'ancien APK Test V2 n'est plus actualisé ; aucun binaire iOS signé n'est distribué.
+
+Consultez [[Installation]], [[Compatibilité des jeux|Compatibilite-des-jeux]] et l'[état détaillé du projet](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/README.md).

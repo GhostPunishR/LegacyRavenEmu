@@ -1,33 +1,46 @@
 # RavenEmu
 
-Bienvenue sur le wiki officiel de **RavenEmu**, un émulateur Game Boy, Game Boy Color et Game Boy Advance pour Android.
+Bienvenue dans la documentation de la **nouvelle version multiplateforme de RavenEmu**. Le projet actif se trouve dans [`multiplateforme/`](https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme) et utilise les moteurs C++20 du dépôt [RavenCore](https://github.com/GhostPunishR/RavenCore).
 
-Les moteurs sont écrits en C++20 pour le projet à partir de documentation technique publique et reliés à l'application par JNI. RavenEmu n'intègre aucun cœur d'émulation tiers et ne fournit aucun BIOS, aucune ROM ni aucun contenu protégé.
+L'application installée s'appelle **RavenEmu**. Les noms techniques V3 encore présents dans les paquets et les fichiers ne désignent pas une autre application.
+
+## Disponibilité
+
+| Plateforme | État actuel |
+|---|---|
+| Android 8.0 et plus | Bêta : bibliothèque, lecteur GB/GBC/GBA, audio, commandes tactiles et sauvegardes raccordés |
+| iOS | Interface partagée et passerelle native présentes ; import, persistance et lecteur jouable à connecter. Aucun binaire signé distribué |
+
+La compatibilité GBC/GBA, les performances sur téléphone et les déblocages RetroAchievements nécessitent encore des validations. Un build réussi n'atteste pas du fonctionnement de chaque jeu.
 
 ## Commencer
 
-1. [[Installer RavenEmu|Installation]]
-2. [[Ajouter ses jeux et lancer une partie|Premiers-pas]]
-3. [[Configurer les commandes|Commandes]]
-4. [[Comprendre les sauvegardes|Sauvegardes-et-etats]]
+1. [[Installer la bêta Android|Installation]]
+2. [[Importer un jeu et lancer une partie|Premiers-pas]]
+3. [[Sauvegarder et transférer sa progression|Sauvegardes-et-etats]]
+4. [[Régler l'image, le son et les commandes|Affichage-et-audio]]
 
-## État du projet
+## Explorer
 
-| Console | État | Remarque |
-|---|---|---|
-| Game Boy | Avancé | Moteur LR35902, vidéo, audio, timers et principaux contrôleurs de cartouche |
-| Game Boy Color | Intégré | Couleur, banques mémoire, HDMA, palettes et double vitesse |
-| Game Boy Advance | Expérimental | Compatibilité et performances encore à vérifier jeu par jeu |
+- [[Bibliothèque et ROM|Bibliotheque-et-ROM]]
+- [[Consoles et compatibilité|Consoles-et-compatibilite]]
+- [[Matrice des tests de jeux|Compatibilite-des-jeux]]
+- [[RetroAchievements]]
+- [[Dépannage|Depannage]]
+- [[Compilation]], [[Architecture]] et [[Contribution]]
+- [[Feuille de route|Feuille-de-route]]
 
-Consultez [[Consoles et compatibilité|Consoles-et-compatibilite]] avant de signaler un problème.
+## Version historique
 
-## Liens utiles
+Le code V2 0.8.1 hors de `multiplateforme/` reste dans le dépôt en héritage. Son ancien APK `test-latest` n'est plus mis à jour. Les fonctions de la V2, notamment les skins et les manettes, ne doivent pas être considérées comme automatiquement disponibles dans la nouvelle version.
 
-- [Télécharger le dernier APK Test](https://github.com/GhostPunishR/RavenEmu/releases/download/test-latest/RavenEmu-test.apk)
+La nouvelle application utilise `com.ravenemu.v3.preview` sur Android et peut cohabiter avec la V2. Les bibliothèques, réglages et connexions sont séparés.
+
+## Liens officiels
+
+- [Bêta Android : workflow multiplateforme](https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml?query=branch%3Amain+is%3Asuccess)
 - [Site officiel](https://ghostpunishr.github.io/RavenEmu/)
-- [Dépôt GitHub](https://github.com/GhostPunishR/RavenEmu)
+- [État détaillé du projet](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/README.md)
 - [Issues](https://github.com/GhostPunishR/RavenEmu/issues)
-- [[Compiler le projet|Compilation]]
-- [[Contribuer au projet|Contribution]]
 
-> RavenEmu est en développement. Conservez une copie de vos sauvegardes avant de tester une nouvelle version.
+Aucun jeu n'est fourni. Exportez les sauvegardes importantes avant de désinstaller ou d'effacer les données de RavenEmu.

@@ -1,64 +1,63 @@
 # Dépannage
 
+Les vérifications suivantes concernent la bêta Android multiplateforme. Commencez par relever le **commit du build**, votre appareil et la version Android.
+
+## L'artefact Android est introuvable
+
+- Connectez-vous à GitHub.
+- Ouvrez le bon [workflow multiplateforme](https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml?query=branch%3Amain+is%3Asuccess), une exécution de `main` et son job Android réussi.
+- Cherchez `ravenemu-android-beta` dans les artefacts.
+- Les artefacts expirent après 7 jours ; essayez une exécution plus récente ou [[compilez|Compilation]].
+
 ## L'APK ne s'installe pas
 
-- vérifiez que l'installation depuis la source choisie est autorisée;
-- téléchargez de nouveau le fichier officiel;
-- comparez son empreinte SHA-256;
-- vérifiez l'espace disponible;
-- si Android indique une signature incompatible, sauvegardez vos données avant de désinstaller l'ancienne version.
+Vérifiez Android 8.0 minimum, l'espace libre et l'autorisation d'installer depuis la source utilisée. Extrayez bien l'APK du ZIP.
 
-Voir [[Installation]].
+En cas de signature incompatible, **exportez vos sauvegardes depuis la version installée avant toute désinstallation**. La bêta utilise une signature Debug, qui n'est pas la clé Test dédiée de la V2. Voir [[Installation]].
 
-## Un jeu manque dans la bibliothèque
+## Un jeu n'apparaît pas
 
-1. Vérifiez que le fichier est dans le dossier autorisé.
-2. Actualisez la bibliothèque.
-3. Accordez de nouveau l'accès au dossier avec le sélecteur Android.
-4. Vérifiez que le fichier n'est pas un raccourci ou un fichier incomplet.
-5. Essayez un dossier local simple pour isoler un problème de fournisseur de stockage.
+- Importez le fichier avec **+** ou le dossier avec **⋮ → Importer un dossier**.
+- Vérifiez l'extension `.gb`, `.gbc` ou `.gba`, la validité et la taille maximale de 32 Mio.
+- Lisez le bilan : doublons, ROM invalides, fichiers illisibles ou limites de parcours.
+- Essayez l'import direct d'une ROM ou un sous-dossier plus petit.
 
-## Écran noir
+La bibliothèque garde une copie privée ; elle n'est pas une surveillance permanente du dossier d'origine. Une nouvelle ROM copiée dans ce dossier doit être importée.
 
-- utilisez le dernier APK Test;
-- attendez quelques secondes au premier lancement;
-- vérifiez la console détectée;
-- testez une autre copie obtenue légalement;
-- pour la Game Boy Advance, activez la surcouche de performance et relevez le dernier appel BIOS ainsi que les anomalies;
-- redémarrez le jeu sans charger un ancien état instantané.
+## La console ou la jaquette semble incorrecte
 
-Le moteur Game Boy Advance reste expérimental. Un écran noir peut être une incompatibilité du moteur.
+GB/GBC est décidé par l'en-tête. Un fichier `.gb` peut être classé en Game Boy Color. Les images en ligne dépendent du nom et d'une correspondance de catalogue, sans garantie d'édition exacte.
 
-## Jeu trop lent
+Vérifiez **Paramètres → Général → Jaquettes en ligne** si vous voulez la recherche facultative. Sinon choisissez une image manuelle dans la fiche. Une absence de réseau ou de correspondance ne doit pas bloquer le jeu.
 
-- désactivez l'économie d'énergie;
-- fermez les applications en arrière-plan;
-- testez avec l'appareil suffisamment chargé;
-- activez la surcouche pour relever les images par seconde et le temps de trame;
-- ne comparez pas une performance mesurée sur l'APK Debug à celle d'une version de production;
-- indiquez le modèle exact de l'appareil dans le rapport.
+## Écran noir ou jeu lent
 
-## Sauvegarde absente
+- Utilisez un build récent de la nouvelle version, pas l'ancien APK Test.
+- Démarrez sans charger un état ancien ou incompatible.
+- Notez la console, la région/révision et le résultat avec un autre jeu autorisé.
+- Affichez les performances dans **Paramètres → Général**.
+- Testez sans économie d'énergie ni applications lourdes en arrière-plan.
 
-- lancez le jeu et utilisez sa propre fonction de sauvegarde;
-- quittez proprement vers la bibliothèque;
-- vérifiez que le type de sauvegarde Game Boy Advance a été détecté;
-- ne confondez pas sauvegarde `.sav` et état instantané;
-- restaurez une copie externe si le fichier a été supprimé.
+Les mesures correspondent aux frames calculées, pas aux FPS d'écran garantis. La compatibilité et les performances GBC/GBA restent en validation.
 
-## Signaler un problème
+## Son absent ou craquements
 
-Ouvrez une [issue GitHub](https://github.com/GhostPunishR/RavenEmu/issues) avec:
+Vérifiez **Activer le son**, le volume RavenEmu et le volume média Android. Le son est volontairement suspendu en arrière-plan et pendant le panneau de jeu.
 
-- appareil et version Android;
-- version RavenEmu ou commit;
-- console;
-- étapes de reproduction;
-- résultat attendu;
-- résultat observé;
-- journaux utiles sans donnée sensible;
-- empreinte du fichier si nécessaire.
+Pour un défaut reproductible, indiquez s'il survient au lancement, après un état ou pendant toute la partie. Le menu du jeu permet d'exporter le diagnostic audio. Voir [[Affichage et audio|Affichage-et-audio]].
 
-Ne publiez jamais de ROM, BIOS, clé, jeton, sauvegarde personnelle ou donnée privée.
+## Progression absente ou état refusé
 
-Pour une vulnérabilité, utilisez un [avis de sécurité privé](https://github.com/GhostPunishR/RavenEmu/security/advisories/new).
+Une sauvegarde normale du jeu et un état instantané sont distincts. Vérifiez que vous avez réimporté la **même ROM exacte**, pas une autre édition. Un état peut ne plus fonctionner après une évolution du moteur ou un reclassement GB vers GBC.
+
+Les exports ZIP doivent correspondre au SHA-256 du jeu cible. Un `.sav` brut nécessite une confirmation explicite. Ne désinstallez pas pour résoudre ce problème sans avoir exporté la progression encore accessible. Voir [[Sauvegardes et états|Sauvegardes-et-etats]].
+
+## RetroAchievements ou skins
+
+La reconnaissance et l'attribution des succès restent à valider : voir [[RetroAchievements]]. Les skins Delta ne sont pas encore migrés ; l'absence de menu d'import est attendue.
+
+## Signaler un défaut
+
+Dans une [issue](https://github.com/GhostPunishR/RavenEmu/issues/new/choose), indiquez commit/build, appareil, Android, console, région/révision, étapes, résultat attendu et observé, réglages concernés et diagnostics utiles.
+
+Ne joignez aucune ROM, aucun BIOS, aucun jeton ni aucune sauvegarde personnelle. Retirez les chemins et identifiants privés. Pour une vulnérabilité, utilisez un [avis de sécurité privé](https://github.com/GhostPunishR/RavenEmu/security/advisories/new).

@@ -1,57 +1,41 @@
 # Légalité et confidentialité
 
-## Licence
+Cette page résume les informations du projet. Les documents officiels sont la [licence](https://github.com/GhostPunishR/RavenEmu/blob/main/LICENSE), les [conditions d'utilisation](https://github.com/GhostPunishR/RavenEmu/blob/main/TERMS.md) et la [politique de confidentialité](https://github.com/GhostPunishR/RavenEmu/blob/main/PRIVACY.md).
 
-Le code de RavenEmu est distribué sous [GNU Affero General Public License version 3](https://github.com/GhostPunishR/RavenEmu/blob/main/LICENSE).
+## Licence et composants
 
-Vous pouvez l'utiliser, l'étudier, le modifier et le redistribuer, y compris à titre commercial. Toute version redistribuée doit l'être sous la même licence, avec son code source. L'article 13 ajoute le cas du réseau: un utilisateur qui se servirait à distance d'une version modifiée doit pouvoir en obtenir la source. RavenEmu étant une application locale, cet article ne change rien à son usage habituel.
+RavenEmu est distribué sous **GNU AGPL-3.0**. Consultez le texte de la licence et les avis du dépôt pour les conditions de réutilisation et de redistribution.
 
-Les versions publiées avant ce changement restaient sous licence MIT: qui les a reçues sous ces termes les conserve.
-
-Le SDK RetroAchievements [rcheevos](https://github.com/RetroAchievements/rcheevos) reste sous sa licence MIT, et les bibliothèques AndroidX, Material et Kotlin sous Apache 2.0. Ces licences permissives autorisent l'inclusion dans une oeuvre sous AGPL, et leurs avis sont conservés.
-
-## Marques
+Les moteurs C++20 sont maintenus dans RavenCore et écrits pour le projet à partir de documentation technique publique. Le SDK officiel rcheevos conserve sa licence MIT ; les autres composants conservent leurs avis de licence respectifs.
 
 Game Boy, Game Boy Color et Game Boy Advance sont des marques de Nintendo. RavenEmu n'est ni affilié à Nintendo, ni approuvé par Nintendo.
 
-## ROM et BIOS
+## Contenu non fourni
 
-Le projet ne fournit:
+Le projet ne distribue aucune ROM, aucun BIOS propriétaire ni aucun jeu protégé. Utilisez des copies que vous êtes autorisé à employer ou des homebrews distribués légalement.
 
-- aucune ROM;
-- aucun BIOS propriétaire;
-- aucune clé;
-- aucune base contenant des jeux;
-- aucun lien vers du contenu protégé non autorisé.
+Le lecteur GBA actuel ne demande pas de fichier BIOS externe à l'utilisateur. Cela ne signifie pas qu'un BIOS propriétaire est fourni.
 
-Utilisez uniquement des copies que vous êtes autorisé à employer et des homebrews distribués légalement.
+## Données locales
 
-## Code original
+La bibliothèque, les ROM importées, les sauvegardes, les états, les réglages et les jaquettes sont conservés sur Android dans l'espace privé de l'application. RavenEmu ne téléverse pas les ROM ou les sauvegardes et n'ajoute ni publicité ni télémétrie.
 
-Les moteurs sont développés pour RavenEmu à partir de documentation technique publique. Le code d'autres émulateurs ne doit pas être copié ou adapté dans le projet.
+Le sélecteur de documents permet de choisir explicitement fichiers et dossiers. Il n'y a pas de demande d'accès global au stockage pour ces opérations. Désinstaller ou effacer les données supprime le stockage privé ; les exports choisis par l'utilisateur doivent être conservés séparément.
 
-## Données
+## Réseau facultatif
 
-RavenEmu est conçu sans télémétrie et sans service réseau dans l'application. Les éléments suivants restent sur l'appareil:
+| Fonction | Déclenchement | Données concernées |
+|---|---|---|
+| RetroAchievements | Connexion volontaire au compte tiers | Informations de compte/session, identification du jeu et succès prévus par le SDK ; le service reçoit aussi l'adresse IP |
+| Images RetroAchievements | Utilisation du profil et des badges | Requêtes HTTPS d'images et informations techniques de connexion ; images en cache |
+| Jaquettes Libretro | Option « Jaquettes en ligne », désactivée par défaut | Adresse IP et noms des images demandées, pouvant révéler des jeux de la bibliothèque ; aucune ROM ni sauvegarde envoyée |
 
-- ROM;
-- sauvegardes;
-- états instantanés;
-- empreintes;
-- pochettes;
-- réglages.
+Le mot de passe RetroAchievements n'est pas conservé ; le jeton est chiffré sur l'appareil. Pour les hôtes contactés, la conservation, les nouvelles tentatives et la déconnexion, référez-vous à la politique complète.
 
-Consultez la [politique de confidentialité complète](https://github.com/GhostPunishR/RavenEmu/blob/main/PRIVACY.md) pour le détail du traitement local et des services GitHub utilisés.
+RavenEmu peut être utilisé sans compte. Les données traitées par les services tiers relèvent aussi de leurs propres politiques.
 
-## Rapports publics
+## Site, GitHub et rapports
 
-Avant de publier une issue ou une capture:
+Le site est hébergé par GitHub Pages. Dépôt, issues, artefacts et wiki utilisent les services GitHub, qui peuvent traiter les données techniques de connexion. Le site n'ajoute aucun outil de suivi publicitaire.
 
-- retirez les chemins contenant votre nom;
-- retirez les identifiants personnels;
-- ne joignez pas de sauvegarde;
-- ne joignez pas de ROM ou de BIOS;
-- ne publiez pas de clé, secret ou jeton;
-- partagez uniquement les journaux nécessaires.
-
-Pour un problème de sécurité, utilisez un [avis privé](https://github.com/GhostPunishR/RavenEmu/security/advisories/new).
+Avant de publier une issue ou une capture, retirez chemins personnels, identifiants, clés et jetons. Ne joignez pas de ROM, BIOS ou sauvegarde personnelle. Pour un problème privé de sécurité ou de confidentialité, utilisez un [avis privé](https://github.com/GhostPunishR/RavenEmu/security/advisories/new).

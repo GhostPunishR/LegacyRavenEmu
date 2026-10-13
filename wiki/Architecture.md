@@ -1,110 +1,56 @@
 # Architecture
 
-RavenEmu V2 sépare physiquement les moteurs, l'interface native, le moteur Kotlin,
-les services Android et les features. Les chemins Gradle correspondent aux dossiers.
+Le projet actif est un projet Gradle indépendant dans **`multiplateforme/`**. L'interface est écrite une fois avec Compose Multiplatform ; chaque hôte apporte ses adaptateurs système.
 
-## Couches
+## Modules
 
-| Couche | Type | Responsabilité |
+| Chemin | Responsabilité |
+|---|---|
+| `multiplateforme/shared/` | Interface Compose, modèles, navigation de bibliothèque, réglages et logique Kotlin commune |
+| `multiplateforme/androidApp/` | Activité Android, lecteur, audio, fichiers privés, imports et RetroAchievements |
+| `multiplateforme/iosApp/` | Hôte SwiftUI et spécification XcodeGen |
+| `multiplateforme/native/` | Construction native, pont JNI Android et module API C pour Swift |
+| `multiplateforme/policy/` | Tests JVM des règles de CI |
+| [RavenCore](https://github.com/GhostPunishR/RavenCore) | Dépôt distinct des moteurs C++20 GB/GBC/GBA et de l'API C |
+
+`multiplateforme/settings.gradle.kts` inclut `shared`, `androidApp` et `policy`. Les commandes utilisent `-p multiplateforme` pour sélectionner ce projet.
+
+## Frontière native
+
+La configuration CMake récupère RavenCore à un **commit précis**. Le code des moteurs n'est pas copié dans l'application.
+
+| Hôte | Chemin utile | Échanges |
 |---|---|---|
-| `app/android` | Android | Coque UI et composition finale |
-| `cores/common` | C++20 | Contrat et primitives communes |
-| `cores/gb` | C++20 | Matériel commun GB/GBC et différences DMG explicites |
-| `cores/gbc` | C++20 | Façade CGB et extraction progressive du matériel spécifique |
-| `cores/gba` | C++20 | Game Boy Advance |
-| `native/api` | C++20 | Contrat natif générique |
-| `native/jni` | Java/C++ | Frontière JNI uniquement |
-| `engine/*` | Kotlin/JVM | API, runtime, session, état, save, audio, diagnostics |
-| `platform/android/*` | Android | Audio, rendu, entrées, stockage, vibration, lifecycle |
-| `features/*` | JVM/Android | Library, player, settings, skins, savestates, diagnostics |
+| Android | `NativeCore.kt` et `native/android/bridge_jni.cpp` | JNI, chargement ROM, frames ARGB8888, audio PCM16, boutons et sauvegardes |
+| iOS | `RavenNativeCore.swift` et `native/apple/module.modulemap` | Même API C, appelée depuis Swift |
 
-## Principes
+L'API native de l'application est l'API C de RavenCore, **pas une interface libretro**. Libretro intervient uniquement comme catalogue de jaquettes facultatif.
 
-### Moteurs indépendants
+Le SDK rcheevos est récupéré à une révision épinglée pour l'intégration RetroAchievements Android. Le pont des succès est maintenu dans `multiplateforme/native/android/`.
 
-Le moteur GBA ne dépend pas du moteur Game Boy. Chaque implémentation C++ expose le même contrat natif, puis son adaptateur Kotlin implémente le contrat porté par `engine/api`.
+## État des hôtes
 
-### C++ testable sur l'hôte
+Android raccorde la bibliothèque, la session native, le rendu, l'audio, les commandes et le stockage. Les opérations sur un cœur sont sérialisées ; le lecteur est suspendu en arrière-plan.
 
-Les moteurs ne dépendent pas d'Android. CMake construit et teste leur bibliothèque statique sur l'hôte ; la CI compile également le pont JNI avec les vrais en-têtes Java. Les contrats, métadonnées et implémentations Kotlin de référence restent testés sur JVM sans émulateur Android.
+iOS affiche les écrans partagés et possède un adaptateur natif. La présence de ces fichiers ne prouve pas un lecteur complet : import, persistance et exécution jouable restent à connecter.
 
-### Frontière JNI étroite
+## Données Android
 
-Les objets Kotlin ne traversent pas le moteur : JNI transporte des handles, des scalaires et des tableaux primitifs. Les fournisseurs de production créent les adaptateurs C++ ; les anciennes implémentations Kotlin ne vivent plus que dans les sources de test, comme références de régression. La session Android, le renderer, les entrées et DeltaSkin continuent d'utiliser uniquement `EmulatorCore`.
+Les ROM et données sont conservées dans l'espace privé. La bibliothèque, les sauvegardes et les jaquettes utilisent le **SHA-256 de la ROM** comme identité. Les imports Android passent par le sélecteur de documents, sans accès global au stockage.
 
-### Sélection par fabrique
+Les archives de sauvegarde contiennent un manifeste et des empreintes, pas de ROM. Les réglages sont persistants sur Android et indépendants de la V2.
 
-L'application détecte la console d'une ROM et demande le moteur correspondant. Les écrans Android n'instancient pas directement les cœurs.
+## Ancienne version
 
-### Identité produit et modèle matériel
+Les dossiers racine `app/`, `engine/`, `features/`, `platform/`, `cores/` et `native/` appartiennent à la V2 conservée. Les modifier ne met pas automatiquement à jour la nouvelle application ou RavenCore.
 
-`ConsoleType` désigne une identité de bibliothèque et de stockage, pas le modèle
-physique sélectionné pour une exécution : `engine/runtime` couvre encore la
-Game Boy et la Game Boy Color sous la même identité persistée.
+Les noms `com.ravenemu.v3`, `com.ravenemu.v3.preview` et certains noms Xcode restent volontairement stables pour préserver l'identité de la nouvelle application et les données des testeurs.
 
-Ce que déclare la cartouche (monochrome, compatible couleur, ou couleur exigée) est une métadonnée distincte, lue à l'octet `0x0143` de l'en-tête et portée par `GameBoyCartridgeMode`. L'extension du fichier ne décide de rien : des `.gbc` contiennent des cartouches monochromes, des `.gb` des cartouches couleur.
+## Ajouter ou modifier une fonction
 
-La fabrique C++ choisit séparément le modèle physique `automatic`, `dmg` ou
-`cgb`. Après lecture de l'en-tête, la machine possède un mode effectif explicite
-DMG, CGB natif ou compatibilité DMG sur CGB. La façade `gbc_raven_core` force le
-dernier choix matériel au lieu de rediriger sans information vers la fabrique
-automatique.
+- Interface ou règle partagée : `shared/`.
+- Intégration Android : `androidApp/` et, si nécessaire, pont natif Android.
+- Intégration Apple : `iosApp/`, branchement des callbacks partagés et pont Swift.
+- Correction d'un moteur : dépôt RavenCore, puis mise à jour séparée de la révision épinglée après validation.
 
-Les formats persistés désignent la console par un identifiant **figé** (`ConsoleType.storageId`), jamais par son rang de déclaration : ajouter ou retirer une console ne doit pas réinterpréter les fichiers déjà enregistrés par les utilisateurs. Un identifiant retiré n'est jamais réattribué.
-
-### Restauration transactionnelle
-
-Charger un état instantané construit une machine neuve et ne remplace la machine active qu'en cas de succès complet. Un fichier tronqué, corrompu ou d'une autre version laisse la partie en cours intacte et jouable, quel que soit l'endroit où la lecture échoue.
-
-### Données locales
-
-Le stockage passe par des interfaces dédiées. Les moteurs reçoivent les octets nécessaires sans connaître les URI Android.
-
-### Boucle déterministe
-
-Chaque moteur avance selon un budget de cycles et produit un framebuffer, des échantillons audio et des données de sauvegarde par l'API commune.
-
-Dans le cœur GB/GBC, chaque accès CPU et chaque cycle interne est ordonnancé à
-une frontière de M-cycle. Le bus avance les périphériques par dots et laisse les
-DMA prendre le bus entre deux micro-opérations. Le PPU possède un fetcher, un
-FIFO BG et un FIFO OBJ. Les phases de lecture OAM/VRAM, les premiers dots OBJ
-qui recouvrent la sortie BG, la fusion des priorités et l'état intermédiaire
-des deux FIFO font partie des états instantanés. Les
-portes CPU de VRAM, OAM et CRAM suivent la phase interne, indépendamment des
-bits de mode publiés par `STAT`; leurs fronts particuliers après l'activation
-LCD du DMG sont conservés. Le bus les échantillonne après le M-cycle courant,
-avec deux dots PPU par M-cycle CPU en double vitesse.
-
-Le DMA OAM publie sa propriété du port au scan et au fetcher OBJ ; GDMA/HDMA
-reste, lui, cadencé sur les dots LCD. Une transition `KEY1` laisse avancer le
-raster tout en figeant ses droits VRAM/OAM/CRAM selon le mode PPU de départ.
-Ces états sont restaurés et recroisés au chargement pour refuser toute phase
-DMA ou vitesse contradictoire.
-
-La conformité externe est pilotée par un manifeste JSON versionné. Les ROMs
-restent hors dépôt et sous une racine fournie par le développeur ; leur
-SHA-256, provenance et licence déclarée sont contrôlés avant le lancement du
-runner natif. Un rapport machine distingue réussite, échec, timeout, erreur,
-crash et test explicitement ignoré faute d'artefact.
-
-Le port série et le port infrarouge dépendent uniquement des interfaces communes
-`LinkEndpoint` et `InfraredEndpoint`. Le transport local, Android, réseau ou
-Bluetooth appartient à l'hôte, jamais au cœur. Une machine agrège son port
-`RP` CGB et l'éventuel transceiver de cartouche HuC1/HuC3 derrière une seule
-extrémité : le backend ne peut pas les confondre avec deux consoles ni créer
-une auto-réception.
-
-## Ajouter une console
-
-Un nouveau moteur doit:
-
-1. vivre dans une implémentation C++ isolée sous `cores/`, avec ses organes séparés;
-2. exposer son adaptateur via `engine/api` et `engine/runtime`;
-3. rester indépendant des moteurs existants;
-4. fournir des tests synthétiques natifs;
-5. ajouter sa détection à la bibliothèque;
-6. déclarer ses capacités à l'application;
-7. se voir attribuer un `storageId` **neuf**, jamais une valeur déjà employée;
-8. documenter clairement ses limites.
-
-Voir [[Contribution]] avant de proposer une évolution importante.
+Sources : [projet multiplateforme](https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme) et [configuration native](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/native/CMakeLists.txt). Voir [[Compilation]] et [[Contribution]].

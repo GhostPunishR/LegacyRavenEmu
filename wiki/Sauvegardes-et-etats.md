@@ -1,135 +1,64 @@
 # Sauvegardes et états
 
-RavenEmu gère deux mécanismes différents.
+La nouvelle version Android conserve ses sauvegardes dans son espace privé, séparément de la V2. Chaque jeu est identifié par le **SHA-256 du contenu exact de sa ROM**. Renommer un fichier ne change pas son identité ; utiliser une autre région ou révision peut la changer.
 
-## Sauvegarde de cartouche
+## Deux mécanismes distincts
 
-La sauvegarde de cartouche correspond au système utilisé par le jeu. Elle est
-enregistrée dans un fichier `.sav`. Une mémoire simple reste brute ; les
-contrôleurs qui possèdent plusieurs états persistants ajoutent un conteneur ou
-un pied de page propre au matériel.
+| Mécanisme | Usage | Compatibilité |
+|---|---|---|
+| Sauvegarde de cartouche | Fonction de sauvegarde prévue par le jeu, persistée par RavenEmu | Un export `.sav` peut être utilisable ailleurs selon le format accepté par le jeu et l'autre émulateur |
+| État instantané | Capture de la machine émulée à un instant donné | Dépend de la ROM, du moteur et de son format d'état ; pas de garantie entre versions ou émulateurs |
 
-Exemples:
+Privilégiez la sauvegarde normale du jeu pour conserver une progression durable. Les formats natifs sont ceux de la révision RavenCore épinglée ; les anciens numéros de format documentés pour la V2 ne constituent pas une garantie pour cette application.
 
-- mémoire avec pile sur Game Boy;
-- MBC3 avec horloge;
-- MBC6 avec SRAM, flash, région cachée et protection du secteur 0;
-- MBC7 avec EEPROM série de 256 octets;
-- HuC1 avec SRAM brute et batterie;
-- HuC3 avec SRAM, mémoire interne à nibbles et RTC minute/jour;
-- SRAM, Flash et EEPROM sur Game Boy Advance.
+## Sauvegardes de cartouche
 
-Le MBC6 utilise le conteneur versionné `RVM6`, car un seul fichier doit réunir
-32 Kio de SRAM, 1 Mio de flash, sa région cachée de 256 octets et le verrou non
-volatile du secteur 0. Un conteneur dont la taille, la signature ou la version
-est invalide est refusé en entier : RavenEmu n'en importe jamais un préfixe.
+La mémoire batterie modifiée est enregistrée périodiquement, ainsi qu'à la sortie du lecteur, au changement de ROM et en arrière-plan. Elle est rechargée quand vous relancez la même ROM.
 
-Le HuC3 conserve les 32 Kio de SRAM en tête du fichier, puis ajoute le pied de
-page versionné `RVH3`. Celui-ci empaquette les 256 nibbles internes, le reliquat
-de secondes, l'index alimenté par la pile et l'époque de dernière
-synchronisation. Une ancienne sauvegarde composée exactement des 32 Kio de
-SRAM est acceptée et enrichie au prochain instantané ; une taille étendue, une
-signature, une version ou un compteur invalide est refusé sans importer même
-le préfixe SRAM.
+Les fichiers sont écrits atomiquement. Cela ne remplace pas une copie externe : une désinstallation ou un effacement des données supprime le stockage privé.
 
-Ces données sont sauvegardées automatiquement et écrites de manière atomique pour limiter les risques de corruption.
+## Quatre emplacements d'état
 
-## État instantané
+Dans le menu **⋮** du lecteur, chaque jeu dispose de **quatre emplacements**, avec miniature et date lorsqu'elles sont disponibles.
 
-Un état instantané capture l'ensemble de la machine émulée à un moment précis:
+- Enregistrer dans un emplacement déjà occupé demande confirmation.
+- Charger un état reprend la partie et renouvelle la sortie audio.
+- Supprimer un emplacement demande confirmation et ne supprime pas le fichier batterie de la cartouche.
+- Une miniature absente ou illisible ne doit pas empêcher le chargement de l'état.
 
-- processeur;
-- mémoire;
-- vidéo;
-- audio;
-- timers;
-- interruptions;
-- contrôleurs de cartouche;
-- mode matériel DMG/CGB, `KEY1`, `OPRI`, IR et état de la boot ROM;
-- état intermédiaire du fetcher, des FIFO BG/OBJ, d'un fetch OBJ en cours, des
-  DMA, des boutons et de la phase libre du port série.
+L'emplacement 1 conserve le chemin historique `.slot0.state` des premières préversions de cette nouvelle application. Cela ne garantit pas la compatibilité des états V2.
 
-Les états utilisent le format RavenEmu `RVNS`. Ils ne sont pas annoncés comme compatibles avec d'autres émulateurs.
+## Exporter sa progression
 
-Le format GB/GBC courant est la **version 10**. Il enregistre les frontières de
-M-cycle, le séquenceur APU dérivé de DIV et le pipeline PPU complet, y compris
-les octets OBJ déjà échantillonnés mais pas encore fusionnés et les dots de
-fetch OBJ qui recouvrent la sortie du FIFO BG. La phase des DMA
-et la porte vidéo figée pendant une transition `KEY1` sont également conservées,
-ainsi que la sélection, les masques et les verrous d'une cartouche MMM01. Pour
-MBC6, il conserve la SRAM et la flash complètes, la région cachée, la protection,
-les registres, l'automate de commande et le tampon de programmation. Sa taille
-peut donc dépasser 1 Mio et reste bornée à 2 Mio.
-L'ajout des layouts internes MMM01 et MBC6 n'avait pas imposé de nouvelle
-version globale : les versions précédentes refusaient ces contrôleurs et ne
-pouvaient donc produire aucun état ambigu à recharger. Le passage à la version
-10 vient du nouvel état de recouvrement temporel du fetch OBJ.
-Pour MBC7, l'état conserve également les axes bruts, leur latch, les broches et
-l'automate EEPROM, y compris une commande ou un délai d'écriture en cours. Comme
-ce contrôleur était auparavant refusé, son layout interne n'impose pas de
-changement de version supplémentaire.
-Pour HuC1, les banques, la sélection RAM/IR, l'émetteur, le niveau lumineux
-reçu et la SRAM sont enregistrés. Le transport externe reste exclu comme pour
-`RP`; le type `$FF` était auparavant refusé, donc son ajout reste non ambigu.
-Pour HuC3, l'état inclut en plus la boîte aux lettres, la réponse, l'index, les
-256 nibbles, l'horloge, le sémaphore et la commande éventuellement suspendue au
-milieu de sa phase occupée. Le type `$FE` était lui aussi refusé auparavant ;
-son layout interne n'impose donc pas de changement de version supplémentaire.
-Les versions GB/GBC antérieures, notamment la version 9, sont refusées avec une
-erreur explicite au lieu de charger silencieusement un état incomplet. Les
-portes VRAM/OAM/CRAM ordinaires et le mot OAM présenté par le DMA sont
-recalculés depuis les phases déjà enregistrées. Les modes, dots, retards de
-publication ou couples KEY1/PPU incohérents sont rejetés au chargement. Le
-format du cœur GBA évolue indépendamment.
+Ouvrez la **fiche du jeu dans la bibliothèque** :
 
-Les objets de transport externes (`LinkEndpoint` et `InfraredEndpoint`) ne font
-pas partie de la machine émulée et ne sont pas sérialisés. Après restauration,
-le cœur se reconnecte à l'endpoint que l'hôte lui a déjà fourni ; l'autre
-instance ou le backend reste responsable de sa propre restauration.
+1. **Exporter toutes les sauvegardes (.zip)** : sauvegarde de cartouche, emplacements d'état occupés et miniatures disponibles.
+2. **Exporter .sav** : fichier batterie seul, lorsqu'une sauvegarde existe.
+3. Choisissez une destination avec le sélecteur Android.
 
-## Compatibilité des sauvegardes et des états
+Le ZIP comporte un manifeste versionné, l'empreinte de la ROM et les sommes de contrôle des fichiers. **Il ne contient pas la ROM.** Conservez aussi votre propre copie de celle-ci.
 
-Les deux mécanismes n'offrent pas les mêmes garanties, et c'est volontaire.
+## Importer
 
-**Sauvegarde `.sav` : compatibilité durable au sein du format documenté.** Pour
-une SRAM simple, le fichier reproduit directement les octets de la cartouche.
-Les pieds de page RTC et le conteneur `RVM6` conservent les états persistants qui
-n'ont pas de représentation SRAM brute. RavenEmu versionne et valide ces
-extensions ; un outil externe doit connaître le format concerné pour les lire.
-C'est le support à privilégier pour conserver une progression.
+Dans la fiche du jeu cible, touchez **Importer**, puis sélectionnez :
 
-**État instantané `RVNS` : compatibilité limitée à un format donné.** Un état contient l'intégralité de la machine émulée, y compris des détails internes que les corrections de précision font évoluer. Le format porte un numéro de version, et un état d'une version antérieure est **refusé** plutôt que réinterprété au risque de produire un comportement faux.
+| Fichier | Contrôle et confirmation |
+|---|---|
+| ZIP RavenEmu de la nouvelle version | Le manifeste doit correspondre à la même ROM exacte. Les fichiers et empreintes sont vérifiés avant écriture |
+| `.sav` brut | Aucune identité de ROM n'est incluse ; un avertissement demande de confirmer le jeu cible |
 
-Ce que RavenEmu garantit :
+Le résumé précise les fichiers existants qui seront remplacés. Les éléments absents du paquet restent intacts ; si un état est remplacé sans miniature, l'ancienne miniature correspondante est retirée. Les ROM ne sont pas modifiées.
 
-- un état n'est jamais chargé sur une autre ROM : l'empreinte SHA-256 de la ROM est inscrite dans le fichier et vérifiée ;
-- un état n'est jamais chargé sur une autre console : l'identifiant de console inscrit est figé et n'est jamais réattribué, même si la liste des consoles évolue ;
-- un état refusé (tronqué, corrompu, ou d'une autre version) laisse la partie en cours **strictement intacte** et jouable : la restauration se fait dans une machine neuve, qui ne remplace l'active qu'en cas de succès complet ;
-- une sauvegarde `.sav` n'est effacée qu'après confirmation de l'écriture du nouveau fichier.
-
-Ce que RavenEmu ne garantit pas :
-
-- qu'un état créé par une version antérieure reste chargeable après une évolution du moteur ;
-- qu'un état soit lisible par un autre émulateur ; le format `RVNS` est propre à RavenEmu et n'a pas vocation à être partagé.
-
-## Recommandations
-
-- utilisez les sauvegardes normales du jeu comme référence;
-- gardez plusieurs copies de vos fichiers importants;
-- ne déplacez pas un état entre deux jeux différents;
-- évitez de charger un état créé avec une version très ancienne;
-- vérifiez votre sauvegarde avant de désinstaller l'application;
-- ne partagez pas publiquement une sauvegarde contenant des données personnelles.
+Les fichiers de la V2 et les états d'autres émulateurs ne doivent pas être importés comme des ZIP de cette version. Un `.sav` compatible peut être transféré, sans garantie de conversion automatique.
 
 ## Après une mise à jour
 
-Le format des états GBA est désormais en version 10 : il conserve la banque
-Flash, les commandes Flash en cours et les transactions EEPROM. Les états GBA
-de version 9 sont refusés sans modifier la partie active ; les fichiers `.sav`
-restent compatibles. Le format GB/GBC ne change pas.
+Un état peut devenir incompatible après une évolution du moteur. Essayez alors de lancer normalement le jeu et de reprendre depuis sa sauvegarde de cartouche.
 
-Charger un état GB/GBC ou GBA marque sa mémoire de sauvegarde à persister,
-même si le jeu n'y écrit plus ensuite. Les acquittements d'écritures commencées
-avant la restauration ne peuvent pas acquitter cette nouvelle mémoire.
+Lorsqu'un ancien jeu GB est reclassé comme GBC d'après son en-tête, sa sauvegarde de cartouche est conservée, mais ses états créés avec le moteur GB ne sont plus chargeables sur le moteur GBC.
 
-Si un état ne se charge plus, démarrez le jeu normalement et utilisez sa sauvegarde `.sav`. Signalez le problème uniquement si la sauvegarde de cartouche est également touchée.
+## iOS et précautions
+
+Le stockage et le transfert iOS ne sont pas encore raccordés. Avant de désinstaller Android, vérifiez vos exports et gardez-les hors du stockage privé de RavenEmu. Ne publiez pas vos sauvegardes personnelles dans une issue.
+
+Sources : [transfert de sauvegardes](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/v3/android/GbSaveTransfer.kt) et [gestion des emplacements](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/v3/android/GbSaveStateStore.kt).
