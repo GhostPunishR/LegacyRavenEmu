@@ -12,9 +12,9 @@ import java.text.Normalizer
 import java.util.Locale
 
 /**
- * Optional online artwork for ROMs already added to the GB/GBC library.
+ * Optional online artwork for ROMs already added to the GB/GBC/GBA library.
  * Source: Libretro's public Named_Boxarts index of each game's console
- * ("Nintendo - Game Boy" or "Nintendo - Game Boy Color").
+ * ("Nintendo - Game Boy", "- Game Boy Color" or "- Game Boy Advance").
  *
  * Only the public directory index and selected PNG are fetched. ROM content,
  * hashes, SRAM and state files are never uploaded. All I/O is called from IO.
@@ -75,8 +75,9 @@ internal class GbAutoCoverDownloader {
     }
 
     private fun indexUrl(platform: GamePlatform): String = when (platform) {
+        GamePlatform.GB -> GB_INDEX_URL
         GamePlatform.GBC -> GBC_INDEX_URL
-        else -> GB_INDEX_URL
+        GamePlatform.GBA -> GBA_INDEX_URL
     }
 
     private fun download(address: String, maximum: Int): ByteArray {
@@ -122,6 +123,8 @@ internal class GbAutoCoverDownloader {
             "https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy/Named_Boxarts/"
         const val GBC_INDEX_URL =
             "https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Color/Named_Boxarts/"
+        const val GBA_INDEX_URL =
+            "https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Advance/Named_Boxarts/"
         const val MAX_INDEX_BYTES = 2 * 1024 * 1024
         const val MAX_IMAGE_BYTES = 3 * 1024 * 1024
         const val MAX_IMAGES_PER_PASS = 30

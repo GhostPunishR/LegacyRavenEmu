@@ -20,7 +20,7 @@ data class StoredGbRom(
 )
 
 /**
- * Persistent GB/GBC library, independent of the document picker's permission.
+ * Persistent GB/GBC/GBA library, independent of the document picker's permission.
  * An app-private ROM copy is addressed by the same SHA-256 as its SRAM/state.
  * All methods must run on a background dispatcher; index and ROM writes are
  * atomic, and the host serializes imports/loads.
@@ -56,9 +56,10 @@ internal class GbRomLibrary(
             val platform = when (item.optString("platform")) {
                 "gb" -> GamePlatform.GB
                 "gbc" -> GamePlatform.GBC
+                "gba" -> GamePlatform.GBA
                 // Indexes written before GBC support have no console field:
                 // read it once from the private copy's header.
-                else -> platformFromStoredHeader(id).also { classified = true }
+                else -> platformFromStoredHeader(id, name).also { classified = true }
             }
             entries.add(StoredGbRom(id, name, platform))
         }
@@ -73,7 +74,7 @@ internal class GbRomLibrary(
         entries
     }
 
-    private fun platformFromStoredHeader(id: String): GamePlatform = try {
+    private fun platformFromStoredHeader(id: String, name: String): GamePlatform = try {
         val header = ByteArray(HEADER_BYTES)
         val read = AtomicFile(fileFor(id)).openRead().use { input ->
             var total = 0
@@ -84,7 +85,7 @@ internal class GbRomLibrary(
             }
             total
         }
-        RomImportPolicy.platformOf(header.copyOf(read))
+        RomImportPolicy.platformOf(name, header.copyOf(read))
     } catch (error: Exception) {
         // A missing copy is reported when the game is launched; until then
         // the game stays under Game Boy, where every older import was.
@@ -99,8 +100,8 @@ internal class GbRomLibrary(
         )?.use { cursor ->
             if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null
         } ?: throw IllegalArgumentException("Impossible de lire le nom du fichier.")
-        require(RomImportPolicy.acceptsGameBoyFile(name)) {
-            "Sélectionnez une ROM Game Boy (.gb) ou Game Boy Color (.gbc)."
+        require(RomImportPolicy.acceptsRomFile(name)) {
+            "Sélectionnez une ROM Game Boy (.gb), Game Boy Color (.gbc) ou Game Boy Advance (.gba)."
         }
         val stream = resolver.openInputStream(uri)
             ?: throw IllegalArgumentException("Impossible d'ouvrir la ROM.")
@@ -109,7 +110,7 @@ internal class GbRomLibrary(
 
     /** Add a ROM only after native validation succeeded. Duplicate hashes stay unique. */
     fun add(filename: String, bytes: ByteArray): StoredGbRom = synchronized(indexLock) {
-        require(RomImportPolicy.acceptsGameBoyFile(filename))
+        require(RomImportPolicy.acceptsRomFile(filename))
         require(bytes.size in 1..RomImportPolicy.maxRomBytes)
         val id = GbBatteryStore.keyForRom(bytes)
         val existing = list()
@@ -124,7 +125,7 @@ internal class GbRomLibrary(
         }
         require(existing.size < MAX_GAMES) { "Bibliothèque pleine ($MAX_GAMES jeux)." }
         writeRom(id, bytes)
-        val added = StoredGbRom(id, filename.take(256), RomImportPolicy.platformOf(bytes))
+        val added = StoredGbRom(id, filename.take(256), RomImportPolicy.platformOf(filename, bytes))
         writeIndex(existing + added)
         return added
     }
@@ -160,7 +161,7 @@ internal class GbRomLibrary(
         val games = JSONArray()
         for (entry in entries) {
             games.put(JSONObject().put("id", entry.id).put("name", entry.filename)
-                .put("platform", if (entry.platform == GamePlatform.GBC) "gbc" else "gb"))
+                .put("platform", entry.platform.name.lowercase()))
         }
         val data = JSONObject().put("version", 2).put("games", games)
             .toString().toByteArray(Charsets.UTF_8)
@@ -193,7 +194,7 @@ internal class GbRomLibrary(
             if (next < 0) break
             if (next == 0) continue
             require(next <= RomImportPolicy.maxRomBytes - count) {
-                "La ROM dépasse la limite de 16 Mio."
+                "La ROM dépasse la limite de 32 Mio."
             }
             result.write(chunk, 0, next)
             count += next

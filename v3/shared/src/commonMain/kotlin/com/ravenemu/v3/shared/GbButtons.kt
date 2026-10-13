@@ -3,10 +3,14 @@ package com.ravenemu.v3.shared
 import kotlin.math.abs
 import kotlin.math.min
 
-/** Matches the eight Game Boy buttons in RavenCore sdk/include/ravenemu/bridge.h. */
+/**
+ * Matches the buttons in RavenCore sdk/include/ravenemu/bridge.h: the eight
+ * Game Boy buttons, then the GBA shoulder buttons L and R.
+ */
 enum class GbButton(val nativeCode: Int) {
     UP(0), DOWN(1), LEFT(2), RIGHT(3),
     A(4), B(5), START(6), SELECT(7),
+    L(8), R(9),
 }
 
 /** V2-style central dead zone, sliding and diagonal support. */

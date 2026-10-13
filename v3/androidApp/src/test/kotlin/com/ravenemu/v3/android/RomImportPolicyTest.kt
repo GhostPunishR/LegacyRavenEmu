@@ -7,25 +7,26 @@ import org.junit.Test
 
 class RomImportPolicyTest {
     @Test
-    fun acceptsGbAndGbcFilesRegardlessOfCase() {
-        assertTrue(RomImportPolicy.acceptsGameBoyFile("jeu.gb"))
-        assertTrue(RomImportPolicy.acceptsGameBoyFile("JEU.GB"))
-        assertTrue(RomImportPolicy.acceptsGameBoyFile("jeu.gbc"))
-        assertTrue(RomImportPolicy.acceptsGameBoyFile("JEU.GBC"))
+    fun acceptsGbGbcAndGbaFilesRegardlessOfCase() {
+        assertTrue(RomImportPolicy.acceptsRomFile("jeu.gb"))
+        assertTrue(RomImportPolicy.acceptsRomFile("JEU.GB"))
+        assertTrue(RomImportPolicy.acceptsRomFile("jeu.gbc"))
+        assertTrue(RomImportPolicy.acceptsRomFile("JEU.GBC"))
+        assertTrue(RomImportPolicy.acceptsRomFile("jeu.gba"))
     }
 
     @Test
     fun rejectsOtherFormatsAndCompressedFiles() {
-        assertFalse(RomImportPolicy.acceptsGameBoyFile("jeu.gbc.zip"))
-        assertFalse(RomImportPolicy.acceptsGameBoyFile("jeu.gba"))
-        assertFalse(RomImportPolicy.acceptsGameBoyFile("jeu.gb.zip"))
-        assertFalse(RomImportPolicy.acceptsGameBoyFile("jeu.txt"))
-        assertFalse(RomImportPolicy.acceptsGameBoyFile(""))
+        assertFalse(RomImportPolicy.acceptsRomFile("jeu.gbc.zip"))
+        assertFalse(RomImportPolicy.acceptsRomFile("jeu.gba.7z"))
+        assertFalse(RomImportPolicy.acceptsRomFile("jeu.gb.zip"))
+        assertFalse(RomImportPolicy.acceptsRomFile("jeu.txt"))
+        assertFalse(RomImportPolicy.acceptsRomFile(""))
     }
 
     @Test
-    fun theMaximumSizeAllowsLargeGbButNotUnlimitedFiles() {
-        assertTrue(RomImportPolicy.maxRomBytes >= 8 * 1024 * 1024)
-        assertTrue(RomImportPolicy.maxRomBytes <= 16 * 1024 * 1024)
+    fun theMaximumSizeAllowsTheLargestGbaButNotUnlimitedFiles() {
+        assertTrue(RomImportPolicy.maxRomBytes >= 32 * 1024 * 1024)
+        assertTrue(RomImportPolicy.maxRomBytes <= 32 * 1024 * 1024)
     }
 }

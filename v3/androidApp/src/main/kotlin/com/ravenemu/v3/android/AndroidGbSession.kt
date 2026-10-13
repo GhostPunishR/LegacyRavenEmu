@@ -13,8 +13,8 @@ import java.io.Closeable
 import java.io.File
 
 /**
- * Owns one GB or GBC emulation core for the current Activity; the
- * cartridge header picks which one (see [RomImportPolicy.platformOf]).
+ * Owns one GB, GBC or GBA emulation core for the current Activity; the
+ * file and its header pick which one (see [RomImportPolicy.platformOf]).
  * ROMs are selected on demand; battery-backed game saves survive process restarts.
  * Native state is always protected by lock, while disk writes use saveLock.
  */
@@ -31,22 +31,22 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
     /** Must be called off the UI thread. */
     fun load(uri: Uri): LoadedGameInfo {
         val filename = displayName(uri)
-        require(RomImportPolicy.acceptsGameBoyFile(filename)) {
-            "Sélectionnez une ROM Game Boy (.gb) ou Game Boy Color (.gbc)."
+        require(RomImportPolicy.acceptsRomFile(filename)) {
+            "Sélectionnez une ROM Game Boy (.gb), Game Boy Color (.gbc) ou Game Boy Advance (.gba)."
         }
         return loadBytes(filename, readBounded(uri))
     }
 
     /** Load either a just-imported ROM or a private persistent library copy. */
     fun loadBytes(filename: String, bytes: ByteArray): LoadedGameInfo {
-        require(RomImportPolicy.acceptsGameBoyFile(filename)) {
-            "La ROM doit être au format .gb ou .gbc."
+        require(RomImportPolicy.acceptsRomFile(filename)) {
+            "La ROM doit être au format .gb, .gbc ou .gba."
         }
         require(bytes.size in 1..RomImportPolicy.maxRomBytes) {
             "Taille de ROM invalide."
         }
         val romKey = GbBatteryStore.keyForRom(bytes)
-        val platform = RomImportPolicy.platformOf(bytes)
+        val platform = RomImportPolicy.platformOf(filename, bytes)
         val replacement = NativeCore(NativeCore.systemFor(platform))
         var transferred = false
         try {
@@ -264,7 +264,7 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
                 if (read == -1) break
                 if (read == 0) continue
                 require(read <= RomImportPolicy.maxRomBytes - total) {
-                    "Cette ROM dépasse la limite de 16 Mio."
+                    "Cette ROM dépasse la limite de 32 Mio."
                 }
                 output.write(chunk, 0, read)
                 total += read

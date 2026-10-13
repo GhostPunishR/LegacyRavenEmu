@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -64,6 +65,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -155,6 +159,12 @@ fun RavenEmuApp(
         )
     val pages = LibraryNavigation.pages(games)
     val pagerState = rememberPagerState(pageCount = { pages.size })
+    var pageRequest by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(pageRequest) {
+        val target = pageRequest ?: return@LaunchedEffect
+        if (target in pages.indices) pagerState.animateScrollToPage(target)
+        pageRequest = null
+    }
 
     LaunchedEffect(pages.size) {
         if (pagerState.currentPage >= pages.size) pagerState.scrollToPage(0)
@@ -224,7 +234,7 @@ fun RavenEmuApp(
                             onSelect = { gameDetails = it },
                         )
                     }
-                    PageIndicator(pages.size, pagerState.currentPage)
+                    PageIndicator(pages, pagerState.currentPage) { pageRequest = it }
                     Text(
                         "RavenEmu By GhostPunishR",
                         modifier = Modifier.fillMaxWidth().height(28.dp),
@@ -260,6 +270,7 @@ fun RavenEmuApp(
                 RavenScreen.PLAYER -> GbVideoScreen(
                     settings = settings,
                     title = loadedGame?.filename.orEmpty(),
+                    platform = loadedGame?.platform ?: GamePlatform.GB,
                     frame = videoFrame,
                     error = videoError,
                     metrics = videoMetrics,
@@ -344,7 +355,7 @@ fun RavenEmuApp(
                         ) { Text("Retirer la jaquette", color = RavenAccent) }
                     }
                     Text(
-                        "Vidéo, commandes et audio Game Boy disponibles sur Android. La sauvegarde interne du jeu est automatique et un save state manuel est disponible dans le menu ⋮.",
+                        "Vidéo, commandes et audio Game Boy, Game Boy Color et Game Boy Advance disponibles sur Android. La sauvegarde interne du jeu est automatique et un save state manuel est disponible dans le menu ⋮.",
                         color = RavenMuted,
                         fontSize = 13.sp,
                     )
@@ -514,6 +525,7 @@ fun RavenEmuApp(
 private fun GbVideoScreen(
     settings: V3Settings,
     title: String,
+    platform: GamePlatform,
     frame: ImageBitmap?,
     error: String?,
     metrics: GbVideoMetrics?,
@@ -590,19 +602,23 @@ private fun GbVideoScreen(
                 color = RavenMuted, fontSize = 10.sp, maxLines = 1,
             )
         }
-        // Pin the GB picture to the top of its available area rather than
+        // Pin the picture to the top of its available area rather than
         // vertically centering it. The remaining space sits below the video,
         // allowing the thumb controls to remain anchored near the safe bottom.
         BoxWithConstraints(
             modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black),
             contentAlignment = Alignment.TopCenter,
         ) {
-            val pictureHeight = minOf(maxHeight, maxWidth * (144f / 160f))
-            val pictureWidth = pictureHeight * (160f / 144f)
+            // 160x144 on GB/GBC, 240x160 on GBA: follow the core's frame.
+            val aspect = if (frame != null && frame.height > 0) {
+                frame.width.toFloat() / frame.height
+            } else if (platform == GamePlatform.GBA) 240f / 160f else 160f / 144f
+            val pictureHeight = minOf(maxHeight, maxWidth / aspect)
+            val pictureWidth = pictureHeight * aspect
             if (frame != null) {
                 Image(
                     bitmap = frame,
-                    contentDescription = "Image de la Game Boy",
+                    contentDescription = "Image du jeu ${platformLabel(platform)}",
                     modifier = Modifier.width(pictureWidth).height(pictureHeight),
                     contentScale = ContentScale.Fit,
                     filterQuality = FilterQuality.None,
@@ -638,6 +654,7 @@ private fun GbVideoScreen(
                 scalePercent = settings.controlsScale,
                 verticalGapDp = settings.controlsGap,
                 highContrast = settings.controlsStyle == "contrast",
+                shoulders = platform == GamePlatform.GBA,
                 // Keep the lower pills slightly above the system navigation bar,
                 // matching the requested default control placement.
                 modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
@@ -1063,23 +1080,32 @@ private fun CoverPlaceholder(platform: GamePlatform, modifier: Modifier) {
     }
 }
 
+/** One console pictogram per library page, instead of dots; tap to switch. */
 @Composable
-private fun PageIndicator(pageCount: Int, currentPage: Int) {
+private fun PageIndicator(pages: List<LibraryPage>, currentPage: Int, onSelect: (Int) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().height(28.dp),
+        modifier = Modifier.fillMaxWidth().height(40.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (pageCount > 1) {
-            repeat(pageCount) { index ->
+        if (pages.size > 1) {
+            pages.forEachIndexed { index, page ->
+                val active = index == currentPage
                 Box(
-                    Modifier.padding(horizontal = 4.dp)
-                        .size(if (index == currentPage) 7.dp else 5.dp)
-                        .background(
-                            if (index == currentPage) RavenAccent else RavenOutline,
-                            CircleShape,
-                        ),
-                )
+                    Modifier.padding(horizontal = 4.dp).size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (active) RavenAccent.copy(alpha = 0.16f) else Color.Transparent)
+                        .selectable(selected = active, role = Role.Tab) { onSelect(index) }
+                        .semantics { contentDescription = page.title },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ConsoleIcon(
+                        page = page,
+                        tint = if (active) RavenAccent else RavenMuted,
+                        active = active,
+                        modifier = Modifier.size(if (active) 24.dp else 21.dp),
+                    )
+                }
             }
         }
     }

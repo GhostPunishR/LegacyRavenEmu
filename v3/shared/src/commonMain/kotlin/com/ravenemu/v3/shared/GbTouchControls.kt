@@ -58,7 +58,8 @@ private val ControlPressedBottom = Color(0xFF33284F)
 
 /**
  * Portrait controls inspired by RavenEmu 0.8.1 TouchControlsView:
- * one movable D-pad with diagonals, A/B and Start/Select.
+ * one movable D-pad with diagonals, A/B and Start/Select, plus the L and R
+ * shoulder buttons above them when [shoulders] is set (GBA games).
  */
 @Composable
 fun GbTouchControls(
@@ -68,6 +69,7 @@ fun GbTouchControls(
     scalePercent: Int = 100,
     verticalGapDp: Int = 46,
     highContrast: Boolean = false,
+    shoulders: Boolean = false,
 ) {
     // Default portrait geometry follows the user-provided control layout:
     // D-pad at the left, A at the upper-right, B lower and inward, and
@@ -85,6 +87,24 @@ fun GbTouchControls(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(verticalGapDp.coerceIn(20, 80).dp),
         ) {
+            if (shoulders) {
+                // Above the D-pad and A/B, at the edges, as on the console.
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    GbMomentaryButton(
+                        GbButton.L, "L", onButton, diameter = 40,
+                        modifier = Modifier.width(96.dp),
+                        haptics = haptics, highContrast = highContrast,
+                    )
+                    GbMomentaryButton(
+                        GbButton.R, "R", onButton, diameter = 40,
+                        modifier = Modifier.width(96.dp),
+                        haptics = haptics, highContrast = highContrast,
+                    )
+                }
+            }
             Row(
                 Modifier.fillMaxWidth().padding(start = 16.dp, end = 28.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -247,7 +267,8 @@ private fun GbMomentaryButton(
     val handler by rememberUpdatedState(onButton)
     val hapticsEnabled by rememberUpdatedState(haptics)
     val feedback = LocalHapticFeedback.current
-    val pill = button == GbButton.SELECT || button == GbButton.START
+    val pill = button == GbButton.SELECT || button == GbButton.START ||
+        button == GbButton.L || button == GbButton.R
     val shape = if (pill) RoundedCornerShape(50) else CircleShape
     Box(
         modifier

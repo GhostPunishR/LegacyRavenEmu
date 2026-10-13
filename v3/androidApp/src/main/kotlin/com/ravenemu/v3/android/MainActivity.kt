@@ -546,7 +546,7 @@ class MainActivity : ComponentActivity() {
                             }
                             loadedGame = info
                             activeGameId = stored.id
-                            try { retro.attachRom(rom) }
+                            try { retro.attachRom(rom, info.platform) }
                             catch (error: Exception) {
                                 Log.w("RavenEmuRetro", "RA identify failed after import", error)
                             }
@@ -939,7 +939,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                     loadedGame = result
                                     activeGameId = id
-                                    try { retro.attachRom(rom) }
+                                    try { retro.attachRom(rom, result.platform) }
                                     catch (error: Exception) {
                                         Log.w("RavenEmuRetro", "RA identify failed on launch", error)
                                     }
@@ -1009,7 +1009,8 @@ class MainActivity : ComponentActivity() {
                                 withContext(Dispatchers.IO) {
                                     val preview = screenshot?.let { image ->
                                         val miniature = Bitmap.createScaledBitmap(
-                                            image, 160, 144, false,
+                                            // Native size: 160x144 (GB/GBC), 240x160 (GBA).
+                                            image, image.width, image.height, false,
                                         )
                                         try {
                                             ByteArrayOutputStream().use { output ->

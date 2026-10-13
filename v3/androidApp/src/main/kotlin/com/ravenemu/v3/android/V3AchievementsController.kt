@@ -30,6 +30,7 @@ internal class V3AchievementsController(
     private val dispatcher = executor.asCoroutineDispatcher()
     private var client: V3AchievementClient? = null // dedicated SDK thread only
     private var currentRom: ByteArray? = null
+    private var currentPlatform = GamePlatform.GB
     private var connected = false
     private var currentUser = ""
     private var lastSnapshotMs = 0L
@@ -57,12 +58,13 @@ internal class V3AchievementsController(
         }
     }
 
-    suspend fun attachRom(rom: ByteArray) = withContext(dispatcher) {
+    suspend fun attachRom(rom: ByteArray, platform: GamePlatform) = withContext(dispatcher) {
         if (stopped) return@withContext
         val id = GbBatteryStore.keyForRom(rom)
         val currentId = currentRom?.let(GbBatteryStore::keyForRom)
         if (id == currentId) return@withContext
         currentRom = rom.copyOf()
+        currentPlatform = platform
         // New ROM means a new SDK game session, including pending award
         // requests. Never let the old game's award be associated with a
         // different cartridge.
@@ -124,12 +126,10 @@ internal class V3AchievementsController(
                 }
             }
             connected = true
-            // RetroAchievements console IDs: Game Boy = 4, Game Boy Color = 6.
-            // These differ from RavenCore's system enum (GB = 0). The same
-            // header rule picks the core, so both always agree.
+            // The platform that picked the core also picks the RA console,
+            // so the emulator and the service always agree.
             currentRom?.let { rom ->
-                val system = if (RomImportPolicy.platformOf(rom) == GamePlatform.GBC) 6 else 4
-                client?.load(system, rom)
+                client?.load(RomImportPolicy.retroAchievementsConsole(currentPlatform), rom)
             }
         }
         if (event.kind == "login_error") {

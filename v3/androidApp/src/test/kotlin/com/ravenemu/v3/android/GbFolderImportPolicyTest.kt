@@ -14,7 +14,8 @@ class GbFolderImportPolicyTest {
         assertFalse(GbFolderImportPolicy.isRomFilename("save.sav"))
         assertFalse(GbFolderImportPolicy.isRomFilename("cover.png"))
         assertFalse(GbFolderImportPolicy.isRomFilename("archive.zip"))
-        assertFalse(GbFolderImportPolicy.isRomFilename("game.gba"))
+        assertTrue(GbFolderImportPolicy.isRomFilename("Metroid Fusion (Europe).gba"))
+        assertFalse(GbFolderImportPolicy.isRomFilename("game.nds"))
     }
 
     @Test

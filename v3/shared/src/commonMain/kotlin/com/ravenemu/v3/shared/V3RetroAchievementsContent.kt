@@ -70,7 +70,7 @@ fun V3RetroAchievementsContent(
         Text(snapshot.status, fontSize = 12.sp, color = raMuted)
 
         if (snapshot.username.isBlank()) {
-            Text("Connectez votre compte pour obtenir les succès officiels pendant vos parties Game Boy. Mode normal (Softcore).",
+            Text("Connectez votre compte pour obtenir les succès officiels pendant vos parties Game Boy, Game Boy Color et Game Boy Advance. Mode normal (Softcore).",
                 color = raMuted, fontSize = 13.sp)
             OutlinedTextField(
                 value = username,
