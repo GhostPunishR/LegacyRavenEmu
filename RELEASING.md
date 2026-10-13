@@ -6,12 +6,12 @@ Le canal actuel est la **bêta Android multiplateforme**, produite par le [workf
 
 | Élément | Valeur |
 |---|---|
-| Commande | `./gradlew -p multiplateforme :androidApp:assembleDebug` |
-| Variante | Debug |
+| Commande | `./gradlew -p multiplateforme :androidApp:assembleBeta` |
+| Variante | Beta : la variante Debug (même signature) sans le drapeau débogable, pour un lecteur optimisé |
 | Identifiant | `com.ravenemu.v3.preview` |
 | Nom affiché | RavenEmu |
 | Artefact Actions | `ravenemu-android-beta` |
-| APK source | `multiplateforme/androidApp/build/outputs/apk/debug/androidApp-debug.apk` |
+| APK source | `multiplateforme/androidApp/build/outputs/apk/beta/androidApp-beta.apk` |
 | Rétention | 7 jours |
 
 Le workflow traite les pushs sur ses branches déclarées, les pull requests pour ses chemins surveillés et les déclenchements manuels. Les fichiers de documentation seuls ne relancent pas automatiquement ce build. Les filtres exacts restent dans le workflow.

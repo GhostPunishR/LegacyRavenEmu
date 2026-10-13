@@ -14,6 +14,18 @@ android {
         versionCode = 1
         versionName = "0.1.0-preview"
     }
+    buildTypes {
+        // APK bêta publié par la CI : même identifiant et même signature que
+        // l'APK Debug (une mise à jour garde les données), mais non débogable.
+        // Un APK débogable fait tourner le code Kotlin du lecteur (son, image,
+        // cadence) moins optimisé ; la V2 publiait pour cela sa variante
+        // « profil ». L'APK Debug reste disponible pour le débogage local.
+        create("beta") {
+            initWith(getByName("debug"))
+            isDebuggable = false
+            matchingFallbacks += listOf("debug")
+        }
+    }
     buildFeatures { compose = true }
     externalNativeBuild {
         cmake { path = file("../native/CMakeLists.txt") }

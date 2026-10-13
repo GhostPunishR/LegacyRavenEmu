@@ -93,15 +93,17 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      # Variante « beta » : l'APK Debug sans le drapeau débogable, pour que
+      # le lecteur tourne optimisé sur téléphone (voir androidApp/build.gradle.kts).
       - name: Construire l'APK bêta
-        run: ./gradlew -p multiplateforme :androidApp:assembleDebug --stacktrace
+        run: ./gradlew -p multiplateforme :androidApp:assembleBeta --stacktrace
       - name: Tests Android
         run: ./gradlew -p multiplateforme :androidApp:testDebugUnitTest --stacktrace
       - name: Publier l'APK bêta
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ravenemu-android-beta
-          path: multiplateforme/androidApp/build/outputs/apk/debug/*.apk
+          path: multiplateforme/androidApp/build/outputs/apk/beta/*.apk
           if-no-files-found: error
           retention-days: 7
 

@@ -431,6 +431,7 @@ class MainActivity : ComponentActivity() {
                                 if (sample != null) {
                                     videoMetrics = sample
                                     output?.let {
+                                        it.recordVideo(sample.actualFps, sample.coreMs, sample.conversionMs)
                                         lastAudioReport = it.exportReport()
                                         Log.d("RavenEmuAudio", it.diagnostics())
                                     }
