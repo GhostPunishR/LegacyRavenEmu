@@ -1,7 +1,7 @@
 package com.ravenemu.v3.android
 
 /**
- * JNI adapter over RavenEmu-Cores' pinned portable C ABI.
+ * JNI adapter over RavenCore's pinned portable C ABI.
  * Own one instance per running game and call it from a single emulation thread.
  * No ROMs or BIOS files are bundled with the APK.
  *

@@ -16,6 +16,13 @@ data class V3Settings(
     val controlsScale: Int = 100,
     val controlsGap: Int = 46,
     val controlsStyle: String = "classic",
+    /**
+     * Recherche des jaquettes sur `thumbnails.libretro.com`. Désactivée par
+     * défaut : chaque image demandée indique à ce serveur tiers un jeu de la
+     * bibliothèque, avec l'adresse IP de l'appareil. L'utilisateur doit
+     * pouvoir l'accepter en connaissance de cause, pas la découvrir.
+     */
+    val onlineCovers: Boolean = false,
 ) {
     fun normalized(): V3Settings = copy(
         audioVolume = audioVolume.coerceIn(0, 100),

@@ -3,6 +3,7 @@ package com.ravenemu.v3.shared
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class V3SettingsTest {
@@ -22,6 +23,19 @@ class V3SettingsTest {
         val reference = frame.copyOf()
         GbDisplayFilter.apply(frame, defaults)
         assertContentEquals(reference, frame)
+    }
+
+    /**
+     * Chaque jaquette demandée indique à un serveur tiers un jeu de la
+     * bibliothèque, avec l'adresse IP de l'appareil. La recherche doit donc
+     * être un choix de l'utilisateur, jamais un comportement par défaut, y
+     * compris pour des réglages relus ou normalisés.
+     */
+    @Test
+    fun onlineCoversStayOffUnlessChosen() {
+        assertFalse(V3Settings().onlineCovers)
+        assertFalse(V3Settings().normalized().onlineCovers)
+        assertTrue(V3Settings(onlineCovers = true).normalized().onlineCovers)
     }
 
     @Test

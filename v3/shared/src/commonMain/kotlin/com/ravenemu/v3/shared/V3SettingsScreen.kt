@@ -100,7 +100,7 @@ fun V3SettingsScreen(
                             page = Page.RETRO
                         }
                     }
-                    CategoryRow("Général", "Pause et diagnostics") { page = Page.GENERAL }
+                    CategoryRow("Général", "Pause, jaquettes et diagnostics") { page = Page.GENERAL }
                     CategoryRow("Audio", "Son du jeu et volume") { page = Page.AUDIO }
                     CategoryRow("Vidéo", "Couleurs, luminosité et contraste") { page = Page.VIDEO }
                     CategoryRow("Interface", "Vibrations, commandes et style") { page = Page.INTERFACE }
@@ -125,6 +125,13 @@ fun V3SettingsScreen(
                         "Pause automatique",
                         "Le jeu et son audio sont suspendus lorsque RavenEmu passe en arrière-plan ou lorsque le panneau de jeu est ouvert. Ce comportement est fixe pour protéger la partie.",
                     )
+                    GroupTitle("Bibliothèque")
+                    SettingSwitch(
+                        "Jaquettes en ligne",
+                        "Cherche les jaquettes manquantes sur thumbnails.libretro.com. Ce serveur tiers reçoit le nom des jeux de la bibliothèque et l'adresse IP de l'appareil.",
+                        settings.onlineCovers,
+                        onSettingsChange != null,
+                    ) { update(settings.copy(onlineCovers = it)) }
                     GroupTitle("Diagnostic")
                     SettingSwitch(
                         "Afficher les performances",
@@ -227,7 +234,7 @@ fun V3SettingsScreen(
                     SettingDescription("Version installée", appVersion)
                     SettingDescription("Créateur", "GhostPunishR")
                     SettingDescription("Version du projet", "V3 — préversion Android / iOS")
-                    SettingDescription("Moteurs natifs", "RavenEmu-Cores 0.1.0 (révision épinglée)")
+                    SettingDescription("Moteurs natifs", "RavenCore (révision épinglée)")
                     SettingDescription("Licence du projet", "GNU AGPL-3.0")
                     GroupTitle("Informations légales")
                     ExternalRow("Conditions d'utilisation", onOpenLink,
@@ -239,8 +246,8 @@ fun V3SettingsScreen(
                     GroupTitle("Code source")
                     ExternalRow("RavenEmu — GitHub", onOpenLink,
                         "https://github.com/GhostPunishR/RavenEmu")
-                    ExternalRow("RavenEmu-Cores — GitHub", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenEmu-Cores")
+                    ExternalRow("RavenCore — GitHub", onOpenLink,
+                        "https://github.com/GhostPunishR/RavenCore")
                     Text("Aucune ROM commerciale ni BIOS propriétaire n'est distribué avec RavenEmu.",
                         color = Muted, fontSize = 12.sp)
                 }

@@ -3,7 +3,7 @@ package com.ravenemu.v3.shared
 import kotlin.math.abs
 import kotlin.math.min
 
-/** Matches the eight Game Boy buttons in RavenEmu-Cores sdk/bridge.h. */
+/** Matches the eight Game Boy buttons in RavenCore sdk/include/ravenemu/bridge.h. */
 enum class GbButton(val nativeCode: Int) {
     UP(0), DOWN(1), LEFT(2), RIGHT(3),
     A(4), B(5), START(6), SELECT(7),

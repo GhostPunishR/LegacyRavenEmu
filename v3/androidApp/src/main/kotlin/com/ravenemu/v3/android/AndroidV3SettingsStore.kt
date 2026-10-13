@@ -18,6 +18,7 @@ internal class AndroidV3SettingsStore(context: Context) {
         controlsScale = prefs.getInt("controls_scale", 100),
         controlsGap = prefs.getInt("controls_gap", 46),
         controlsStyle = prefs.getString("controls_style", "classic") ?: "classic",
+        onlineCovers = prefs.getBoolean("online_covers", false),
     ).normalized()
 
     fun write(settings: V3Settings) {
@@ -33,6 +34,7 @@ internal class AndroidV3SettingsStore(context: Context) {
             .putInt("controls_scale", safe.controlsScale)
             .putInt("controls_gap", safe.controlsGap)
             .putString("controls_style", safe.controlsStyle)
+            .putBoolean("online_covers", safe.onlineCovers)
             .apply()
     }
 }

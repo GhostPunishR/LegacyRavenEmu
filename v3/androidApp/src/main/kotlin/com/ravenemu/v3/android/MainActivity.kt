@@ -92,6 +92,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val settingsStore = remember { AndroidV3SettingsStore(applicationContext) }
+            var userSettings by remember { mutableStateOf(settingsStore.read()) }
             val romLibrary = remember { GbRomLibrary(File(filesDir, "gb-library"), contentResolver) }
             val saveTransfer = remember { GbSaveTransfer(filesDir) }
             val coverStore = remember { GbCoverStore(File(filesDir, "gb-covers"), contentResolver) }
@@ -102,6 +103,15 @@ class MainActivity : ComponentActivity() {
             var ignoredAutoCovers by remember {
                 mutableStateOf(
                     coverPreferences.getStringSet("disabled_auto_cover_ids", emptySet())
+                        ?.toSet() ?: emptySet()
+                )
+            }
+            // Jeux que l'index de libretro ne connaît pas. Les retenir évite de
+            // retélécharger l'index entier à chaque lancement pour les chercher
+            // à nouveau ; désactiver puis réactiver la recherche les réarme.
+            var unmatchedAutoCovers by remember {
+                mutableStateOf(
+                    coverPreferences.getStringSet("unmatched_auto_cover_ids", emptySet())
                         ?.toSet() ?: emptySet()
                 )
             }
@@ -131,10 +141,19 @@ class MainActivity : ComponentActivity() {
                     Log.e("RavenEmuLibrary", "Cannot open library index", error)
                 }
             }
-            // Only run a cover search when the library changes or an excluded
-            // ROM is explicitly re-enabled. Recomposition/video frames never
-            // initiate network calls.
-            LaunchedEffect(libraryGames, ignoredAutoCovers) {
+            // Only run a cover search when the user enabled it, and then only
+            // when the library changes or an excluded ROM is explicitly
+            // re-enabled. Recomposition/video frames never initiate network
+            // calls. Disabled by default: the requests tell a third-party
+            // server which games are in the library.
+            LaunchedEffect(libraryGames, ignoredAutoCovers, userSettings.onlineCovers) {
+                if (!userSettings.onlineCovers) {
+                    if (unmatchedAutoCovers.isNotEmpty()) {
+                        unmatchedAutoCovers = emptySet()
+                        coverPreferences.edit().remove("unmatched_auto_cover_ids").apply()
+                    }
+                    return@LaunchedEffect
+                }
                 if (libraryGames.isNotEmpty()) {
                     autoCoverLoading = true
                     try {
@@ -143,13 +162,19 @@ class MainActivity : ComponentActivity() {
                         // first 30 games, without blocking the Compose UI.
                         val entries = withContext(Dispatchers.IO) { romLibrary.list() }
                         for (batch in entries.chunked(30)) {
-                            val pictures = withContext(Dispatchers.IO) {
+                            val pass = withContext(Dispatchers.IO) {
                                 autoCoverDownloader.fillMissing(
-                                    batch, coverStore, ignoredAutoCovers,
-                                ).mapValues { it.value.asImageBitmap() }
+                                    batch, coverStore, ignoredAutoCovers + unmatchedAutoCovers,
+                                )
                             }
                             // Manual artwork wins over a concurrent download.
-                            libraryCovers = pictures + libraryCovers
+                            libraryCovers = pass.found.mapValues { it.value.asImageBitmap() } + libraryCovers
+                            if (pass.unmatched.isNotEmpty()) {
+                                unmatchedAutoCovers = unmatchedAutoCovers + pass.unmatched
+                                coverPreferences.edit()
+                                    .putStringSet("unmatched_auto_cover_ids", unmatchedAutoCovers)
+                                    .apply()
+                            }
                         }
                     } catch (error: Exception) {
                         Log.w("RavenEmuCover", "Automatic cover lookup unavailable", error)
@@ -158,7 +183,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            var userSettings by remember { mutableStateOf(settingsStore.read()) }
             val appVersion = remember {
                 runCatching {
                     packageManager.getPackageInfo(packageName, 0).versionName

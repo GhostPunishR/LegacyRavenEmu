@@ -16,24 +16,41 @@ import java.util.Locale
  *
  * Only the public directory index and selected PNG are fetched. ROM content,
  * hashes, SRAM and state files are never uploaded. All I/O is called from IO.
+ *
+ * Disabled unless the user turns it on in the settings: the requests tell a
+ * third-party server which games are in the library.
  */
 internal class GbAutoCoverDownloader {
     private var cachedNames: List<BoxartRecord>? = null
 
+    /**
+     * [found] holds the artwork downloaded during this pass. [unmatched] lists
+     * the ROMs the index has no entry for: the caller remembers them, so a
+     * game libretro does not know is not looked up again at every launch,
+     * which used to download the whole index (up to 2 MB) each time. A failed
+     * download is not reported there: it may succeed on the next pass.
+     */
+    data class Pass(val found: Map<String, Bitmap>, val unmatched: Set<String>)
+
     fun fillMissing(
         entries: List<StoredGbRom>,
         store: GbCoverStore,
-        disabledIds: Set<String>,
-    ): Map<String, Bitmap> {
+        skippedIds: Set<String>,
+    ): Pass {
         val missing = entries.filter { item ->
-            item.id !in disabledIds && store.read(item.id) == null
+            item.id !in skippedIds && store.read(item.id) == null
         }.take(MAX_IMAGES_PER_PASS)
-        if (missing.isEmpty()) return emptyMap()
+        if (missing.isEmpty()) return Pass(emptyMap(), emptySet())
 
         val candidates = getNames()
         val artwork = mutableMapOf<String, Bitmap>()
+        val unmatched = mutableSetOf<String>()
         for (item in missing) {
-            val match = GbBoxartMatcher.bestMatch(item.filename, candidates) ?: continue
+            val match = GbBoxartMatcher.bestMatch(item.filename, candidates)
+            if (match == null) {
+                unmatched += item.id
+                continue
+            }
             try {
                 val response = download(INDEX_URL + match.encodedHref, MAX_IMAGE_BYTES)
                 val bitmap = store.saveDownloadedIfMissing(item.id, response)
@@ -42,7 +59,7 @@ internal class GbAutoCoverDownloader {
                 Log.w(TAG, "Unable to download boxart for ${item.id.take(12)}", e)
             }
         }
-        return artwork
+        return Pass(artwork, unmatched)
     }
 
     private fun getNames(): List<BoxartRecord> {

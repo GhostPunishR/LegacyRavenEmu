@@ -1,6 +1,6 @@
 # Politique de confidentialité de RavenEmu
 
-Date d’entrée en vigueur : 11 octobre 2026
+Date d’entrée en vigueur : 12 octobre 2026
 
 ## Champ d’application
 
@@ -27,9 +27,17 @@ Lors de la connexion choisie par l’utilisateur, le nom de compte et le mot de 
 
 Pendant une partie connectée, le SDK officiel transmet l’empreinte du jeu, les identifiants de jeu et de succès, les informations de session et de présence prévues par le jeu, ainsi que le nom/jeton du compte. Le service reçoit aussi les informations techniques d’une connexion HTTPS, dont l’adresse IP et la version du client. Les échanges servent à reconnaître la ROM, télécharger les conditions des succès et enregistrer leur obtention. La mémoire et les fichiers du jeu ne sont pas téléversés.
 
-Les badges des succès et le portrait du compte sont des images publiques, téléchargées en HTTPS depuis `https://media.retroachievements.org`. C’est le seul autre hôte contacté, aucune donnée n’y est envoyée au-delà de ce que comporte une requête HTTPS, et les images sont conservées dans le cache de l’application, que le système peut vider et qu’effacer les données supprime.
+Les badges des succès et le portrait du compte sont des images publiques, téléchargées en HTTPS depuis `https://media.retroachievements.org`. Pour RetroAchievements, c’est le seul autre hôte contacté ; aucune donnée n’y est envoyée au-delà de ce que comporte une requête HTTPS, et les images sont conservées dans le cache de l’application, que le système peut vider et qu’effacer les données supprime.
 
 Les informations enregistrées par RetroAchievements relèvent de sa [politique de confidentialité](https://retroachievements.org/privacy.php). RavenEmu ne stocke pas ces informations sur un serveur du projet. Les envois de succès en échec sont retentés pendant la session ; leur file d’attente n’est pas conservée après la fermeture du jeu.
+
+## Jaquettes en ligne (facultatif, préversion V3)
+
+La préversion V3 peut chercher les jaquettes manquantes de la bibliothèque sur `https://thumbnails.libretro.com`, un service tiers. Cette recherche est **désactivée par défaut** et ne démarre que si l’utilisateur l’active dans Réglages → Général → Bibliothèque.
+
+Une fois activée, l’application télécharge l’index public des jaquettes Game Boy, puis l’image correspondant au nom de fichier de chaque jeu sans jaquette. Ce service reçoit donc les informations d’une connexion HTTPS, dont l’adresse IP de l’appareil, et, à travers les images demandées, le nom des jeux de la bibliothèque. Aucune ROM, empreinte, sauvegarde ni aucun état n’est envoyé. Les jaquettes sont conservées sur l’appareil. Les jeux absents de l’index ne sont pas recherchés de nouveau ; désactiver puis réactiver l’option relance la recherche.
+
+Les images ainsi obtenues sont la propriété de leurs ayants droit ; RavenEmu ne les distribue pas et ne les inclut pas dans l’application.
 
 ## Accès aux fichiers
 
