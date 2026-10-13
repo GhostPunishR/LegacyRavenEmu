@@ -213,9 +213,11 @@ class MainActivity : ComponentActivity() {
             }
             LaunchedEffect(retroSnapshot.avatarUrl,
                 retroSnapshot.entries.map { it.badgeUrl }.distinct()) {
+                // Every badge of the set: a cap of 120 left the badges of
+                // larger sets blank. 64x64 badges stay small in memory.
                 val urls = (listOf(retroSnapshot.avatarUrl) +
                     retroSnapshot.entries.map { it.badgeUrl })
-                    .filter { it.isNotBlank() }.distinct().take(120)
+                    .filter { it.isNotBlank() }.distinct().take(MAX_RETRO_IMAGES)
                 for (batch in urls.chunked(12)) {
                     val toLoad = batch.filter { it !in retroImages }
                     if (toLoad.isEmpty()) continue
@@ -234,6 +236,7 @@ class MainActivity : ComponentActivity() {
             }
             var retroBusy by remember { mutableStateOf(false) }
             var retroNotice by remember { mutableStateOf<String?>(null) }
+            var retroNoticeBadge by remember { mutableStateOf<ImageBitmap?>(null) }
             val retro = remember {
                 V3AchievementsController(
                     applicationContext, gameSession,
@@ -241,6 +244,25 @@ class MainActivity : ComponentActivity() {
                     onEvent = { event ->
                         if (event.kind == "achievement") {
                             retroNotice = "Succès débloqué · ${event.title} (${event.extra} pts)"
+                            // The unlock event carries the unlocked badge URL;
+                            // the list may only hold the locked one so far.
+                            val badgeUrl = event.image
+                            retroNoticeBadge = retroImages[badgeUrl]
+                            if (retroNoticeBadge == null && badgeUrl.isNotBlank()) {
+                                scope.launch {
+                                    val badge = withContext(Dispatchers.IO) {
+                                        runCatching { retroBadgeStore.load(badgeUrl) }
+                                            .getOrNull()?.asImageBitmap()
+                                    }
+                                    if (badge != null) {
+                                        retroImages = retroImages + (badgeUrl to badge)
+                                        // Only if this unlock is still the one shown.
+                                        if (retroNotice?.contains(event.title) == true) {
+                                            retroNoticeBadge = badge
+                                        }
+                                    }
+                                }
+                            }
                         }
                         if (event.kind == "login_error" || event.kind == "login") {
                             retroBusy = false
@@ -262,6 +284,7 @@ class MainActivity : ComponentActivity() {
                 if (retroNotice != null) {
                     delay(4800)
                     retroNotice = null
+                    retroNoticeBadge = null
                 }
             }
             LaunchedEffect(retro, videoEnabled, pausedForGameMenu, foreground) {
@@ -696,6 +719,7 @@ class MainActivity : ComponentActivity() {
                 retroImages = retroImages,
                 retroBusy = retroBusy,
                 retroNotice = retroNotice,
+                retroNoticeBadge = retroNoticeBadge,
                 onRetroLogin = { username, password ->
                     if (!retroBusy) {
                         retroBusy = true
@@ -1095,3 +1119,6 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 }
+
+/** Avatar plus badges: well above the largest RetroAchievements sets. */
+private const val MAX_RETRO_IMAGES = 600
