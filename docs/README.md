@@ -1,13 +1,15 @@
 # Site officiel RavenEmu
 
-Site statique publié avec GitHub Pages depuis `main`, dossier `docs/`. Ouvrir `index.html` ou servir ce dossier avec un serveur HTTP local ; aucune dépendance ni compilation n'est nécessaire.
+Site statique publié avec GitHub Pages depuis `main`, dossier `docs/`. Aucune dépendance ni compilation : ouvrir `index.html` ou servir ce dossier avec un serveur HTTP local.
 
-- `index.html` : présentation du projet `multiplateforme/`, état Android/iOS, accès à la bêta, documentation et FAQ.
-- `assets/styles.css` : styles responsive, sans animation, transition ou défilement animé.
-- `assets/app.js` : copie de la commande et année du pied de page. Navigation, contenu et FAQ fonctionnent sans JavaScript.
+Direction visuelle : sombre minimaliste, composition centrée sur le produit, violet discret. Pas d'animation, de transition ou de défilement animé. Le visuel de console de l'ancien site n'est plus utilisé. L'aperçu de bibliothèque est réalisé en HTML/CSS et explicitement présenté comme conceptuel ; les jeux et visuels sont des exemples illustratifs, pas une capture de l'application ni du contenu fourni.
 
-La bêta actuelle est l'artefact `ravenemu-android-beta` du workflow `multiplateforme.yml` (compte GitHub requis, rétention de 7 jours). L'APK `test-latest` appartient à la V2 et ne doit pas être présenté comme la version actuelle.
+- `index.html` : expérience Android, état des plateformes, installation de la bêta, ressources et FAQ.
+- `assets/styles.css` : composition et styles responsive.
+- `assets/app.js` : copie de la commande et année. Navigation, contenu et FAQ fonctionnent sans JavaScript.
 
-Avant une mise à jour, comparer les fonctions et les statuts à `multiplateforme/README.md`, au workflow et à `PRIVACY.md`. Ne pas présenter le lecteur iOS ou les validations RetroAchievements/GBC/GBA comme terminés avant confirmation.
+La bêta actuelle est l'artefact `ravenemu-android-beta` de `multiplateforme.yml` (compte GitHub requis, rétention 7 jours). `test-latest` est l'ancien APK V2, plus mis à jour.
 
-Vérification rapide : `node --check docs/assets/app.js` et `git diff --check`. Contrôler aussi les ancres, les chemins locaux et le rendu desktop/mobile. Le site utilise uniquement ses assets locaux et n'ajoute aucun service externe ni outil de suivi.
+Sources de vérité : `multiplateforme/README.md`, le workflow et `PRIVACY.md`. Ne pas présenter iOS jouable ou les validations RetroAchievements/GBC/GBA comme terminés sans confirmation.
+
+Vérification : `node --check docs/assets/app.js`, `git diff --check`, ancres, assets et chemins GitHub ; vérifier aussi le rendu desktop/mobile, le focus clavier et les débordements dans un navigateur. Le site utilise uniquement ses assets locaux et aucun outil de suivi.
