@@ -21,10 +21,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -41,6 +43,10 @@ import com.ravenemu.v3.shared.RavenEmuApp
 import com.ravenemu.v3.shared.V3Settings
 import com.ravenemu.v3.shared.V3RetroSnapshot
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -237,32 +243,17 @@ class MainActivity : ComponentActivity() {
             var retroBusy by remember { mutableStateOf(false) }
             var retroNotice by remember { mutableStateOf<String?>(null) }
             var retroNoticeBadge by remember { mutableStateOf<ImageBitmap?>(null) }
+            var retroNoticeVisible by remember { mutableStateOf(false) }
+            // Unlocks wait their turn: several often fire on the same frame,
+            // and each used to replace the previous popup at once.
+            val retroUnlocks = remember { mutableStateListOf<RetroUnlock>() }
             val retro = remember {
                 V3AchievementsController(
                     applicationContext, gameSession,
                     onSnapshot = { snapshot -> retroSnapshot = snapshot },
                     onEvent = { event ->
-                        if (event.kind == "achievement") {
-                            retroNotice = "Succès débloqué · ${event.title} (${event.extra} pts)"
-                            // The unlock event carries the unlocked badge URL;
-                            // the list may only hold the locked one so far.
-                            val badgeUrl = event.image
-                            retroNoticeBadge = retroImages[badgeUrl]
-                            if (retroNoticeBadge == null && badgeUrl.isNotBlank()) {
-                                scope.launch {
-                                    val badge = withContext(Dispatchers.IO) {
-                                        runCatching { retroBadgeStore.load(badgeUrl) }
-                                            .getOrNull()?.asImageBitmap()
-                                    }
-                                    if (badge != null) {
-                                        retroImages = retroImages + (badgeUrl to badge)
-                                        // Only if this unlock is still the one shown.
-                                        if (retroNotice?.contains(event.title) == true) {
-                                            retroNoticeBadge = badge
-                                        }
-                                    }
-                                }
-                            }
+                        if (event.kind == "achievement" && retroUnlocks.size < MAX_QUEUED_UNLOCKS) {
+                            retroUnlocks.add(RetroUnlock(event.title, event.extra, event.image))
                         }
                         if (event.kind == "login_error" || event.kind == "login") {
                             retroBusy = false
@@ -280,11 +271,34 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
-            LaunchedEffect(retroNotice) {
-                if (retroNotice != null) {
-                    delay(4800)
+            // One popup at a time, each for the same duration. The badge is
+            // fetched before the popup opens, so it never changes size while
+            // shown; after 2 s without it, the star stands in.
+            LaunchedEffect(Unit) {
+                while (isActive) {
+                    val unlock = snapshotFlow { retroUnlocks.firstOrNull() }
+                        .filterNotNull().first()
+                    // The unlock event carries the unlocked badge URL; the
+                    // list may only hold the locked one so far.
+                    val url = unlock.badgeUrl
+                    var badge = retroImages[url]
+                    if (badge == null && url.isNotBlank()) {
+                        val download = scope.async(Dispatchers.IO) {
+                            runCatching { retroBadgeStore.load(url) }.getOrNull()?.asImageBitmap()
+                        }
+                        badge = withTimeoutOrNull(2_000) { download.await() }
+                        if (badge != null) retroImages = retroImages + (url to badge)
+                    }
+                    retroNoticeBadge = badge
+                    retroNotice = "Succès débloqué · ${unlock.title} (${unlock.points} pts)"
+                    retroNoticeVisible = true
+                    delay(4_800)
+                    // Fade out with the same content, then clear it.
+                    retroNoticeVisible = false
+                    delay(400)
                     retroNotice = null
                     retroNoticeBadge = null
+                    retroUnlocks.removeAt(0)
                 }
             }
             LaunchedEffect(retro, videoEnabled, pausedForGameMenu, foreground) {
@@ -720,6 +734,7 @@ class MainActivity : ComponentActivity() {
                 retroBusy = retroBusy,
                 retroNotice = retroNotice,
                 retroNoticeBadge = retroNoticeBadge,
+                retroNoticeVisible = retroNoticeVisible,
                 onRetroLogin = { username, password ->
                     if (!retroBusy) {
                         retroBusy = true
@@ -1122,3 +1137,8 @@ class MainActivity : ComponentActivity() {
 
 /** Avatar plus badges: well above the largest RetroAchievements sets. */
 private const val MAX_RETRO_IMAGES = 600
+
+/** A burst beyond this is not worth minutes of popups; the list keeps them all. */
+private const val MAX_QUEUED_UNLOCKS = 20
+
+private data class RetroUnlock(val title: String, val points: String, val badgeUrl: String)
