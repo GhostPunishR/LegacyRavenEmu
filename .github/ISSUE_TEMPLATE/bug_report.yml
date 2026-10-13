@@ -1,75 +1,78 @@
 name: "Rapport de bug"
-description: "Signaler un défaut reproductible dans RavenEmu"
+description: "Signaler un défaut reproductible dans la version multiplateforme"
 title: "[Bug] "
 body:
   - type: markdown
     attributes:
       value: |
-        Merci de prendre le temps de documenter le problème.
+        Ce formulaire concerne le projet actif multiplateforme. Si vous utilisez la V2, précisez-le.
+        Ne joignez aucune ROM, aucun BIOS, aucune sauvegarde personnelle, aucune clé ni aucun jeton. Pour une vulnérabilité, suivez la [politique de sécurité](https://github.com/GhostPunishR/RavenEmu/blob/main/SECURITY.md).
 
-        Ne joignez aucune ROM, aucun BIOS, aucune sauvegarde personnelle, aucune clé et aucune donnée privée. Pour une vulnérabilité, utilisez le signalement privé indiqué dans la politique de sécurité.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: "Plateforme ou contexte"
+      options:
+        - "Android (bêta multiplateforme)"
+        - "iOS (hôte en développement)"
+        - "Compilation ou GitHub Actions"
+        - "Documentation, site ou wiki"
+        - "V2 conservée en héritage"
+    validations:
+      required: true
 
   - type: dropdown
     id: component
     attributes:
       label: "Composant concerné"
-      description: "Choisissez la partie de RavenEmu qui présente le problème."
       options:
         - "Game Boy"
         - "Game Boy Color"
         - "Game Boy Advance"
-        - "Bibliothèque de jeux"
-        - "Commandes tactiles ou manette"
+        - "Bibliothèque, import ou jaquettes"
+        - "Commandes tactiles"
         - "Affichage ou audio"
-        - "Sauvegardes ou états instantanés"
-        - "Application Android"
-        - "Compilation ou GitHub Actions"
-        - "Documentation ou site"
+        - "Sauvegardes, états ou transferts"
+        - "RetroAchievements"
+        - "Hôte Android ou iOS"
+        - "Compilation ou CI"
+        - "Documentation, site ou wiki"
         - "Autre"
     validations:
       required: true
 
   - type: input
-    id: ravenemu_version
+    id: build
     attributes:
-      label: "Version de RavenEmu"
-      description: "Indiquez le numéro de version ou le commit testé."
-      placeholder: "Exemple: test-latest, 0.1.0 ou abc1234"
+      label: "Commit ou lien du build"
+      description: "Indiquez le SHA du commit ou le lien de l'exécution GitHub Actions. Le nom de préversion seul ne distingue pas les builds."
+      placeholder: "Exemple : abc1234 ou URL de l'exécution multiplateforme"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Appareil ou environnement"
+      description: "Appareil et version Android/iOS, ou système, JDK et outils de compilation. Pour la documentation, indiquez la page concernée."
+      placeholder: "Exemple : Pixel 8, Android 15 ; ou macOS, Xcode et JDK ; ou URL de la page"
     validations:
       required: true
 
   - type: input
-    id: device
+    id: game
     attributes:
-      label: "Appareil"
-      description: "Indiquez le fabricant et le modèle de l’appareil."
-      placeholder: "Exemple: Google Pixel 8"
-    validations:
-      required: true
-
-  - type: input
-    id: android_version
-    attributes:
-      label: "Version Android"
-      placeholder: "Exemple: Android 15"
-    validations:
-      required: true
-
-  - type: input
-    id: game_fingerprint
-    attributes:
-      label: "Empreinte du jeu"
-      description: "Facultatif. Fournissez uniquement une empreinte SHA-256, jamais le fichier du jeu."
-      placeholder: "SHA-256 du fichier testé"
+      label: "Jeu, région ou révision"
+      description: "Si le problème concerne un jeu. Une empreinte SHA-256 peut être ajoutée, jamais la ROM."
 
   - type: textarea
     id: steps
     attributes:
       label: "Étapes de reproduction"
-      description: "Décrivez une procédure minimale et reproductible."
+      description: "Décrivez les étapes minimales, les réglages concernés et l'utilisation éventuelle d'un état ou de RetroAchievements."
       placeholder: |
         1. Ouvrir...
-        2. Sélectionner...
+        2. Choisir...
         3. Observer...
     validations:
       required: true
@@ -77,16 +80,15 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: "Comportement attendu"
-      description: "Expliquez ce qui devait se produire."
+      label: "Résultat attendu"
     validations:
       required: true
 
   - type: textarea
     id: observed
     attributes:
-      label: "Comportement observé"
-      description: "Expliquez précisément le résultat obtenu."
+      label: "Résultat observé"
+      description: "Ajoutez le message d'erreur et une capture sans données privées si utile."
     validations:
       required: true
 
@@ -94,19 +96,17 @@ body:
     id: diagnostics
     attributes:
       label: "Diagnostics utiles"
-      description: "Ajoutez uniquement les journaux ou mesures nécessaires après avoir supprimé les données sensibles."
+      description: "Journaux ou export audio expurgés des chemins personnels, identifiants et jetons. Les FPS calculés ne garantissent pas les FPS affichés."
       render: shell
 
   - type: checkboxes
     id: confirmations
     attributes:
-      label: "Confirmations"
+      label: "Avant envoi"
       options:
-        - label: "J’ai recherché une issue existante décrivant le même problème."
+        - label: "J'ai recherché une issue similaire."
           required: true
-        - label: "J’utilise une copie du jeu que je suis autorisé à employer ou un homebrew légalement distribué."
+        - label: "Je n'ai joint aucun contenu protégé, secret ou fichier personnel."
           required: true
-        - label: "Je n’ai joint aucune ROM, aucun BIOS, aucune clé et aucune donnée personnelle."
-          required: true
-        - label: "J’accepte le code de conduite du projet."
+        - label: "J'accepte le code de conduite du projet."
           required: true

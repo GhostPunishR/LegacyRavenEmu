@@ -1,145 +1,85 @@
 # Contribuer à RavenEmu
 
-Merci de votre intérêt pour RavenEmu. Les contributions de code, de documentation, de tests et de rapports de compatibilité sont les bienvenues.
+Les contributions de code, de documentation et de tests sont bienvenues. Le projet actif se trouve dans **`multiplateforme/`** ; la V2 est conservée en héritage.
 
-## Principes du projet
+## Choisir le bon emplacement
 
-Toute contribution doit respecter les règles suivantes :
+| Sujet | Emplacement |
+|---|---|
+| Interface et logique communes Android/iOS | `multiplateforme/shared/` |
+| Lecteur, stockage, audio et services Android | `multiplateforme/androidApp/` |
+| Hôte Apple et intégration Swift | `multiplateforme/iosApp/` |
+| Ponts natifs et révisions épinglées | `multiplateforme/native/` |
+| Règles de CI | `multiplateforme/policy/` et `.github/workflows/` |
+| Moteurs d'émulation | Dépôt [RavenCore](https://github.com/GhostPunishR/RavenCore) |
+| Site et wiki | `docs/` et `wiki/` |
 
-- écrire du code original pour RavenEmu ;
-- utiliser uniquement de la documentation technique publique et légalement accessible ;
-- ne pas copier, traduire ou adapter le code d'un autre émulateur ;
-- ne jamais ajouter de ROM commerciale, de BIOS protégé, de clé, de firmware ou de contenu soumis au droit d'auteur ;
-- conserver une architecture modulaire et extensible ;
-- documenter honnêtement les limites et les comportements encore incomplets ;
-- accepter que la contribution soit distribuée sous la licence AGPL-3.0 du dépôt, en conservant la paternité de son auteur.
+Voir [ARCHITECTURE.md](ARCHITECTURE.md). Une correction du moteur se fait dans RavenCore, puis sa révision épinglée est mise à jour séparément dans RavenEmu. Modifier les anciens modules V2 ne modifie pas la nouvelle application.
 
-Les homebrews et les données de test peuvent être utilisés uniquement si leur licence autorise clairement leur redistribution.
+## Avant de développer
 
-## Avant de commencer
+1. Recherchez une issue ou une PR similaire.
+2. Pour un chantier important, décrivez le besoin, le périmètre et la validation envisagée dans une issue.
+3. Créez une branche depuis `main` et gardez un objectif clair par PR.
 
-Pour une correction simple, vérifiez d'abord qu'une issue similaire n'existe pas.
+Pour une vulnérabilité, suivez [SECURITY.md](SECURITY.md) plutôt qu'une issue publique.
 
-Pour une modification importante, ouvrez une issue afin de décrire :
+## Environnement et vérifications
 
-- le problème ou le besoin ;
-- la solution envisagée ;
-- les modules concernés ;
-- les risques de régression ;
-- la méthode de validation prévue.
+Utilisez JDK 21, le Gradle Wrapper du dépôt et, pour Android, le SDK API 37 avec les outils natifs CMake/NDK. Le build iOS nécessite un Mac, Xcode, CMake et XcodeGen. Les instructions détaillées sont dans le [wiki Compilation](https://github.com/GhostPunishR/RavenEmu/wiki/Compilation).
 
-Les vulnérabilités ne doivent pas être publiées dans une issue. Consultez plutôt [la politique de sécurité](SECURITY.md).
+Depuis la racine du dépôt, choisissez les contrôles utiles à votre changement :
 
-## Environnement de développement
-
-Prérequis recommandés :
-
-- JDK 21 ;
-- Gradle Wrapper fourni avec le dépôt ;
-- SDK Android avec `compileSdk 37` pour les modules Android ;
-- Android NDK `30.0.16248370`, CMake `3.22.1` et un compilateur C++20.
-
-Les modules JVM peuvent être construits et testés sans SDK Android. Les moteurs se valident également sur l'hôte avec CMake.
-
-Commandes utiles :
-
-```bash
-# Tests des modules JVM
-./gradlew jvmTest
-
-# Tous les tests
-# CMake est requis : `engine:runtime` construit la bibliothèque native et
-# compare ses implémentations Kotlin de référence, Game Boy comme Game Boy
-# Advance, au cœur C++ réellement livré. Sans elle, la comparaison ne porterait
-# sur rien, aussi la tâche échoue plutôt que de s'ignorer.
-./gradlew test
-
-# Tests des moteurs C++
-cmake -S cores -B build/native-host -DRAVENEMU_BUILD_TESTS=ON
-cmake --build build/native-host --parallel
-ctest --test-dir build/native-host --output-on-failure
-
-# Analyse Android
-./gradlew lint
-
-# APK Debug
-./gradlew assembleDebug
+```sh
+./gradlew -p multiplateforme :androidApp:testDebugUnitTest
+./gradlew -p multiplateforme :androidApp:assembleDebug
+./gradlew -p multiplateforme :policy:test
 ```
 
-## Intégrité de la chaîne de construction
+Pour découvrir les tâches du module partagé :
 
-Le code exécuté pendant une construction ne se limite pas au dépôt : il y a aussi le wrapper Gradle, la distribution qu'il télécharge, les actions GitHub et les dépendances. Voici ce qui protège chacun de ces maillons.
-
-**Wrapper Gradle.** `gradle/wrapper/gradle-wrapper.jar` est un binaire versionné, exécuté avant tout le reste et relu par personne. La CI le compare aux empreintes publiées par Gradle **avant** de le lancer : un jar substitué dans une contribution est arrêté là. Ne remplacez jamais ce fichier à la main ; utilisez `./gradlew wrapper --gradle-version <version>`.
-
-**Distribution Gradle.** `distributionUrl` doit rester sur `https://services.gradle.org`, et `validateDistributionUrl=true` interdit qu'on l'en détourne. `distributionSha256Sum` va plus loin : le wrapper refuse l'archive téléchargée si son empreinte diffère, sur chaque poste comme en CI.
-
-En changeant de version de Gradle, il faut mettre cette empreinte à jour :
-
-1. relever l'empreinte « Binary-only (-bin) ZIP Checksum » de la nouvelle version sur <https://gradle.org/release-checksums/> ;
-2. la reporter dans `gradle/wrapper/gradle-wrapper.properties`.
-
-La CI confronte ensuite la valeur inscrite à celle que Gradle publie à côté de l'archive : épingler une empreinte ne protège que si c'est la bonne, et une valeur recopiée depuis une archive déjà substituée épinglerait la substitution.
-
-**Actions GitHub.** Elles sont épinglées par SHA de commit, jamais par étiquette de version : une étiquette peut être redéplacée, un SHA non. Leurs versions doivent être vérifiées et mises à jour manuellement afin que l'épinglage ne fige pas indéfiniment une version vulnérable.
-
-**Dépendances.** La vérification d'intégrité de Gradle (`gradle/verification-metadata.xml`) n'est pas encore activée. Elle exige des métadonnées couvrant **toutes** les configurations résolues, donc une machine disposant du SDK Android — sans lui, les modules Android sont exclus du build et les métadonnées produites seraient incomplètes, ce qui ferait échouer la CI à la première dépendance manquante. Pour la mettre en place :
-
-```bash
-./gradlew --write-verification-metadata sha256 help
+```sh
+./gradlew -p multiplateforme :shared:tasks
 ```
 
-Le fichier produit doit être relu avant d'être versionné, et complété à chaque ajout de dépendance.
+Sur macOS, la CI vérifie aussi :
 
-Ces règles étaient vérifiées par les tests du module `ci-policy` (V2, héritage, plus exécutés par la CI). Pour la version multiplateforme, les règles des workflows sont dans `multiplateforme/policy`.
+```sh
+./gradlew -p multiplateforme :shared:linkDebugFrameworkIosSimulatorArm64
+sh multiplateforme/native/build-ios.sh
+```
 
-## Règles de développement
+Ces commandes sélectionnent le projet actuel. Les commandes Gradle sans `-p multiplateforme` à la racine ciblent la V2.
 
-- Respectez le style du code existant.
-- Utilisez des noms explicites pour les classes, fonctions et variables.
-- Gardez les moteurs d'émulation indépendants d'Android.
-- Évitez les dépendances entre moteurs de consoles.
-- Placez l'exécution matérielle dans `cores/gb`, `cores/gbc` ou `cores/gba`, un dossier par organe, et gardez JNI limité aux types primitifs.
-- Placez les fonctionnalités partagées derrière les contrats de `engine/api`.
-- Ajoutez des tests synthétiques, déterministes et reproductibles.
-- Ne masquez pas un comportement incomplet derrière une valeur arbitraire.
-- Commentez les choix matériels complexes et indiquez la documentation consultée.
-- Ne journalisez aucune donnée personnelle ni aucun chemin sensible.
+Ajoutez une vérification de régression lorsque le changement modifie un comportement. Une compilation ou un test unitaire ne remplace pas un essai sur appareil : précisez séparément ce qui a été compilé, testé et observé.
 
-## Proposer une pull request
+## Règles essentielles
 
-1. Créez une branche à partir de `main`.
-2. Limitez la modification à un objectif clair.
-3. Ajoutez ou mettez à jour les tests nécessaires.
-4. Exécutez les tâches Gradle adaptées.
-5. Mettez à jour la documentation si le comportement visible change.
-6. Ouvrez une pull request avec une description précise.
+- Respectez les frontières des modules et le style du code existant.
+- Gardez les moteurs indépendants des plateformes et les appels à une instance native sérialisés.
+- Préservez les données et les identifiants des testeurs ; documentez toute migration ou incompatibilité.
+- Utilisez du code original et des références techniques publiques. Ne copiez, traduisez ou adaptez pas le code d'un autre émulateur.
+- N'ajoutez aucune ROM commerciale, aucun BIOS protégé, aucune clé ni donnée personnelle. Les données redistribuées doivent disposer d'une licence adaptée.
+- Ne présentez pas une fonction à migrer ou une validation restante comme terminée.
 
-La description doit indiquer :
+Les contributions relèvent de la [licence AGPL-3.0](LICENSE) et du [code de conduite](CODE_OF_CONDUCT.md). Les avis de licence des composants tiers doivent être conservés.
 
-- ce qui a été modifié ;
-- pourquoi la modification est nécessaire ;
-- comment elle a été testée ;
-- les limites connues ;
-- les issues associées.
+## Pull request
 
-Les captures d'écran sont recommandées pour toute modification de l'interface.
+Indiquez le problème, le résultat obtenu, les modules concernés, les commandes réellement exécutées et les limites restantes. Pour une modification d'interface, ajoutez une capture sans données privées si possible.
 
-## Rapports de compatibilité
+Si une vérification n'a pas pu être effectuée, dites laquelle et pourquoi. Le [modèle de PR](.github/PULL_REQUEST_TEMPLATE.md) vous guide.
 
-Un rapport utile doit préciser :
+## Documentation et rapports
 
-- la console concernée ;
-- la version ou le commit testé ;
-- l'appareil et la version Android ;
-- le comportement attendu ;
-- le comportement observé ;
-- les étapes permettant de reproduire le problème.
+Le site se trouve dans `docs/`. Les pages sources du wiki sont dans `wiki/` et sont synchronisées après leur fusion dans `main`. Conservez les noms de page, actualisez `_Sidebar.md` si nécessaire et n'utilisez pas de tiret cadratin dans le wiki : son workflow le refuse.
 
-Ne joignez jamais une ROM commerciale, un BIOS ou une sauvegarde contenant des données protégées.
+Pour un bug ou un résultat de compatibilité, indiquez **le commit ou le lien du build**, la plateforme, l'appareil ou l'environnement, les étapes et les réglages concernés. Les noms de préversion seuls ne distinguent pas toujours les builds.
 
-## Relecture
+Consultez le [dépannage](https://github.com/GhostPunishR/RavenEmu/wiki/Depannage), la [matrice de compatibilité](https://github.com/GhostPunishR/RavenEmu/wiki/Compatibilite-des-jeux) et [RELEASING.md](RELEASING.md) pour la distribution actuelle.
 
-Une contribution peut être refusée si elle introduit du code non original, réduit la séparation entre modules, manque de tests ou présente un risque juridique. Une demande de modification ne constitue pas un rejet définitif.
+## Intégrité de la construction
 
-En participant au projet, vous acceptez également le [code de conduite](CODE_OF_CONDUCT.md).
+Les actions GitHub et les révisions natives sont épinglées par SHA. Le Wrapper est validé en CI et la distribution Gradle doit conserver son empreinte `distributionSha256Sum`. Lors d'une mise à jour, vérifiez les références et empreintes officielles ; ne remplacez pas le JAR du Wrapper à la main et ne versionnez aucun secret.
+
+Les règles actives sont dans `multiplateforme/policy/`. Les procédures de la V2 sont conservées dans [les archives](legacy-docs/RELEASING-V2.md).

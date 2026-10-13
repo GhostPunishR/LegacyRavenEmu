@@ -1,102 +1,51 @@
-## Description
+## Changement
 
-Décrivez clairement ce qui a été modifié et le résultat attendu.
+Décrivez le problème et le comportement obtenu. Ajoutez l'issue associée si elle existe.
 
-## Motivation
+## Périmètre
 
-Expliquez le problème résolu ou le besoin couvert.
+Cochez uniquement les parties touchées. Le projet actif est `multiplateforme/` ; voir [ARCHITECTURE.md](https://github.com/GhostPunishR/RavenEmu/blob/main/ARCHITECTURE.md).
 
-Issue associée : #
+- [ ] `multiplateforme/shared/` : interface et logique communes
+- [ ] `multiplateforme/androidApp/` : hôte et lecteur Android
+- [ ] `multiplateforme/iosApp/` : hôte Apple
+- [ ] `multiplateforme/native/` : ponts et révisions épinglées
+- [ ] `multiplateforme/policy/`, Gradle ou GitHub Actions
+- [ ] Documentation, site ou wiki
+- [ ] Héritage V2 : expliquez pourquoi cette modification est nécessaire
 
-## Modules concernés
-
-Les frontières sont celles d'[ARCHITECTURE.md](https://github.com/GhostPunishR/RavenEmu/blob/main/ARCHITECTURE.md),
-du bas de la pile vers le haut. Cochez les couches réellement touchées : une
-modification qui en traverse plusieurs mérite d'être justifiée dans la
-description.
-
-Cœurs C++ (`cores/`, aucune connaissance de JNI, de la JVM ni d'Android) :
-
-- [ ] `cores/common`
-- [ ] `cores/gb`
-- [ ] `cores/gbc`
-- [ ] `cores/gba`
-
-Frontière native :
-
-- [ ] `native/api`
-- [ ] `native/jni`
-
-Moteur (`engine/`, Kotlin/JVM pur, jamais dépendant d'Android) :
-
-- [ ] `engine/api`
-- [ ] `engine/runtime`
-- [ ] `engine/session`
-- [ ] `engine/state`, `engine/save`, `engine/audio` ou `engine/diagnostics`
-
-Plateforme et produit :
-
-- [ ] `platform/android/*` (audio, renderer, input, storage, vibration, lifecycle)
-- [ ] `features/*` (library, player, settings, skins, savestates, diagnostics)
-- [ ] `app/android`
-
-Outillage :
-
-- [ ] `build-logic`, `gradle` ou `tools`
-- [ ] Documentation, site ou Wiki
-- [ ] GitHub Actions
-
-## Type de modification
-
-- [ ] Correction
-- [ ] Fonctionnalité
-- [ ] Refactorisation
-- [ ] Performance
-- [ ] Tests
-- [ ] Documentation
-- [ ] Construction ou automatisation
+Une correction du moteur relève de RavenCore. Si sa révision épinglée change, liez la PR ou le commit RavenCore et décrivez la validation de l'intégration.
 
 ## Validation
 
-Indiquez les commandes exécutées et leurs résultats. Les commandes sont celles
-du [guide de contribution](https://github.com/GhostPunishR/RavenEmu/blob/main/CONTRIBUTING.md).
+Listez les commandes **réellement exécutées**, leurs résultats et les essais manuels. Choisissez selon le périmètre :
 
-Sans SDK Android :
+```sh
+./gradlew -p multiplateforme :androidApp:testDebugUnitTest
+./gradlew -p multiplateforme :androidApp:assembleDebug
+./gradlew -p multiplateforme :policy:test
+```
 
-- [ ] `./gradlew jvmTest`
-- [ ] `cmake -S cores -B build/native-host -DRAVENEMU_BUILD_TESTS=ON` puis `ctest --test-dir build/native-host --output-on-failure`
+Sur macOS, si concerné :
 
-Avec SDK Android :
+```sh
+./gradlew -p multiplateforme :shared:linkDebugFrameworkIosSimulatorArm64
+sh multiplateforme/native/build-ios.sh
+```
 
-- [ ] `./gradlew test`
-- [ ] `./gradlew lint`
-- [ ] `./gradlew assembleDebug`
-- [ ] Test manuel sur Android
+Pour une validation sur appareil, précisez le modèle, le système et le scénario. Pour une modification visuelle, ajoutez une capture sans données privées si possible.
 
-Autre :
+Vérifications non exécutées et raison :
 
-- [ ] Documentation mise à jour si nécessaire
+## Compatibilité et limites
 
-Si une commande n'a pas pu être exécutée, dites-le ici plutôt que de laisser la
-case vide sans explication : une validation manquante qu'on annonce se rattrape,
-une validation manquante qu'on tait se découvre en production.
+Décrivez les risques ou cas non testés et les effets sur les sauvegardes, formats, réglages et identifiants. Une compilation réussie ne suffit pas à annoncer un lecteur iOS jouable ou un succès RetroAchievements synchronisé.
 
-## Références techniques
+Références techniques publiques utilisées, si nécessaire :
 
-Listez les documents publics utilisés pour les comportements matériels ou les formats de fichiers.
+## Avant envoi
 
-## Captures d’écran
-
-Ajoutez des captures pour toute modification visible de l’interface. Retirez les données personnelles avant publication.
-
-## Limites connues
-
-Décrivez les comportements encore incomplets, les risques et les cas non testés.
-
-## Vérifications juridiques et communautaires
-
-- [ ] Le code proposé est original et écrit pour RavenEmu.
-- [ ] Aucun code d’un autre émulateur n’a été copié, traduit ou adapté.
-- [ ] Aucun BIOS, aucune ROM, aucune clé et aucun contenu protégé n’est ajouté.
-- [ ] Les tests utilisent uniquement des données synthétiques ou redistribuables.
-- [ ] La contribution respecte le guide de contribution et le code de conduite.
+- [ ] La contribution respecte le [guide](https://github.com/GhostPunishR/RavenEmu/blob/main/CONTRIBUTING.md) et le code de conduite.
+- [ ] Aucun code d'un autre émulateur n'est copié, traduit ou adapté.
+- [ ] Aucun contenu protégé, secret ou fichier personnel n'est ajouté ; les données de test sont synthétiques ou redistribuables.
+- [ ] La documentation est actualisée lorsque le comportement visible change.

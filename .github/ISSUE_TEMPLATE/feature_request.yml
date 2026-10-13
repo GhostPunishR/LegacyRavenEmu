@@ -1,27 +1,40 @@
 name: "Demande de fonctionnalité"
-description: "Proposer une amélioration ciblée pour RavenEmu"
+description: "Proposer une amélioration ciblée pour le projet multiplateforme"
 title: "[Fonctionnalité] "
 body:
   - type: markdown
     attributes:
       value: |
-        Décrivez le besoin avant la solution. Une proposition concernant un moteur d’émulation doit reposer sur une documentation technique publique et ne doit intégrer aucun code provenant d’un autre émulateur.
+        Décrivez le besoin avant la solution. Consultez la [feuille de route](https://github.com/GhostPunishR/RavenEmu/wiki/Feuille-de-route) : le lecteur iOS, les skins et certaines validations restent en cours.
+        Pour une évolution du moteur, identifiez la partie RavenCore et utilisez des références techniques publiques.
+
+  - type: dropdown
+    id: target
+    attributes:
+      label: "Cible"
+      options:
+        - "Interface ou logique communes Android/iOS"
+        - "Android"
+        - "iOS"
+        - "Moteurs RavenCore ou intégration native"
+        - "Construction ou CI"
+        - "Documentation, site ou wiki"
+    validations:
+      required: true
 
   - type: dropdown
     id: area
     attributes:
       label: "Domaine"
       options:
-        - "Game Boy"
-        - "Game Boy Color"
-        - "Game Boy Advance"
-        - "Bibliothèque de jeux"
-        - "Commandes"
+        - "Game Boy / Game Boy Color / Game Boy Advance"
+        - "Bibliothèque, import ou jaquettes"
+        - "Commandes ou skins"
         - "Affichage ou audio"
-        - "Sauvegardes ou états instantanés"
-        - "Application Android"
+        - "Sauvegardes, états ou transferts"
+        - "RetroAchievements"
         - "Architecture ou outils"
-        - "Documentation ou site"
+        - "Documentation, site ou wiki"
         - "Autre"
     validations:
       required: true
@@ -37,8 +50,8 @@ body:
   - type: textarea
     id: proposal
     attributes:
-      label: "Solution proposée"
-      description: "Décrivez le comportement attendu et le périmètre envisagé."
+      label: "Comportement proposé"
+      description: "Décrivez le résultat attendu, le périmètre et un scénario permettant de le valider."
     validations:
       required: true
 
@@ -46,24 +59,22 @@ body:
     id: alternatives
     attributes:
       label: "Solutions alternatives"
-      description: "Indiquez les autres approches étudiées, si elles existent."
+      description: "Facultatif : autres approches étudiées."
 
   - type: textarea
     id: references
     attributes:
-      label: "Références techniques"
-      description: "Pour une évolution matérielle, ajoutez les références publiques utilisées."
+      label: "Références et compatibilité"
+      description: "Références publiques pour le matériel ou les formats ; conséquences sur les sauvegardes, réglages ou plateformes si concerné."
 
   - type: checkboxes
     id: confirmations
     attributes:
-      label: "Confirmations"
+      label: "Avant envoi"
       options:
-        - label: "J’ai recherché une proposition similaire dans les issues existantes."
+        - label: "J'ai recherché une proposition similaire."
           required: true
-        - label: "La proposition ne nécessite aucun code copié, traduit ou adapté depuis un autre émulateur."
+        - label: "La proposition ne nécessite pas de code copié, traduit ou adapté d'un autre émulateur, ni de contenu protégé."
           required: true
-        - label: "La proposition ne demande aucune ROM, aucun BIOS ni aucun contenu protégé."
-          required: true
-        - label: "J’accepte le code de conduite du projet."
+        - label: "J'accepte le code de conduite du projet."
           required: true
