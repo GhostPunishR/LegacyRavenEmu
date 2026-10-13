@@ -2,7 +2,7 @@
 
 Site statique publié avec GitHub Pages depuis `main`, dossier `docs/`. Aucune dépendance ni compilation : ouvrir `index.html` ou servir ce dossier avec un serveur HTTP local.
 
-Direction visuelle : sombre minimaliste, composition centrée sur le produit, violet discret. Pas d'animation, de transition ou de défilement animé. Le visuel de console de l'ancien site n'est plus utilisé. L'aperçu de bibliothèque est réalisé en HTML/CSS et explicitement présenté comme conceptuel ; les jeux et visuels sont des exemples illustratifs, pas une capture de l'application ni du contenu fourni.
+Direction visuelle : sombre minimaliste, composition centrée sur le produit, violet discret. Pas d'animation, de transition ou de défilement animé. Le visuel de console de l'ancien site n'est plus utilisé. Le bloc de présentation utilise une capture réelle de la bibliothèque Android vide (`assets/ravenemu-library-android.jpg`), fournie par le créateur. Elle est affichée sans retouche, avec un lien pour l'agrandir et des instructions d'import. Aucun jeu fictif ni contrôle décoratif n'est présenté.
 
 - `index.html` : expérience Android, état des plateformes, installation de la bêta, ressources et FAQ.
 - `assets/styles.css` : composition et styles responsive.

@@ -54,35 +54,19 @@ h1 span { color: var(--accent); }
 .button-quiet:hover { border-color: var(--accent); }
 .hero-note { margin-top: 18px; font-size: .72rem; }
 .hero-note span { padding-inline: 9px; color: #70687d; }
-.product-preview { margin: 56px auto 0; padding: 26px 32px 16px; max-width: 890px; background: #15161f; border: 1px solid #363441; border-radius: 14px; box-shadow: 0 25px 70px #00000050; }
-.preview-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; }
-.preview-brand { letter-spacing: .18em; font-size: .63rem; font-weight: 600; color: #c3b5de; }
-.preview-heading { font-size: .86rem; font-weight: 600; }
-.preview-layout { justify-self: end; color: #c3b5de; font-size: 1.2rem; }
-.preview-search { display: flex; align-items: center; gap: 10px; border: 1px solid #353644; border-radius: 6px; padding: 9px 12px; margin: 22px 0; color: #a9a6b9; font-size: .72rem; background: #101118; }
-.preview-search > span:first-child { font-size: 1.15rem; line-height: 1; }
-.preview-add { margin-left: auto; color: #c9b5fc; font-size: 1.15rem; line-height: 1; }
-.game-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-.game-example { min-width: 0; }
-.game-art { aspect-ratio: 4 / 5; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 13px 10px; background: #29322e; border: 1px solid #3d4940; border-radius: 4px; color: #c4d2bd; }
-.art-label { align-self: start; font-size: .45rem; letter-spacing: .16em; }
-.art-platform { font-size: .5rem; font-weight: 650; letter-spacing: .12em; text-align: center; }
-.art-gbc { background: #322a46; border-color: #4d3d6a; color: #d0bef0; }
-.art-gba { background: #253041; border-color: #394862; color: #bdcfe9; }
-.art-alternate { background: #32343b; border-color: #484b55; color: #d5d6dd; }
-.device { width: 60%; max-width: 89px; height: 65%; max-height: 138px; border: 1.5px solid currentColor; border-radius: 6px 6px 20px 6px; padding: 10px 8px; display: flex; flex-direction: column; justify-content: space-between; }
-.device-screen { display: block; width: 100%; height: 49%; border: 1px solid currentColor; border-radius: 2px; background: #101712; opacity: .75; }
-.device-controls { display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; line-height: 1; }
-.device-controls i { font-size: .6rem; font-style: normal; }
-.device-gbc .device-screen { background: #211931; }
-.device-gba { width: 90%; max-width: 140px; height: 36%; border-radius: 13px; display: grid; place-items: center; padding: 8px 25px; }
-.device-gba .device-screen { height: 100%; background: #141c29; }
-.game-title { display: block; font-size: .73rem; margin-top: 12px; color: #eeebf7; }
-.game-system { display: block; font-size: .61rem; color: #a8a4b8; margin-top: 3px; }
-.preview-bottom { display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid #30313e; margin-top: 24px; padding-top: 15px; color: #b0a9c4; font-size: .58rem; }
-.preview-page { display: flex; gap: 18px; color: #d3befe; }
-.preview-page span { color: #a8a4b8; }
-.product-preview figcaption { text-align: center; font-size: .6rem; color: #a6a1b6; margin-top: 18px; }
+.product-preview { display: grid; grid-template-columns: 1fr 240px; align-items: center; gap: 70px; margin: 56px auto 0; padding: 40px; max-width: 890px; background: #13141b; border: 1px solid #30313e; border-radius: 12px; }
+.library-intro { min-width: 0; }
+.library-intro h2 { font-size: clamp(2rem, 3.4vw, 2.8rem); }
+.library-intro > p:not(.eyebrow) { font-size: .9rem; margin-top: 22px; }
+.library-steps { list-style: none; display: grid; gap: 20px; padding: 0; margin: 28px 0; }
+.library-steps strong { display: block; font-size: .88rem; font-weight: 600; }
+.library-steps span { display: block; color: var(--muted); font-size: .81rem; margin-top: 6px; }
+.library-steps b { color: var(--accent); }
+.library-capture { width: 100%; max-width: 240px; justify-self: center; }
+.library-capture img { width: 100%; height: auto; border: 1px solid #393b46; border-radius: 8px; }
+.library-capture figcaption { text-align: center; font-size: .7rem; color: var(--muted); margin-top: 14px; }
+.library-capture figcaption a { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--accent); }
+.library-capture figcaption a:hover { text-decoration: underline; }
 .principles { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px 44px; margin-top: 38px; padding-bottom: 48px; color: var(--muted); font-size: .73rem; border-bottom: 1px solid var(--line); }
 .principles span::before { content: "·"; margin-right: 9px; color: var(--accent); }
 .section { padding: 100px 0; }
@@ -163,23 +147,13 @@ pre code { overflow-wrap: normal; }
   .install-steps { gap: 26px; }
 }
 @media (max-width: 760px) {
+  .product-preview { grid-template-columns: 1fr; gap: 32px; margin-top: 40px; padding: 28px; }
   .container { width: calc(100% - 40px); }
   .header-inner { grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 0 12px; }
   .site-nav { grid-column: 1 / -1; grid-row: 2; justify-content: center; gap: 28px; }
   .header-link { grid-column: 2; grid-row: 1; }
   .hero { padding-top: 48px; }
   .hero-lead { font-size: .94rem; }
-  .product-preview { margin-top: 40px; padding: 20px 20px 14px; }
-  .game-grid { gap: 14px; }
-  .game-title { font-size: .66rem; }
-  .game-system { font-size: .55rem; }
-  .game-art { padding: 9px 7px; }
-  .art-label { font-size: .38rem; }
-  .art-platform { font-size: .39rem; }
-  .device { padding: 7px 5px; border-radius: 4px 4px 12px 4px; }
-  .device-gba { padding: 5px 15px; border-radius: 9px; }
-  .device-controls { font-size: .8rem; }
-  .device-controls i { font-size: .42rem; }
   .principles { gap: 12px 26px; padding-bottom: 36px; font-size: .68rem; }
   .section { padding: 64px 0; }
   .experience .section-heading { display: block; }
@@ -205,20 +179,10 @@ pre code { overflow-wrap: normal; }
   .footer-bottom p { text-align: left; }
 }
 @media (max-width: 440px) {
+  .product-preview { padding: 22px; }
+  .library-capture { max-width: 230px; }
   h1 { font-size: clamp(2.4rem, 10vw, 3rem); }
   .hero-actions { flex-direction: column; }
-  .product-preview { padding: 16px 14px 12px; }
-  .preview-brand { font-size: .49rem; }
-  .preview-heading { font-size: .7rem; }
-  .preview-search { font-size: .64rem; margin: 16px 0; }
-  .game-grid { grid-template-columns: repeat(2, 1fr); gap: 20px 14px; }
-  .game-art { padding: 11px 9px; }
-  .art-label { font-size: .43rem; }
-  .art-platform { font-size: .46rem; }
-  .device { padding: 9px 7px; }
-  .device-gba { padding: 6px 20px; }
-  .preview-bottom { flex-direction: column; gap: 9px; }
-  .product-preview figcaption { font-size: .56rem; }
   .install-panel { padding: 24px; }
   .platform-title h3 { font-size: 1.6rem; }
   .site-nav { gap: 20px; font-size: .73rem; }
