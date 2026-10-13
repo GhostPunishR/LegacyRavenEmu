@@ -91,7 +91,7 @@ La CI confronte ensuite la valeur inscrite à celle que Gradle publie à côté 
 
 Le fichier produit doit être relu avant d'être versionné, et complété à chaque ajout de dépendance.
 
-Ces règles sont vérifiées automatiquement par les tests du module `ci-policy`.
+Ces règles étaient vérifiées par les tests du module `ci-policy` (V2, héritage, plus exécutés par la CI). Pour la version multiplateforme, les règles des workflows sont dans `multiplateforme/policy`.
 
 ## Règles de développement
 

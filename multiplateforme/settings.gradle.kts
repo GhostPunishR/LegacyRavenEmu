@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "RavenEmuMultiplateforme"
-include(":shared", ":androidApp")
+include(":shared", ":androidApp", ":policy")

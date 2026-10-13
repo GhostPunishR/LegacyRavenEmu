@@ -2,7 +2,7 @@
 
 Nouvelle version de RavenEmu, à l'interface **identique sur Android et iOS** : l'application installée s'appelle simplement **RavenEmu**. Le projet vit dans `multiplateforme/` (anciennement `v3/`, nom encore utilisé dans l'historique ci-dessous, les paquets Kotlin `com.ravenemu.v3` et l'identifiant Android `com.ravenemu.v3.preview`, conservés pour ne pas perdre les données des testeurs). Son workflow est `.github/workflows/multiplateforme.yml`, qui produit l'APK bêta `ravenemu-android-beta`.
 
-La V2 0.8.1 (racine du dépôt : `app/`, `engine/`, `features/`…) n'est plus construite automatiquement : son workflow `android.yml` ne se lance plus qu'à la main. Elle s'installe à côté de cette version sans être remplacée, les deux applications ayant des identifiants différents.
+**Le projet tourne désormais autour de cette version.** Le code hors de ce dossier, dont la V2 0.8.1 (`app/`, `engine/`, `features/`, `cores/`…), est conservé en héritage et n'est plus construit par la CI : `multiplateforme.yml` est le seul workflow de construction, et la règle `multiplateforme/policy` refuse tout appel Gradle ou CMake qui ne vise pas ce dossier. La V2 s'installe à côté de cette version sans être remplacée, les deux applications ayant des identifiants différents.
 
 ## État de la V3
 
@@ -50,7 +50,7 @@ La V2 0.8.1 (racine du dépôt : `app/`, `engine/`, `features/`…) n'est plus c
 
 **Étape 17, Game Boy Advance (Android V3) et icônes de console :** le bouton + et l'import de dossier acceptent les `.gba`, lancés sur le cœur GBA de RavenCore (même révision épinglée, BIOS intégré à RavenCore : aucun fichier BIOS à fournir). La limite de taille d'une ROM passe à 32 Mio, la taille maximale d'une cartouche GBA. Le lecteur suit les dimensions de l'image du cœur (240 × 160 en GBA) et ajoute les gâchettes L et R au-dessus de la croix et des boutons A/B pour les jeux GBA. Les miniatures des save states gardent la taille native. RetroAchievements reçoit la console Game Boy Advance (5) et les jaquettes en ligne, si l'option est activée, viennent du catalogue `Nintendo - Game Boy Advance`. Le type de sauvegarde et l'horloge des cartouches sont détectés automatiquement par RavenCore. Sous la bibliothèque, les points de l'indicateur de pages sont remplacés par des pictogrammes de console dessinés pour RavenEmu (grille pour « Tous les jeux », console verticale pour Game Boy, la même avec un écran en couleurs pour Game Boy Color, console horizontale pour Game Boy Advance) ; toucher une icône ouvre sa page.
 
-**Étape 18, nom et dossier définitifs :** le dossier `v3/` devient `multiplateforme/` et son workflow `multiplateforme.yml` (qui tourne aussi sur `main`) ; l'APK bêta s'appelle `ravenemu-android-beta`. L'application installée s'appelle **RavenEmu** sur Android comme sur iOS, avec l'icône d'origine. Les identifiants techniques (`com.ravenemu.v3.preview`, paquets `com.ravenemu.v3`, clé Keystore RetroAchievements, format des archives de sauvegarde) restent inchangés : une mise à jour garde la bibliothèque, les sauvegardes et la connexion RetroAchievements. Le workflow de la V2 0.8.1 ne se lance plus qu'à la main ; les règles du dépôt tournent dans `repository-policy.yml`.
+**Étape 18, nom et dossier définitifs :** le dossier `v3/` devient `multiplateforme/` et son workflow `multiplateforme.yml` (qui tourne aussi sur `main`) ; l'APK bêta s'appelle `ravenemu-android-beta`. L'application installée s'appelle **RavenEmu** sur Android comme sur iOS, avec l'icône d'origine. Les identifiants techniques (`com.ravenemu.v3.preview`, paquets `com.ravenemu.v3`, clé Keystore RetroAchievements, format des archives de sauvegarde) restent inchangés : une mise à jour garde la bibliothèque, les sauvegardes et la connexion RetroAchievements. Les workflows de la V2 (`android.yml`) et de ses règles (`tools/ci-policy`) sont retirés : la CI ne construit plus que ce dossier. Le job « Règles du dépôt » de `multiplateforme.yml` exécute `multiplateforme/policy` (actions épinglées par SHA, identifiants git non conservés, aucun secret dans les journaux, permissions déclarées, aucune construction hors de `multiplateforme/`) et vérifie l'empreinte de la distribution Gradle. Le pont des succès, copié de la V2 figée, est désormais maintenu ici.
 
 **Encore à réaliser :** validation sur téléphone de l'authentification RA, reconnaissance Game Boy (notamment Pokémon Bleu), de l'affichage des badges et d'un déblocage synchronisé, import iOS/lecteur jouable, validation sur téléphone de jeux Game Boy Color et Game Boy Advance (performances GBA notamment), skins Delta.
 
@@ -61,6 +61,8 @@ multiplateforme/
   shared/       UI Compose et logique Kotlin Multiplatform
   androidApp/   Activité Android et packaging de prévisualisation
   iosApp/       Hôte iOS SwiftUI + spécification XcodeGen
+  native/       Pont C/JNI vers RavenCore (révision épinglée)
+  policy/       Règles de la CI (tests JVM, sans SDK)
 ```
 
 Le code d'émulation reste dans [RavenCore](https://github.com/GhostPunishR/RavenCore). Une API C de préversion existe désormais pour les moteurs C++20, utilisée côté Android par JNI et côté iOS par Swift. **Libretro n'est pas l'interface native de l'application.**

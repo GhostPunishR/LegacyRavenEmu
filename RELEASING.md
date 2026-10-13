@@ -4,7 +4,9 @@ Ce document décrit l'APK Test continu et les futures versions numérotées sign
 
 ## APK Test continu
 
-Après chaque construction réussie de `main`, GitHub Actions met à jour la préversion `test-latest`. **Depuis le passage à la version multiplateforme, le workflow `android.yml` de la V2 0.8.1 ne se lance plus qu'à la main** (onglet Actions → « Android CI (V2 0.8.1) » → « Run workflow ») : `test-latest` n'est mis à jour que lors d'une telle exécution sur `main`. L'APK bêta de la nouvelle version est produit par `multiplateforme.yml`.
+> **Héritage.** Ce document décrit la publication de la V2 0.8.1. Depuis le passage à la version multiplateforme, son workflow `android.yml` a été retiré : la CI ne construit plus que `multiplateforme/` (`multiplateforme.yml`, qui produit l'APK bêta). `test-latest` reste à sa dernière publication. Les procédures ci-dessous restent valables pour une construction locale de la V2, ou pour rétablir ce workflow depuis l'historique git si un correctif de la 0.8.1 devait être publié.
+
+Avant ce changement, après chaque construction réussie de `main`, GitHub Actions mettait à jour la préversion `test-latest`.
 
 Cette préversion contient :
 

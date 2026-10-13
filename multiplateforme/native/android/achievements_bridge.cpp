@@ -1,5 +1,5 @@
-// Port of V2's official rcheevos adapter (native/jni/src/achievements_bridge.cpp).
-// Only the JNI package changes for V3; everything else stays identical.
+// Ported from the V2 0.8.1 rcheevos adapter (native/jni/src/achievements_bridge.cpp,
+// now legacy and frozen). This copy is the maintained one from here on.
 #include <jni.h>
 #include <rc_client.h>
 #include <rc_error.h>
