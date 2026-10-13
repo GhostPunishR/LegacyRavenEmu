@@ -10,6 +10,7 @@ import android.util.Log
 import android.widget.Toast
 import java.io.File
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.locks.LockSupport
 import java.text.DateFormat
 import java.util.Date
 import androidx.activity.ComponentActivity
@@ -47,19 +48,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToLong
 
-private data class CapturedGbFrame(
-    val bitmap: ImageBitmap,
-    val coreTimeNanos: Long,
-    val conversionTimeNanos: Long,
-    val audioFailure: String?,
-)
-
 class MainActivity : ComponentActivity() {
     private lateinit var gameSession: AndroidGbSession
     private var retroController: V3AchievementsController? = null
     private var foreground by mutableStateOf(false)
-    private var activeAudio: AndroidGbAudioOutput? = null
-    private var lastAudioReport: String = "Aucune session audio enregistrée.\n"
+    // Written by the emulation thread, read by the UI thread.
+    @Volatile private var activeAudio: AndroidGbAudioOutput? = null
+    @Volatile private var lastAudioReport: String = "Aucune session audio enregistrée.\n"
 
     override fun onResume() {
         super.onResume()
@@ -354,8 +349,7 @@ class MainActivity : ComponentActivity() {
                 val pixels = IntArray(currentGame.width * currentGame.height)
                 // More than one GB frame of interleaved stereo, reused per frame.
                 val samples = ShortArray(4096)
-                var due = System.nanoTime()
-                var lastBatteryCheckNanos = due
+                val images = GbFrameBitmaps(currentGame.width, currentGame.height)
                 var output: AndroidGbAudioOutput? = null
 
                 try {
@@ -373,97 +367,85 @@ class MainActivity : ComponentActivity() {
                         audioStatus = "Audio indisponible : ${error.message ?: "Erreur AudioTrack"}"
                     }
 
-                    while (isActive) {
-                        try {
-                            // One synchronized native frame + PCM read, then one
-                            // non-blocking audio submission on the worker.
-                            val sink = output
-                            val captured = withContext(Dispatchers.Default) {
+                    // The whole loop runs on the dedicated emulation thread
+                    // (see GbEmulationThread): no per-frame round trip to the
+                    // UI thread, nanosecond pacing, and late frames are caught
+                    // up rather than dropped, so the audio never starves.
+                    withContext(gbEmulationDispatcher) {
+                        val pacer = GbFramePacer(periodNanos)
+                        pacer.reset(System.nanoTime())
+                        var lastBatteryCheckNanos = System.nanoTime()
+                        while (isActive) {
+                            try {
+                                // A late frame is still emulated and heard;
+                                // only its image is skipped (see GbFramePacer).
+                                val renderVideo = pacer.shouldRender(System.nanoTime())
                                 val nativeStart = System.nanoTime()
                                 val sampleCount =
-                                    gameSession.nextFrameWithAudioInto(pixels, samples)
-                                        ?: return@withContext null
+                                    gameSession.nextFrameWithAudioInto(pixels, samples) ?: break
                                 val nativeElapsed = System.nanoTime() - nativeStart
-                                var audioFailure: String? = null
+                                // One non-blocking audio submission per frame.
+                                val sink = output
                                 if (sink != null) {
                                     try {
                                         sink.submit(samples, sampleCount)
                                     } catch (error: Exception) {
-                                        audioFailure = error.message ?: "Sortie audio interrompue"
                                         sink.stopNow()
+                                        audioStatus = "Audio interrompu : ${error.message ?: "Sortie audio interrompue"}"
+                                        if (activeAudio === sink) activeAudio = null
+                                        lastAudioReport = sink.exportReport()
+                                        sink.close()
+                                        output = null
                                     }
                                 }
-                                val conversionStart = System.nanoTime()
-                                GbDisplayFilter.apply(
-                                    pixels, playbackSettings, currentGame.platform,
-                                )
-                                val image = Bitmap.createBitmap(
-                                    pixels, currentGame.width, currentGame.height,
-                                    Bitmap.Config.ARGB_8888,
-                                ).asImageBitmap()
-                                CapturedGbFrame(
-                                    bitmap = image,
-                                    coreTimeNanos = nativeElapsed,
-                                    conversionTimeNanos = System.nanoTime() - conversionStart,
-                                    audioFailure = audioFailure,
-                                )
-                            } ?: break
+                                var conversionNanos = 0L
+                                if (renderVideo) {
+                                    val conversionStart = System.nanoTime()
+                                    GbDisplayFilter.apply(
+                                        pixels, playbackSettings, currentGame.platform,
+                                    )
+                                    frame = images.publish(pixels)
+                                    conversionNanos = System.nanoTime() - conversionStart
+                                }
 
-                            // The official SDK evaluates each emulated frame
-                            // using observational reads, on its dedicated
-                            // thread. Network requests never block this call.
-                            try {
-                                retro.frame()
-                            } catch (error: Exception) {
-                                Log.w("RavenEmuRetro", "rcheevos frame unavailable", error)
-                            }
-                            frame = captured.bitmap
-                            if (captured.audioFailure != null) {
-                                audioStatus = "Audio interrompu : ${captured.audioFailure}"
-                                if (activeAudio === output) activeAudio = null
-                                output?.let { lastAudioReport = it.exportReport() }
-                                output?.close()
-                                output = null
-                            }
-                            val now = System.nanoTime()
-                            if (now - lastBatteryCheckNanos >= 5_000_000_000L) {
-                                lastBatteryCheckNanos = now
-                                scope.launch(Dispatchers.IO) {
-                                    try {
-                                        gameSession.saveBatteryIfDirty()
-                                    } catch (error: Exception) {
-                                        Log.e("RavenEmuSaves", "Battery autosave failed", error)
+                                // The official SDK evaluates each emulated frame
+                                // using observational reads, on its dedicated
+                                // thread. Network requests never block this call.
+                                try {
+                                    retro.frame()
+                                } catch (error: Exception) {
+                                    Log.w("RavenEmuRetro", "rcheevos frame unavailable", error)
+                                }
+                                val now = System.nanoTime()
+                                if (now - lastBatteryCheckNanos >= 5_000_000_000L) {
+                                    lastBatteryCheckNanos = now
+                                    scope.launch(Dispatchers.IO) {
+                                        try {
+                                            gameSession.saveBatteryIfDirty()
+                                        } catch (error: Exception) {
+                                            Log.e("RavenEmuSaves", "Battery autosave failed", error)
+                                        }
                                     }
                                 }
-                            }
-                            val sample = stats.record(
-                                now,
-                                captured.coreTimeNanos,
-                                captured.conversionTimeNanos,
-                            )
-                            if (sample != null) {
-                                videoMetrics = sample
-                                if (captured.audioFailure == null) {
+                                val sample = stats.record(now, nativeElapsed, conversionNanos)
+                                if (sample != null) {
+                                    videoMetrics = sample
                                     output?.let {
+                                        it.recordVideo(sample.actualFps, sample.coreMs, sample.conversionMs)
                                         lastAudioReport = it.exportReport()
                                         Log.d("RavenEmuAudio", it.diagnostics())
                                     }
                                 }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (error: Exception) {
+                                videoError = error.message ?: "Erreur de rendu Game Boy."
+                                frame = null
+                                break
                             }
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (error: Exception) {
-                            videoError = error.message ?: "Erreur de rendu Game Boy."
-                            frame = null
-                            break
-                        }
 
-                        due += periodNanos
-                        val remaining = due - System.nanoTime()
-                        if (remaining > 0) {
-                            delay((remaining / 1_000_000L).coerceAtLeast(1L))
-                        } else if (remaining < -periodNanos) {
-                            due = System.nanoTime()
+                            val wait = pacer.nextWaitNanos(System.nanoTime())
+                            if (wait > 0) LockSupport.parkNanos(wait)
                         }
                     }
                 } finally {
@@ -1003,7 +985,8 @@ class MainActivity : ComponentActivity() {
                 onSaveState = { slot ->
                     if (!stateOperationBusy && loadedGame != null && videoEnabled) {
                         stateOperationBusy = true
-                        val screenshot = frame?.asAndroidBitmap()
+                        // Private copy: the player reuses its images in rotation.
+                        val screenshot = frame?.asAndroidBitmap()?.copy(Bitmap.Config.ARGB_8888, false)
                         scope.launch {
                             try {
                                 withContext(Dispatchers.IO) {

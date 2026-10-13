@@ -7,6 +7,7 @@ import android.media.AudioManager
 import android.media.AudioTrack
 import android.util.Log
 import com.ravenemu.v3.shared.GbPcmQueue
+import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.cos
@@ -164,6 +165,23 @@ class AndroidGbAudioOutput(
                 lastLoggedSecond = second
                 record("t=${second}s written=$writtenFrames played=${track.playbackHeadPosition.toLong() and MASK_32} underruns=${track.underrunCount} pendingPCM=${queue.size / CHANNELS} dropped=${droppedSamples / CHANNELS} state=${track.playState}")
             }
+        }
+    }
+
+    /**
+     * Per-second video timing from the player, added to the exported report:
+     * a slow second then shows whether the engine or the image took the time.
+     */
+    fun recordVideo(fps: Double, coreMs: Double, conversionMs: Double) {
+        synchronized(lock) {
+            val second = (System.nanoTime() - startNanos) / 1_000_000_000L
+            if (closed || second > 120) return
+            record(
+                String.format(
+                    Locale.ROOT, "video t=%ds fps=%.1f moteurMs=%.2f convMs=%.2f",
+                    second, fps, coreMs, conversionMs,
+                ),
+            )
         }
     }
 
