@@ -11,9 +11,9 @@ import java.io.InputStream
 /**
  * One-shot Storage Access Framework tree import. The picker grants access to
  * the chosen tree for this operation; ROMs are copied into the already used
- * app-private GB library and do not depend on persistent folder permissions.
+ * app-private GB/GBC library and do not depend on persistent folder permissions.
  *
- * Never touches AndroidGbSession: a temporary GB core validates each ROM, so
+ * Never touches AndroidGbSession: a temporary GB or GBC core validates each ROM, so
  * the currently active game, SRAM, audio and save states stay untouched.
  * Call from Dispatchers.IO, not the main thread.
  */
@@ -141,12 +141,13 @@ internal class GbFolderImporter(
                     try {
                         // The validation core is intentionally separate from the
                         // active game session. No battery/save state is loaded.
-                        NativeCore(NativeCore.GB).use { native ->
+                        val system = NativeCore.systemFor(RomImportPolicy.platformOf(rom))
+                        NativeCore(system).use { native ->
                             native.load(rom)
                         }
                     } catch (error: Exception) {
                         invalid++
-                        Log.w(TAG, "Native core rejected a GB ROM", error)
+                        Log.w(TAG, "Native core rejected a GB/GBC ROM", error)
                         onProgress(candidatesSeen)
                         continue
                     }

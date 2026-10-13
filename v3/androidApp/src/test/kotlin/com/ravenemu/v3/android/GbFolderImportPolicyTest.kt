@@ -7,13 +7,14 @@ import org.junit.Test
 
 class GbFolderImportPolicyTest {
     @Test
-    fun gameBoyFilesAreCandidatesNotOtherFiles() {
+    fun gameBoyAndColorFilesAreCandidatesNotOtherFiles() {
         assertTrue(GbFolderImportPolicy.isRomFilename("Pokemon - Version Bleue.gb"))
         assertTrue(GbFolderImportPolicy.isRomFilename("tetris.GB"))
+        assertTrue(GbFolderImportPolicy.isRomFilename("Zelda - Link's Awakening DX.gbc"))
         assertFalse(GbFolderImportPolicy.isRomFilename("save.sav"))
         assertFalse(GbFolderImportPolicy.isRomFilename("cover.png"))
         assertFalse(GbFolderImportPolicy.isRomFilename("archive.zip"))
-        assertFalse(GbFolderImportPolicy.isRomFilename("game.gbc"))
+        assertFalse(GbFolderImportPolicy.isRomFilename("game.gba"))
     }
 
     @Test

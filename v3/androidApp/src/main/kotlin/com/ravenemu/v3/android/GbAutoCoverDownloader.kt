@@ -2,6 +2,7 @@ package com.ravenemu.v3.android
 
 import android.graphics.Bitmap
 import android.util.Log
+import com.ravenemu.v3.shared.GamePlatform
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.HttpURLConnection
@@ -11,8 +12,9 @@ import java.text.Normalizer
 import java.util.Locale
 
 /**
- * Optional online artwork for ROMs already added to the Game Boy library.
- * Source: Libretro's public Nintendo - Game Boy/Named_Boxarts index.
+ * Optional online artwork for ROMs already added to the GB/GBC library.
+ * Source: Libretro's public Named_Boxarts index of each game's console
+ * ("Nintendo - Game Boy" or "Nintendo - Game Boy Color").
  *
  * Only the public directory index and selected PNG are fetched. ROM content,
  * hashes, SRAM and state files are never uploaded. All I/O is called from IO.
@@ -21,7 +23,7 @@ import java.util.Locale
  * third-party server which games are in the library.
  */
 internal class GbAutoCoverDownloader {
-    private var cachedNames: List<BoxartRecord>? = null
+    private val cachedNames = mutableMapOf<GamePlatform, List<BoxartRecord>>()
 
     /**
      * [found] holds the artwork downloaded during this pass. [unmatched] lists
@@ -42,17 +44,18 @@ internal class GbAutoCoverDownloader {
         }.take(MAX_IMAGES_PER_PASS)
         if (missing.isEmpty()) return Pass(emptyMap(), emptySet())
 
-        val candidates = getNames()
         val artwork = mutableMapOf<String, Bitmap>()
         val unmatched = mutableSetOf<String>()
         for (item in missing) {
-            val match = GbBoxartMatcher.bestMatch(item.filename, candidates)
+            // Only the index of a console present in the library is fetched.
+            val folder = indexUrl(item.platform)
+            val match = GbBoxartMatcher.bestMatch(item.filename, getNames(item.platform))
             if (match == null) {
                 unmatched += item.id
                 continue
             }
             try {
-                val response = download(INDEX_URL + match.encodedHref, MAX_IMAGE_BYTES)
+                val response = download(folder + match.encodedHref, MAX_IMAGE_BYTES)
                 val bitmap = store.saveDownloadedIfMissing(item.id, response)
                 if (bitmap != null) artwork[item.id] = bitmap
             } catch (e: Exception) {
@@ -62,13 +65,18 @@ internal class GbAutoCoverDownloader {
         return Pass(artwork, unmatched)
     }
 
-    private fun getNames(): List<BoxartRecord> {
-        cachedNames?.let { return it }
-        val index = download(INDEX_URL, MAX_INDEX_BYTES).toString(Charsets.UTF_8)
+    private fun getNames(platform: GamePlatform): List<BoxartRecord> {
+        cachedNames[platform]?.let { return it }
+        val index = download(indexUrl(platform), MAX_INDEX_BYTES).toString(Charsets.UTF_8)
         val names = GbBoxartMatcher.parseIndex(index)
         require(names.isNotEmpty()) { "Catalogue de jaquettes indisponible." }
-        cachedNames = names
+        cachedNames[platform] = names
         return names
+    }
+
+    private fun indexUrl(platform: GamePlatform): String = when (platform) {
+        GamePlatform.GBC -> GBC_INDEX_URL
+        else -> GB_INDEX_URL
     }
 
     private fun download(address: String, maximum: Int): ByteArray {
@@ -110,8 +118,10 @@ internal class GbAutoCoverDownloader {
 
     private companion object {
         const val TAG = "RavenEmuCover"
-        const val INDEX_URL =
+        const val GB_INDEX_URL =
             "https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy/Named_Boxarts/"
+        const val GBC_INDEX_URL =
+            "https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Color/Named_Boxarts/"
         const val MAX_INDEX_BYTES = 2 * 1024 * 1024
         const val MAX_IMAGE_BYTES = 3 * 1024 * 1024
         const val MAX_IMAGES_PER_PASS = 30

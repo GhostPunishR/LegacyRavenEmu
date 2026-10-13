@@ -4,6 +4,8 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.AtomicFile
+import android.util.Log
+import com.ravenemu.v3.shared.GamePlatform
 import com.ravenemu.v3.shared.RomImportPolicy
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -11,10 +13,14 @@ import java.io.FileNotFoundException
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class StoredGbRom(val id: String, val filename: String)
+data class StoredGbRom(
+    val id: String,
+    val filename: String,
+    val platform: GamePlatform = GamePlatform.GB,
+)
 
 /**
- * Persistent GB library, independent of the document picker's permission.
+ * Persistent GB/GBC library, independent of the document picker's permission.
  * An app-private ROM copy is addressed by the same SHA-256 as its SRAM/state.
  * All methods must run on a background dispatcher; index and ROM writes are
  * atomic, and the host serializes imports/loads.
@@ -25,26 +31,65 @@ internal class GbRomLibrary(
 ) {
     private val index = AtomicFile(File(directory, "index.json"))
     private val romFolder = File(directory, "roms")
+    // list() may rewrite the index while classifying older games: never let
+    // that race an import, or the imported entry would be dropped.
+    private val indexLock = Any()
 
-    fun list(): List<StoredGbRom> {
+    fun list(): List<StoredGbRom> = synchronized(indexLock) {
         val array = try {
             val bytes = index.openRead().use { it.readBytes() }
             require(bytes.size <= MAX_INDEX_BYTES) { "L'index des jeux est trop volumineux." }
             JSONObject(bytes.toString(Charsets.UTF_8)).getJSONArray("games")
         } catch (_: FileNotFoundException) {
-            return emptyList()
+            return@synchronized emptyList()
         }
         require(array.length() <= MAX_GAMES) { "La bibliothèque dépasse sa limite." }
         val entries = ArrayList<StoredGbRom>(array.length())
         val ids = HashSet<String>()
+        var classified = false
         for (i in 0 until array.length()) {
             val item = array.getJSONObject(i)
             val id = validateKey(item.getString("id"))
             val name = item.getString("name")
             require(name.isNotBlank() && name.length <= 256) { "Nom de ROM invalide." }
-            if (ids.add(id)) entries.add(StoredGbRom(id, name))
+            if (!ids.add(id)) continue
+            val platform = when (item.optString("platform")) {
+                "gb" -> GamePlatform.GB
+                "gbc" -> GamePlatform.GBC
+                // Indexes written before GBC support have no console field:
+                // read it once from the private copy's header.
+                else -> platformFromStoredHeader(id).also { classified = true }
+            }
+            entries.add(StoredGbRom(id, name, platform))
         }
-        return entries
+        if (classified) {
+            try {
+                writeIndex(entries)
+            } catch (error: Exception) {
+                // Still usable: the next listing classifies them again.
+                Log.w(TAG, "Unable to record the console of older games", error)
+            }
+        }
+        entries
+    }
+
+    private fun platformFromStoredHeader(id: String): GamePlatform = try {
+        val header = ByteArray(HEADER_BYTES)
+        val read = AtomicFile(fileFor(id)).openRead().use { input ->
+            var total = 0
+            while (total < header.size) {
+                val next = input.read(header, total, header.size - total)
+                if (next < 0) break
+                total += next
+            }
+            total
+        }
+        RomImportPolicy.platformOf(header.copyOf(read))
+    } catch (error: Exception) {
+        // A missing copy is reported when the game is launched; until then
+        // the game stays under Game Boy, where every older import was.
+        Log.w(TAG, "Unable to read the header of ${id.take(12)}", error)
+        GamePlatform.GB
     }
 
     /** The selected file is read once and can be passed directly to the core. */
@@ -55,7 +100,7 @@ internal class GbRomLibrary(
             if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null
         } ?: throw IllegalArgumentException("Impossible de lire le nom du fichier.")
         require(RomImportPolicy.acceptsGameBoyFile(name)) {
-            "Sélectionnez une ROM Game Boy au format .gb."
+            "Sélectionnez une ROM Game Boy (.gb) ou Game Boy Color (.gbc)."
         }
         val stream = resolver.openInputStream(uri)
             ?: throw IllegalArgumentException("Impossible d'ouvrir la ROM.")
@@ -63,7 +108,7 @@ internal class GbRomLibrary(
     }
 
     /** Add a ROM only after native validation succeeded. Duplicate hashes stay unique. */
-    fun add(filename: String, bytes: ByteArray): StoredGbRom {
+    fun add(filename: String, bytes: ByteArray): StoredGbRom = synchronized(indexLock) {
         require(RomImportPolicy.acceptsGameBoyFile(filename))
         require(bytes.size in 1..RomImportPolicy.maxRomBytes)
         val id = GbBatteryStore.keyForRom(bytes)
@@ -79,7 +124,7 @@ internal class GbRomLibrary(
         }
         require(existing.size < MAX_GAMES) { "Bibliothèque pleine ($MAX_GAMES jeux)." }
         writeRom(id, bytes)
-        val added = StoredGbRom(id, filename.take(256))
+        val added = StoredGbRom(id, filename.take(256), RomImportPolicy.platformOf(bytes))
         writeIndex(existing + added)
         return added
     }
@@ -114,9 +159,10 @@ internal class GbRomLibrary(
         check(directory.isDirectory || directory.mkdirs())
         val games = JSONArray()
         for (entry in entries) {
-            games.put(JSONObject().put("id", entry.id).put("name", entry.filename))
+            games.put(JSONObject().put("id", entry.id).put("name", entry.filename)
+                .put("platform", if (entry.platform == GamePlatform.GBC) "gbc" else "gb"))
         }
-        val data = JSONObject().put("version", 1).put("games", games)
+        val data = JSONObject().put("version", 2).put("games", games)
             .toString().toByteArray(Charsets.UTF_8)
         require(data.size <= MAX_INDEX_BYTES)
         val output = index.startWrite()
@@ -157,6 +203,8 @@ internal class GbRomLibrary(
     }
 
     private companion object {
+        const val TAG = "RavenEmuLibrary"
+        const val HEADER_BYTES = 0x150
         const val MAX_GAMES = 256
         const val MAX_INDEX_BYTES = 256 * 1024
     }

@@ -7,14 +7,16 @@ import org.junit.Test
 
 class RomImportPolicyTest {
     @Test
-    fun acceptsGbFilesRegardlessOfCase() {
+    fun acceptsGbAndGbcFilesRegardlessOfCase() {
         assertTrue(RomImportPolicy.acceptsGameBoyFile("jeu.gb"))
         assertTrue(RomImportPolicy.acceptsGameBoyFile("JEU.GB"))
+        assertTrue(RomImportPolicy.acceptsGameBoyFile("jeu.gbc"))
+        assertTrue(RomImportPolicy.acceptsGameBoyFile("JEU.GBC"))
     }
 
     @Test
     fun rejectsOtherFormatsAndCompressedFiles() {
-        assertFalse(RomImportPolicy.acceptsGameBoyFile("jeu.gbc"))
+        assertFalse(RomImportPolicy.acceptsGameBoyFile("jeu.gbc.zip"))
         assertFalse(RomImportPolicy.acceptsGameBoyFile("jeu.gba"))
         assertFalse(RomImportPolicy.acceptsGameBoyFile("jeu.gb.zip"))
         assertFalse(RomImportPolicy.acceptsGameBoyFile("jeu.txt"))

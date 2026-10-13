@@ -162,7 +162,7 @@ fun V3SettingsScreen(
                     GroupTitle("Écran Game Boy")
                     SettingDescription(
                         "Profil de couleurs",
-                        "Original préserve les couleurs actuelles ; DMG simule un LCD vert ; Pocket utilise le gris.",
+                        "Original préserve les couleurs actuelles ; DMG simule un LCD vert ; Pocket utilise le gris. Les jeux Game Boy Color gardent toujours leurs couleurs.",
                     )
                     ChoiceRow("Original", settings.videoPalette == "original",
                         onSettingsChange != null) {

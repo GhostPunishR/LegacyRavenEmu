@@ -63,4 +63,18 @@ class V3SettingsTest {
         assertEquals((color ushr 16) and 255, (color ushr 8) and 255)
         assertEquals((color ushr 8) and 255, color and 255)
     }
+
+    @Test
+    fun colorGamesKeepTheirColorsButFollowBrightness() {
+        val red = 0xffc02010.toInt()
+        val untouched = intArrayOf(red)
+        GbDisplayFilter.apply(untouched, V3Settings(videoPalette = "dmg"), GamePlatform.GBC)
+        assertEquals(red, untouched.single())
+
+        val brighter = intArrayOf(red)
+        GbDisplayFilter.apply(
+            brighter, V3Settings(videoPalette = "pocket", videoBrightness = 10), GamePlatform.GBC,
+        )
+        assertEquals(0xffd43424.toInt(), brighter.single())
+    }
 }

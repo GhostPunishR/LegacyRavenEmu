@@ -1,5 +1,7 @@
 package com.ravenemu.v3.android
 
+import com.ravenemu.v3.shared.GamePlatform
+
 /**
  * JNI adapter over RavenCore's pinned portable C ABI.
  * Own one instance per running game and call it from a single emulation thread.
@@ -137,6 +139,13 @@ class NativeCore(system: Int) : AutoCloseable {
         const val GB = 0
         const val GBC = 1
         const val GBA = 2
+
+        fun systemFor(platform: GamePlatform): Int = when (platform) {
+            GamePlatform.GB -> GB
+            GamePlatform.GBC -> GBC
+            GamePlatform.GBA -> GBA
+        }
+
         init { System.loadLibrary("ravenemu_v3_android") }
     }
 }

@@ -35,10 +35,15 @@ data class V3Settings(
     )
 }
 
-/** Apply an optional display treatment after the native GB frame. */
+/** Apply an optional display treatment after the native GB/GBC frame. */
 object GbDisplayFilter {
-    fun apply(pixels: IntArray, settings: V3Settings) {
-        val profile = settings.videoPalette
+    /**
+     * The DMG and Pocket profiles turn the image into shades of one color:
+     * on a Game Boy Color game they would erase its colors, so they only
+     * apply to monochrome games. Brightness and contrast apply to all.
+     */
+    fun apply(pixels: IntArray, settings: V3Settings, platform: GamePlatform = GamePlatform.GB) {
+        val profile = if (platform == GamePlatform.GB) settings.videoPalette else "original"
         val brightness = settings.videoBrightness
         val contrast = settings.videoContrast
         if (profile == "original" && brightness == 0 && contrast == 100) return

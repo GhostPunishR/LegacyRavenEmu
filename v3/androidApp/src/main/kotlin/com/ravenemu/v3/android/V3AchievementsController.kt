@@ -3,6 +3,8 @@ package com.ravenemu.v3.android
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.ravenemu.v3.shared.GamePlatform
+import com.ravenemu.v3.shared.RomImportPolicy
 import com.ravenemu.v3.shared.V3RetroSnapshot
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -122,11 +124,11 @@ internal class V3AchievementsController(
                 }
             }
             connected = true
-            // Match V2 0.8.1: RA Game Boy = 4 and CGB-flagged GB = 6.
-            // These differ from RavenEmu's native system enum (GB = 0).
+            // RetroAchievements console IDs: Game Boy = 4, Game Boy Color = 6.
+            // These differ from RavenCore's system enum (GB = 0). The same
+            // header rule picks the core, so both always agree.
             currentRom?.let { rom ->
-                val system = if (rom.size > 0x143 &&
-                    (rom[0x143].toInt() and 0x80) != 0) 6 else 4
+                val system = if (RomImportPolicy.platformOf(rom) == GamePlatform.GBC) 6 else 4
                 client?.load(system, rom)
             }
         }

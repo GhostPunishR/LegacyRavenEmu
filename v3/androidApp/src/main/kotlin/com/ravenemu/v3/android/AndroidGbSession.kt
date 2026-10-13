@@ -13,7 +13,8 @@ import java.io.Closeable
 import java.io.File
 
 /**
- * Owns one GB emulation core for the current Activity.
+ * Owns one GB or GBC emulation core for the current Activity; the
+ * cartridge header picks which one (see [RomImportPolicy.platformOf]).
  * ROMs are selected on demand; battery-backed game saves survive process restarts.
  * Native state is always protected by lock, while disk writes use saveLock.
  */
@@ -31,7 +32,7 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
     fun load(uri: Uri): LoadedGameInfo {
         val filename = displayName(uri)
         require(RomImportPolicy.acceptsGameBoyFile(filename)) {
-            "Pour cette étape, sélectionnez une ROM Game Boy au format .gb."
+            "Sélectionnez une ROM Game Boy (.gb) ou Game Boy Color (.gbc)."
         }
         return loadBytes(filename, readBounded(uri))
     }
@@ -39,13 +40,14 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
     /** Load either a just-imported ROM or a private persistent library copy. */
     fun loadBytes(filename: String, bytes: ByteArray): LoadedGameInfo {
         require(RomImportPolicy.acceptsGameBoyFile(filename)) {
-            "La ROM doit être au format .gb."
+            "La ROM doit être au format .gb ou .gbc."
         }
         require(bytes.size in 1..RomImportPolicy.maxRomBytes) {
             "Taille de ROM invalide."
         }
         val romKey = GbBatteryStore.keyForRom(bytes)
-        val replacement = NativeCore(NativeCore.GB)
+        val platform = RomImportPolicy.platformOf(bytes)
+        val replacement = NativeCore(NativeCore.systemFor(platform))
         var transferred = false
         try {
             return synchronized(saveLock) {
@@ -56,7 +58,7 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
                 replacement.load(bytes, savedBattery)
                 val result = LoadedGameInfo(
                     filename = filename,
-                    platform = GamePlatform.GB,
+                    platform = platform,
                     width = replacement.width,
                     height = replacement.height,
                 )

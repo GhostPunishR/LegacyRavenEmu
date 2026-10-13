@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import com.ravenemu.v3.shared.GameEntry
-import com.ravenemu.v3.shared.GamePlatform
 import com.ravenemu.v3.shared.GbFolderImportSummary
 import com.ravenemu.v3.shared.GbDisplayFilter
 import com.ravenemu.v3.shared.GbButton
@@ -133,7 +132,7 @@ class MainActivity : ComponentActivity() {
                                 null
                             }
                         }.toMap()
-                        entries.map { GameEntry(it.id, it.filename, GamePlatform.GB) } to pictures
+                        entries.map { GameEntry(it.id, it.filename, it.platform) } to pictures
                     }
                     libraryGames = games
                     libraryCovers = covers
@@ -395,7 +394,9 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                                 val conversionStart = System.nanoTime()
-                                GbDisplayFilter.apply(pixels, playbackSettings)
+                                GbDisplayFilter.apply(
+                                    pixels, playbackSettings, currentGame.platform,
+                                )
                                 val image = Bitmap.createBitmap(
                                     pixels, currentGame.width, currentGame.height,
                                     Bitmap.Config.ARGB_8888,
@@ -496,7 +497,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 imported to romLibrary.list().map {
-                                    GameEntry(it.id, it.filename, GamePlatform.GB)
+                                    GameEntry(it.id, it.filename, it.platform)
                                 }
                             }
                             libraryGames = entries
@@ -517,7 +518,7 @@ class MainActivity : ComponentActivity() {
                             // valid ROMs. Refresh the library in that case.
                             libraryGames = withContext(Dispatchers.IO) {
                                 romLibrary.list().map {
-                                    GameEntry(it.id, it.filename, GamePlatform.GB)
+                                    GameEntry(it.id, it.filename, it.platform)
                                 }
                             }
                         } finally {
@@ -551,7 +552,7 @@ class MainActivity : ComponentActivity() {
                             }
                             libraryGames = withContext(Dispatchers.IO) {
                                 romLibrary.list().map {
-                                    GameEntry(it.id, it.filename, GamePlatform.GB)
+                                    GameEntry(it.id, it.filename, it.platform)
                                 }
                             }
                         } catch (exception: Exception) {
