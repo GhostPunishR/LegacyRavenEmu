@@ -1,6 +1,6 @@
 # Conditions d'utilisation de RavenEmu
 
-Date d'entrée en vigueur : 11 octobre 2026
+Date d'entrée en vigueur : 13 octobre 2026
 
 Ces conditions accompagnent l'application Android RavenEmu et son code source. En utilisant l'application, vous les acceptez. Elles ne remplacent pas la [licence](LICENSE), qui régit le code lui-même, ni la [politique de confidentialité](PRIVACY.md), qui décrit le traitement des données.
 
@@ -34,6 +34,8 @@ RavenEmu n'est ni affilié à Delta, ni approuvé par ses auteurs : la lecture d
 ## Services tiers
 
 RavenEmu propose une connexion facultative à [RetroAchievements](https://retroachievements.org). Sans connexion de votre part, aucun échange n'a lieu avec ce service. Lorsque vous vous connectez, votre usage de ce service relève de ses propres conditions et de sa propre politique de confidentialité, sur lesquelles le projet n'a aucune prise. RavenEmu n'est ni affilié à RetroAchievements, ni approuvé par ce service.
+
+La nouvelle version multiplateforme propose aussi une option facultative, **désactivée par défaut**, de jaquettes en ligne : si vous l'activez, l'application télécharge les jaquettes manquantes depuis `thumbnails.libretro.com`, un service tiers. Ces images appartiennent à leurs ayants droit ; elles ne sont ni distribuées avec RavenEmu, ni hébergées par le projet, et restent sur votre appareil. Ce que ce service reçoit est décrit dans la [politique de confidentialité](PRIVACY.md). Vous pouvez à tout moment désactiver l'option, retirer une jaquette ou choisir votre propre image.
 
 ## Absence de garantie
 

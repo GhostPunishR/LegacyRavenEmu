@@ -1,6 +1,6 @@
 # RavenEmu
 
-[![Android CI](https://github.com/GhostPunishR/RavenEmu/actions/workflows/android.yml/badge.svg)](https://github.com/GhostPunishR/RavenEmu/actions/workflows/android.yml)
+[![RavenEmu Multiplateforme](https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml/badge.svg)](https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml)
 [![Wiki](https://img.shields.io/badge/Documentation-Wiki-5b21b6.svg?logo=github&logoColor=white)](https://github.com/GhostPunishR/RavenEmu/wiki)
 [![Site officiel](https://img.shields.io/badge/Site-RavenEmu-7c3aed.svg?logo=githubpages&logoColor=white)](https://ghostpunishr.github.io/RavenEmu/)
 [![APK Test](https://img.shields.io/badge/APK-Test-a855f7.svg?logo=android&logoColor=white)](https://github.com/GhostPunishR/RavenEmu/releases/download/test-latest/RavenEmu-test.apk)
@@ -9,6 +9,8 @@
 **RavenEmu** est un émulateur Game Boy, Game Boy Color et Game Boy Advance pour Android.
 
 Les moteurs sont développés en **C++20** pour le projet à partir de documentation technique publique, avec une frontière JNI minimale vers l'application Android. RavenEmu n'intègre aucun cœur d'émulation tiers et ne fournit aucune ROM, aucun BIOS ni contenu protégé.
+
+> **Nouvelle version en cours.** La réécriture multiplateforme (Android et iOS), qui s'appelle simplement **RavenEmu** une fois installée, se trouve dans [`multiplateforme/`](multiplateforme/README.md) ; elle utilise les cœurs du dépôt [RavenCore](https://github.com/GhostPunishR/RavenCore). **Le projet tourne désormais autour de cette version** : le code hors de `multiplateforme/`, dont la V2 0.8.1 décrite ci-dessous, est conservé en héritage. La CI ne construit plus que la version multiplateforme (`multiplateforme.yml`) ; l'APK Test `test-latest` de la V2 n'est plus mis à jour et reste à sa dernière publication. La V2 se construit encore localement, selon les instructions ci-dessous.
 
 ## Télécharger
 
