@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f7f4">
-  <meta name="color-scheme" content="light">
-  <meta name="description" content="RavenEmu, le projet d’émulation portable open source pour Android et iOS. Découvrez la bêta Android, les consoles GB, GBC et GBA et la nouvelle architecture multiplateforme.">
+  <meta name="theme-color" content="#0b0c10">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="RavenEmu réunit Game Boy, Game Boy Color et Game Boy Advance dans un projet open source. Découvrez la nouvelle bêta Android et le développement iOS.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
-  <meta property="og:title" content="RavenEmu — L’émulation portable, pensée pour la suite.">
-  <meta property="og:description" content="Une interface partagée entre Android et iOS. Trois consoles portables. Un projet open source, avec une bêta Android disponible.">
+  <meta property="og:title" content="RavenEmu — Vos classiques. Une nouvelle maison.">
+  <meta property="og:description" content="Émulation portable, bibliothèque personnelle et développement ouvert. Bêta Android disponible, iOS en développement.">
   <meta property="og:type" content="website">
-  <title>RavenEmu — Émulation portable, projet multiplateforme</title>
+  <title>RavenEmu — Vos classiques. Une nouvelle maison.</title>
   <link rel="icon" href="assets/ravenemu-logo.png" type="image/png">
   <link rel="stylesheet" href="assets/styles.css">
   <script src="assets/app.js" defer></script>
@@ -19,140 +19,81 @@
   <a class="skip-link" href="#contenu">Aller au contenu</a>
   <header class="site-header" id="accueil">
     <div class="container header-inner">
-      <a class="brand" href="#accueil" aria-label="RavenEmu, accueil">
-        <img src="assets/ravenemu-logo.png" alt="" width="44" height="44">
-        <span>RavenEmu</span>
-      </a>
-      <nav class="site-nav" aria-label="Navigation principale">
-        <a href="#projet">Le projet</a>
-        <a href="#fonctionnalites">Fonctionnalités</a>
-        <a href="#telecharger">Télécharger</a>
-        <a href="#documentation">Documentation</a>
-        <a class="nav-source" href="https://github.com/GhostPunishR/RavenEmu">GitHub <span aria-hidden="true">↗</span></a>
-      </nav>
+      <a class="brand" href="#accueil" aria-label="RavenEmu, accueil"><img src="assets/ravenemu-logo.png" alt="" width="36" height="36"><span>RavenEmu</span></a>
+      <nav class="site-nav" aria-label="Navigation principale"><a href="#experience">L’expérience</a><a href="#plateformes">Plateformes</a><a href="#ressources">Ressources</a></nav>
+      <a class="header-link" href="https://github.com/GhostPunishR/RavenEmu">GitHub <span aria-hidden="true">↗</span></a>
     </div>
   </header>
   <main id="contenu">
     <section class="hero" aria-labelledby="hero-title">
-      <div class="container hero-grid">
+      <div class="container">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span>RavenEmu · Nouvelle version multiplateforme</p>
-          <h1 id="hero-title">L’émulation portable,<br><span>pensée pour la suite.</span></h1>
-          <p class="hero-lead">Vos consoles portables préférées, réunies dans un projet ouvert. Une nouvelle interface commune à Android et iOS, portée par les moteurs RavenCore.</p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="#telecharger">Découvrir la bêta Android <span aria-hidden="true">↗</span></a>
-            <a class="button button-secondary" href="https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme">Explorer le projet <span aria-hidden="true">→</span></a>
-          </div>
-          <p class="hero-note">Android 8.0 et plus <span aria-hidden="true">·</span> iOS en développement</p>
-          <div class="hero-facts" aria-label="Principes du projet">
-            <span>Open source</span><span>Sans publicité</span><span>Sans télémétrie</span>
-          </div>
+          <p class="release-label"><span aria-hidden="true"></span>Nouvelle version · Bêta Android</p>
+          <h1 id="hero-title">Vos classiques.<br><span>Une nouvelle maison.</span></h1>
+          <p class="hero-lead">Game Boy, Game Boy Color, Game Boy Advance.<br>Une bibliothèque à vous. Un projet ouvert sur la suite.</p>
+          <div class="hero-actions"><a class="button button-primary" href="#installer">Obtenir la bêta Android <span aria-hidden="true">↓</span></a><a class="button button-quiet" href="https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme">Découvrir le projet <span aria-hidden="true">↗</span></a></div>
+          <p class="hero-note">Android 8.0 et plus <span aria-hidden="true">/</span> iOS en développement</p>
         </div>
-        <figure class="hero-visual">
-          <div class="visual-top"><span>RAVENEMU</span><span>GB / GBC / GBA</span></div>
-          <img src="assets/ravenemu-handheld.webp" alt="Illustration d’une console portable graphite aux accents violets, portant le logo RavenEmu." width="779" height="900" fetchpriority="high" decoding="async">
-          <figcaption><span>Trois générations. Un même projet.</span><small>Illustration de l’univers RavenEmu</small></figcaption>
+        <figure class="product-preview" aria-labelledby="preview-caption">
+          <div class="preview-top"><span class="preview-brand">RAVENEMU</span><span class="preview-heading">Tous les jeux</span><span class="preview-layout" aria-hidden="true">▦</span></div>
+          <div class="preview-search"><span aria-hidden="true">⌕</span><span>Rechercher dans la bibliothèque</span><span class="preview-add" aria-hidden="true">+</span></div>
+          <div class="game-grid" aria-hidden="true">
+            <div class="game-example"><div class="game-art art-gb"><span class="art-label">RAVEN / 01</span><span class="device device-gb"><span class="device-screen"></span><span class="device-controls">+ <i>● ●</i></span></span><span class="art-platform">GAME BOY</span></div><span class="game-title">Démo monochrome</span><span class="game-system">Game Boy</span></div>
+            <div class="game-example"><div class="game-art art-gbc"><span class="art-label">RAVEN / 02</span><span class="device device-gbc"><span class="device-screen"></span><span class="device-controls">+ <i>● ●</i></span></span><span class="art-platform">GAME BOY COLOR</span></div><span class="game-title">Démo couleur</span><span class="game-system">Game Boy Color</span></div>
+            <div class="game-example"><div class="game-art art-gba"><span class="art-label">RAVEN / 03</span><span class="device device-gba"><span class="device-screen"></span></span><span class="art-platform">GAME BOY ADVANCE</span></div><span class="game-title">Démo Advance</span><span class="game-system">Game Boy Advance</span></div>
+            <div class="game-example"><div class="game-art art-gb art-alternate"><span class="art-label">RAVEN / 04</span><span class="device device-gb"><span class="device-screen"></span><span class="device-controls">+ <i>● ●</i></span></span><span class="art-platform">GAME BOY</span></div><span class="game-title">Démo Pocket</span><span class="game-system">Game Boy</span></div>
+          </div>
+          <div class="preview-bottom"><span class="preview-page" aria-hidden="true">Tous les jeux <span>GB</span><span>GBC</span><span>GBA</span></span><span>Votre bibliothèque. Votre espace.</span></div>
+          <figcaption id="preview-caption">Aperçu conceptuel de la bibliothèque · exemples illustratifs, aucun jeu fourni.</figcaption>
         </figure>
+        <div class="principles" aria-label="Principes RavenEmu"><span>Code ouvert</span><span>Sans publicité</span><span>Sans télémétrie</span><span>Vos fichiers restent sur l’appareil</span></div>
       </div>
     </section>
 
-    <div class="project-strip">
-      <div class="container strip-inner"><span>LE NOUVEAU CHAPITRE</span><p>RavenEmu évolue autour de <strong>multiplateforme/</strong>. La V2 0.8.1 est conservée en héritage.</p><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/README.md">Lire l’état du projet <span aria-hidden="true">→</span></a></div>
-    </div>
-
-    <section class="section" id="projet" aria-labelledby="project-title">
+    <section class="section experience" id="experience" aria-labelledby="experience-title">
       <div class="container">
-        <div class="section-heading split-heading">
-          <div><p class="eyebrow">01 / Le projet</p><h2 id="project-title">Une base commune.<br>Deux plateformes.</h2></div>
-          <p>La même interface Compose Multiplatform, avec des adaptateurs propres à chaque système. Le projet avance par étapes : les possibilités actuelles restent clairement identifiées.</p>
+        <div class="section-heading"><p class="eyebrow">Pensé pour vos parties</p><h2 id="experience-title">Moins de friction.<br>Plus de jeu.</h2><p>Les outils utiles, au bon endroit. Voici ce que la nouvelle version Android propose aujourd’hui.</p></div>
+        <div class="experience-grid">
+          <article class="experience-item"><span class="feature-index">01 / BIBLIOTHÈQUE</span><h3>Tout retrouver.</h3><p>Importez une ROM ou un dossier. Parcourez vos jeux en grille ou en liste, recherchez un titre et choisissez vos jaquettes.</p><span class="feature-detail">GB · GBC · GBA / Doublons détectés</span></article>
+          <article class="experience-item"><span class="feature-index">02 / SAUVEGARDES</span><h3>Reprendre le fil.</h3><p>Retrouvez vos sauvegardes de cartouche et quatre emplacements d’état avec miniature. Exportez votre progression en ZIP ou en .sav.</p><span class="feature-detail">4 emplacements / Import &amp; export</span></article>
+          <article class="experience-item"><span class="feature-index">03 / PERSONNALISATION</span><h3>Jouer à votre façon.</h3><p>Réglez le son, l’image et les commandes tactiles. Retrouvez les profils DMG vert et Pocket gris pour vos jeux monochromes.</p><span class="feature-detail">Audio / Vidéo / Contrôles tactiles</span></article>
         </div>
-        <div class="platform-grid">
-          <article class="platform-card">
-            <div class="card-top"><span class="platform-name">Android</span><span class="badge badge-purple">Bêta disponible</span></div>
-            <h3>Le lecteur prend vie.</h3>
-            <p>Bibliothèque persistante, import de jeux, vidéo, audio, commandes tactiles et sauvegardes sont raccordés aux moteurs natifs.</p>
-            <a class="text-link" href="#telecharger">Accéder à la bêta Android <span aria-hidden="true">→</span></a>
-          </article>
-          <article class="platform-card">
-            <div class="card-top"><span class="platform-name">iOS</span><span class="badge">En développement</span></div>
-            <h3>La même interface se prépare.</h3>
-            <p>L’hôte SwiftUI, l’interface partagée et le pont natif sont présents. L’import, la persistance et le lecteur jouable restent à connecter.</p>
-            <a class="text-link" href="https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme/iosApp">Suivre le développement iOS <span aria-hidden="true">↗</span></a>
-          </article>
-        </div>
-        <div class="console-heading"><h3>Trois consoles au cœur du projet</h3><p>Intégrées au lecteur Android. La compatibilité dépend du jeu et de l’appareil.</p></div>
-        <div class="console-grid">
-          <article class="console-card"><span class="console-mark">GB</span><div><h4>Game Boy</h4><p>Le classique monochrome. Profils d’image Original, DMG vert et Pocket gris.</p></div></article>
-          <article class="console-card"><span class="console-mark console-color">GBC</span><div><h4>Game Boy Color</h4><p>Un cœur couleur dédié, sélectionné d’après l’en-tête de la cartouche.</p></div></article>
-          <article class="console-card"><span class="console-mark console-wide">GBA</span><div><h4>Game Boy Advance</h4><p>Image native 240 × 160 et commandes L/R. Performances à valider sur téléphone.</p></div></article>
-        </div>
-        <p class="section-note">La validation sur appareil des jeux GBC et GBA se poursuit. Aucun jeu n’est inclus dans l’application.</p>
+        <div class="achievement-row"><span class="small-label">RetroAchievements</span><p>Profil, badges et succès Softcore intégrés sur Android. Connexion facultative ; reconnaissance des jeux et déblocages côté serveur encore à valider sur téléphone.</p><span class="state state-neutral">En validation</span></div>
       </div>
     </section>
 
-    <section class="section section-tinted" id="fonctionnalites" aria-labelledby="features-title">
-      <div class="container">
-        <div class="section-heading"><p class="eyebrow">02 / L’expérience Android</p><h2 id="features-title">L’essentiel, à portée de main.</h2><p>Une bibliothèque personnelle et des outils pour retrouver vos jeux, reprendre une partie et garder le contrôle de vos fichiers.</p></div>
-        <div class="feature-grid">
-          <article class="feature-card"><span class="feature-number">01</span><h3>Votre bibliothèque</h3><p>Importez un jeu ou un dossier de fichiers .gb, .gbc et .gba. Recherche, vues grille ou liste et classement par console ; les doublons sont détectés.</p></article>
-          <article class="feature-card"><span class="feature-number">02</span><h3>Une partie, quatre emplacements</h3><p>Sauvegardes de cartouche et états instantanés avec miniature et date. Exportez vos sauvegardes en ZIP ou votre fichier batterie en .sav.</p></article>
-          <article class="feature-card"><span class="feature-number">03</span><h3>Un affichage à votre goût</h3><p>Profils monochromes pour la Game Boy, luminosité et contraste, volume audio et réglages des commandes tactiles.</p></article>
-          <article class="feature-card"><span class="feature-number">04</span><h3>Des jaquettes personnelles</h3><p>Choisissez vos images depuis l’appareil. La recherche de jaquettes en ligne est facultative et désactivée par défaut.</p></article>
-        </div>
-        <div class="achievement-note"><span class="badge badge-purple">RetroAchievements</span><div><h3>Des succès, en mode Softcore.</h3><p>Connexion facultative, profil, badges et tableau de bord intégrés sur Android. La reconnaissance des jeux et l’attribution des succès côté serveur restent à valider sur téléphone. Le mode Hardcore est désactivé.</p></div></div>
-      </div>
-    </section>
-
-    <section class="section" id="telecharger" aria-labelledby="download-title">
-      <div class="container download-grid">
-        <div class="section-heading"><p class="eyebrow">03 / Tester RavenEmu</p><h2 id="download-title">Commencer avec<br>la bêta Android.</h2><p>La nouvelle version est distribuée comme artefact GitHub Actions, sous le nom <code>ravenemu-android-beta</code>.</p><a class="button button-primary" href="https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml?query=branch%3Amain+is%3Asuccess">Ouvrir les builds Android <span aria-hidden="true">↗</span></a><p class="download-note">Un compte GitHub connecté est nécessaire pour télécharger les artefacts. Ceux-ci sont conservés pendant 7 jours.</p></div>
-        <div class="download-panel">
-          <ol class="download-steps">
-            <li><span class="step-index" aria-hidden="true">1</span><div><h3>Choisissez un build réussi de main</h3><p>Dans le workflow « RavenEmu Multiplateforme », ouvrez une exécution dont le job Android a réussi.</p></div></li>
-            <li><span class="step-index" aria-hidden="true">2</span><div><h3>Téléchargez l’artefact Android</h3><p>En bas de la page, sélectionnez <code>ravenemu-android-beta</code>, puis extrayez l’APK du fichier ZIP.</p></div></li>
-            <li><span class="step-index" aria-hidden="true">3</span><div><h3>Installez, puis importez vos jeux</h3><p>Sur Android 8.0 ou plus récent, installez l’APK et utilisez + ou « Importer un dossier » dans la bibliothèque.</p></div></li>
-          </ol>
-          <div class="download-caution"><strong>Avant de changer de version</strong><p>Exportez vos sauvegardes avant une désinstallation ou un effacement des données. La nouvelle application peut cohabiter avec la V2 ; leurs données sont séparées.</p></div>
+    <section class="section platforms" id="plateformes" aria-labelledby="platforms-title">
+      <div class="container platform-layout">
+        <div class="section-heading"><p class="eyebrow">Un projet multiplateforme</p><h2 id="platforms-title">Le même esprit.<br>Deux horizons.</h2><p>Une interface Compose Multiplatform commune à Android et iOS. Des moteurs C++20 maintenus dans RavenCore.</p><a class="text-link" href="https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/README.md">Lire l’état du développement <span aria-hidden="true">↗</span></a></div>
+        <div class="platform-status">
+          <article><div class="platform-title"><h3>Android</h3><span class="state state-live">Bêta disponible</span></div><p>Bibliothèque, lecteur natif, audio, commandes et sauvegardes raccordés. La compatibilité GBC/GBA et les performances restent à valider jeu par jeu sur téléphone.</p><a class="text-link" href="#installer">Tester RavenEmu <span aria-hidden="true">→</span></a></article>
+          <article><div class="platform-title"><h3>iOS</h3><span class="state state-neutral">En développement</span></div><p>L’interface partagée, l’hôte SwiftUI et le pont natif existent. L’import, la persistance et le lecteur jouable restent à connecter. Aucun binaire iOS signé n’est distribué.</p><a class="text-link" href="https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme/iosApp">Suivre l’avancement <span aria-hidden="true">↗</span></a></article>
         </div>
       </div>
     </section>
 
-    <section class="section section-dark" id="documentation" aria-labelledby="docs-title">
-      <div class="container">
-        <div class="section-heading split-heading"><div><p class="eyebrow">04 / Sous le capot</p><h2 id="docs-title">Une architecture ouverte.<br>Des frontières claires.</h2></div><p>L’interface et la logique partagées vivent dans RavenEmu. Les moteurs C++20 sont maintenus dans RavenCore, reliés à l’application par une API C commune.</p></div>
-        <div class="architecture-grid">
-          <div class="module-list" aria-label="Modules du nouveau projet">
-            <a href="https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme/shared"><code>shared/</code><span>Interface Compose et logique Kotlin Multiplatform</span><span aria-hidden="true">↗</span></a>
-            <a href="https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme/androidApp"><code>androidApp/</code><span>Lecteur, stockage et intégration Android</span><span aria-hidden="true">↗</span></a>
-            <a href="https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme/iosApp"><code>iosApp/</code><span>Hôte SwiftUI et intégration Apple</span><span aria-hidden="true">↗</span></a>
-            <a href="https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme/native"><code>native/</code><span>API C, pont JNI et adaptateur Swift</span><span aria-hidden="true">↗</span></a>
-            <a href="https://github.com/GhostPunishR/RavenCore"><code>RavenCore</code><span>Moteurs GB, GBC et GBA · dépôt dédié</span><span aria-hidden="true">↗</span></a>
-          </div>
-          <div class="build-card"><span class="badge badge-dark">Compilation Android</span><h3>Partir du code source.</h3><p>Depuis la racine du dépôt, avec JDK 21 et le SDK Android API 37 :</p><div class="code-header"><span>Terminal</span><button class="copy-button" type="button" data-copy="./gradlew -p multiplateforme :androidApp:assembleDebug" aria-label="Copier la commande de compilation Android" hidden>Copier</button></div><pre><code>./gradlew -p multiplateforme \
-  :androidApp:assembleDebug</code></pre><p class="copy-feedback" role="status" aria-live="polite"></p><a class="text-link" href="https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/README.md">Prérequis et compilation iOS <span aria-hidden="true">↗</span></a></div>
-        </div>
+    <section class="install-section" id="installer" aria-labelledby="install-title">
+      <div class="container install-panel">
+        <div class="install-heading"><div><p class="eyebrow">À vous de jouer</p><h2 id="install-title">La suite commence ici.</h2><p>Testez la nouvelle bêta Android depuis les builds officiels du projet.</p></div><a class="button button-primary" href="https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml?query=branch%3Amain+is%3Asuccess">Accéder aux builds <span aria-hidden="true">↗</span></a></div>
+        <ol class="install-steps"><li><span>01</span><h3>Ouvrir un build réussi</h3><p>Choisissez une exécution de <code>main</code> dans « RavenEmu Multiplateforme », avec le job Android réussi.</p></li><li><span>02</span><h3>Récupérer l’APK</h3><p>Téléchargez l’artefact <code>ravenemu-android-beta</code>, puis extrayez l’APK de l’archive ZIP.</p></li><li><span>03</span><h3>Importer vos jeux</h3><p>Installez sur Android 8.0 ou plus récent. Le bouton + ajoute un jeu ; le menu permet d’importer un dossier.</p></li></ol>
+        <div class="install-notes"><p>Compte GitHub connecté requis · Artefacts conservés 7 jours.</p><p>Exportez vos sauvegardes avant une désinstallation. La V2 et la nouvelle application ont des données séparées.</p></div>
       </div>
     </section>
 
-    <section class="section" id="questions" aria-labelledby="faq-title">
-      <div class="container faq-grid">
-        <div class="section-heading"><p class="eyebrow">05 / Bon à savoir</p><h2 id="faq-title">Quelques réponses<br>avant de jouer.</h2><p>Un projet transparent, jusque dans ses limites.</p><a class="text-link" href="https://github.com/GhostPunishR/RavenEmu/blob/main/PRIVACY.md">Politique de confidentialité <span aria-hidden="true">↗</span></a></div>
+    <section class="section resources" id="ressources" aria-labelledby="resources-title">
+      <div class="container resources-layout">
+        <div class="resource-links"><p class="eyebrow">Ouvert, jusque dans le code</p><h2 id="resources-title">Explorez.<br>Testez. Contribuez.</h2><p>Le projet actif se trouve dans <code>multiplateforme/</code>. La V2 0.8.1 est conservée en héritage.</p><a href="https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme"><span>Le code de RavenEmu</span><span aria-hidden="true">↗</span></a><a href="https://github.com/GhostPunishR/RavenCore"><span>Les moteurs RavenCore</span><span aria-hidden="true">↗</span></a><a href="https://github.com/GhostPunishR/RavenEmu/issues"><span>Signaler un problème</span><span aria-hidden="true">↗</span></a><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/CONTRIBUTING.md"><span>Guide de contribution</span><span aria-hidden="true">↗</span></a></div>
         <div class="faq-list">
-          <details><summary>Est-ce que la version iOS est disponible ?</summary><p>Pas encore. Les écrans partagés et la passerelle native existent, mais le lecteur jouable, l’import et la persistance doivent encore être raccordés. Aucun binaire iOS signé n’est distribué.</p></details>
-          <details><summary>Où est passé l’ancien APK Test ?</summary><p>L’APK <code>test-latest</code> correspond à la V2 et n’est plus mis à jour. Pour tester le projet actuel, utilisez l’artefact <code>ravenemu-android-beta</code> du workflow multiplateforme. La V2 reste conservée dans le dépôt en héritage.</p></details>
-          <details><summary>Mes jeux et sauvegardes restent-ils sur mon appareil ?</summary><p>Oui. L’application garde sa bibliothèque et ses sauvegardes dans son espace privé. Elle ne téléverse pas vos ROM ni vos sauvegardes. Exportez votre progression avant d’effacer les données de l’application ou de la désinstaller.</p></details>
-          <details><summary>Quelles fonctions utilisent Internet ?</summary><p>La connexion RetroAchievements est facultative ; elle échange des informations de compte, d’identification de jeu et de succès avec ce service. Si vous activez les jaquettes en ligne, le serveur Libretro reçoit votre adresse IP et les noms des images demandées. Cette option est désactivée par défaut. RavenEmu n’ajoute ni télémétrie ni publicité.</p></details>
-          <details><summary>Des jeux sont-ils fournis ?</summary><p>Non. RavenEmu n’inclut aucune ROM ni contenu protégé. Importez des homebrews ou des copies de jeux que vous êtes autorisé à utiliser. Le moteur GBA ne nécessite pas de fichier BIOS externe fourni par l’utilisateur.</p></details>
-          <details><summary>La compatibilité est-elle garantie ?</summary><p>Elle varie selon la ROM et l’appareil. Les jeux Game Boy Color, Game Boy Advance et l’intégration RetroAchievements nécessitent encore des validations sur téléphone. Un build réussi ne garantit pas le bon fonctionnement de chaque jeu.</p></details>
+          <details><summary>Les jeux sont-ils inclus ?</summary><p>Non. Importez des homebrews ou des copies de jeux que vous êtes autorisé à utiliser. Le moteur GBA ne nécessite pas de fichier BIOS externe fourni par l’utilisateur.</p></details>
+          <details><summary>Mes données restent-elles privées ?</summary><p>Les ROM et sauvegardes restent dans l’espace privé de l’application et ne sont pas téléversées. RavenEmu n’ajoute ni publicité ni télémétrie. Exportez votre progression avant d’effacer les données ou de désinstaller l’application.</p></details>
+          <details><summary>Qu’est-ce qui utilise Internet ?</summary><p>RetroAchievements est facultatif et échange des informations de compte, d’identification de jeu et de succès avec ce service. Les jaquettes en ligne sont désactivées par défaut : si vous les activez, Libretro reçoit votre adresse IP et les noms des images demandées. <a href="https://github.com/GhostPunishR/RavenEmu/blob/main/PRIVACY.md">Lire la politique de confidentialité.</a></p></details>
+          <details><summary>Et l’ancien APK Test ?</summary><p><code>test-latest</code> appartient à la V2 et n’est plus mis à jour. Pour la nouvelle version, utilisez l’artefact <code>ravenemu-android-beta</code> du workflow multiplateforme. L’application iOS n’est pas encore distribuée.</p></details>
+          <details class="build-card"><summary>Compiler depuis le code source</summary><div class="build-content"><p>Depuis la racine du dépôt, avec JDK 21 et le SDK Android API 37 :</p><div class="code-header"><span>Android</span><button class="copy-button" type="button" data-copy="./gradlew -p multiplateforme :androidApp:assembleDebug" aria-label="Copier la commande de compilation Android" hidden>Copier</button></div><pre><code>./gradlew -p multiplateforme \
+  :androidApp:assembleDebug</code></pre><p class="copy-feedback" role="status" aria-live="polite"></p><a class="text-link" href="https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/README.md">Tous les prérequis, Android et iOS <span aria-hidden="true">↗</span></a></div></details>
         </div>
       </div>
     </section>
-
-    <section class="contribute" aria-labelledby="contribute-title"><div class="container contribute-inner"><div><p class="eyebrow">Construire la suite, ensemble</p><h2 id="contribute-title">Votre retour fait avancer RavenEmu.</h2><p>Un bug reproductible, un test sur téléphone ou une amélioration documentée : chaque contribution compte.</p></div><div class="contribute-actions"><a class="button button-primary" href="https://github.com/GhostPunishR/RavenEmu/issues">Signaler un problème <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/GhostPunishR/RavenEmu/blob/main/CONTRIBUTING.md">Guide de contribution <span aria-hidden="true">→</span></a></div></div></section>
   </main>
-  <footer class="site-footer"><div class="container">
-    <div class="footer-main"><a class="brand" href="#accueil"><img src="assets/ravenemu-logo.png" alt="" width="36" height="36"><span>RavenEmu</span></a><p>Émulation portable. Développement ouvert.</p><nav aria-label="Liens du pied de page"><a href="https://github.com/GhostPunishR/RavenEmu">GitHub</a><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/TERMS.md">Conditions</a><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/PRIVACY.md">Confidentialité</a><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/SECURITY.md">Sécurité</a><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/LICENSE">AGPL-3.0</a></nav></div>
-    <div class="footer-bottom"><span>© <span id="current-year">2026</span> GhostPunishR</span><p>Game Boy, Game Boy Color et Game Boy Advance sont des marques de Nintendo. RavenEmu n’est ni affilié à Nintendo, ni approuvé par Nintendo.</p></div>
-  </div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-main"><a class="brand" href="#accueil"><img src="assets/ravenemu-logo.png" alt="" width="32" height="32"><span>RavenEmu</span></a><p>Vos jeux. Votre espace.</p><nav aria-label="Liens du pied de page"><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/TERMS.md">Conditions</a><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/PRIVACY.md">Confidentialité</a><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/SECURITY.md">Sécurité</a><a href="https://github.com/GhostPunishR/RavenEmu/blob/main/LICENSE">AGPL-3.0</a></nav></div><div class="footer-bottom"><span>© <span id="current-year">2026</span> GhostPunishR</span><p>Game Boy, Game Boy Color et Game Boy Advance sont des marques de Nintendo. RavenEmu n’est ni affilié à Nintendo, ni approuvé par Nintendo.</p></div></div></footer>
 </body>
 </html>
