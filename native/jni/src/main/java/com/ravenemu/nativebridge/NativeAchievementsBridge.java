@@ -10,6 +10,11 @@ public final class NativeAchievementsBridge {
     public static native String[] summary(long handle);
     /** Nine columns per achievement, the last one the badge URL for its current state. */
     public static native String[] achievements(long handle);
+    /** Rich Presence is evaluated by rcheevos on the emulation thread. */
+    public static native String richPresence(long handle);
+    public static native boolean hardcore(long handle);
+    /** Call only for a user-initiated pause attempt on the owner thread. */
+    public static native boolean canPause(long handle);
     public static native long create();
     public static native void destroy(long handle);
     public static native void login(long handle, String username, String secret, boolean token);

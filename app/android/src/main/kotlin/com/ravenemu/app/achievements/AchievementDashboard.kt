@@ -117,7 +117,10 @@ private class AchievementRows(
     }
 }
 
-internal data class AchievementSnapshot(val status: String, val summary: List<String>, val entries: List<AchievementEntry>)
+internal data class AchievementSnapshot(
+    val status: String, val summary: List<String>, val entries: List<AchievementEntry>,
+    val richPresence: String = "",
+)
 
 /** The supplied request runs SDK reads on the emulation thread and returns on the UI thread. */
 internal object AchievementDashboard {

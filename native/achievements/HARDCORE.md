@@ -1,6 +1,16 @@
 # Préparation du mode Hardcore
 
-Statut : **non activé**. La catégorie Android expose ce statut sans interrupteur
+Statut : **non activé**. Les travaux P1/P2 ajoutent des garde-fous :
+restauration des états contrôlée dans le menu et le worker d'émulation,
+désactivation des diagnostics pendant une session Hardcore,
+contrôle `rc_client_can_pause` lors de la demande de pause et prise en
+charge de `RC_CLIENT_EVENT_RESET`. Le pont natif **force toujours
+`rc_client_set_hardcore_enabled(rc, 0)`** et aucun interrupteur d'activation
+n'est exposé. Le cycle de vie Android, les chemins de reprise et toutes les
+transitions nécessitent des tests réels et l'approbation RetroAchievements
+avant la moindre activation.
+
+La catégorie Android expose ce statut sans interrupteur
 qui laisserait croire à une prise en charge. Les points Hardcore du profil
 proviennent du SDK ; ils ne signifient pas que cette session est Hardcore.
 Le client force `rc_client_set_hardcore_enabled(rc, 0)` et le test de déblocage
@@ -47,7 +57,11 @@ API `rc_client.h` de la version épinglée dans `CMakeLists.txt`,
 6. Ouvrir un lien de succès, revenir à l’application : elle reste en pause tant
    que le tableau de bord est ouvert. Fermer/recréer l’activité sans crash.
 
-Limites restantes : aucune persistance des envois en attente après fermeture,
+Limites restantes : un journal chiffré conserve maintenant les requêtes de
+déblocage Softcore produites par le SDK et les renvoie lors d'une connexion
+ultérieure du même compte. Cette file doit être validée en coupure réseau,
+fermeture forcée, changement de jeton et erreurs de serveur.
+Autres limites :
 aucun cache des badges/avatars, pas de consultation native des classements,
 et certaines régions mémoire GB/cartouches spéciales restent indisponibles.
 Le lien du profil donne accès aux informations complètes du compte sur le site.
