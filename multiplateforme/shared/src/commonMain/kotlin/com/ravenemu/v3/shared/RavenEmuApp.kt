@@ -144,6 +144,7 @@ fun RavenEmuApp(
     onRetroDisconnect: (() -> Unit)? = null,
     onRetroRetry: (() -> Unit)? = null,
     retroNotice: String? = null,
+    retroNoticeBadge: ImageBitmap? = null,
     settings: V3Settings = V3Settings(),
     onSettingsChange: ((V3Settings) -> Unit)? = null,
     appVersion: String = "Préversion",
@@ -291,6 +292,7 @@ fun RavenEmuApp(
                     onRetroRetry = onRetroRetry,
                     onOpenLink = onOpenLink,
                     retroNotice = retroNotice,
+                    retroNoticeBadge = retroNoticeBadge,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -546,6 +548,7 @@ private fun GbVideoScreen(
     onRetroRetry: (() -> Unit)?,
     onOpenLink: ((String) -> Unit)?,
     retroNotice: String?,
+    retroNoticeBadge: ImageBitmap?,
     onBack: () -> Unit,
 ) {
     var gameMenuOpen by remember { mutableStateOf(false) }
@@ -640,7 +643,17 @@ private fun GbVideoScreen(
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("★", color = RavenAccent, fontSize = 21.sp)
+                    // The unlocked achievement's badge; the star only while
+                    // it downloads or when it cannot be fetched (offline).
+                    if (retroNoticeBadge != null) {
+                        Image(
+                            retroNoticeBadge, "Badge du succès",
+                            Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        Text("★", color = RavenAccent, fontSize = 21.sp)
+                    }
                     Spacer(Modifier.width(8.dp))
                     Text(retroNotice, color = RavenText, fontSize = 12.sp,
                         maxLines = 2, overflow = TextOverflow.Ellipsis)

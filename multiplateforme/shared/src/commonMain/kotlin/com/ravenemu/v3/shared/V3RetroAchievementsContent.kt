@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -183,6 +184,11 @@ fun V3RetroAchievementsContent(
                             if (badge != null) {
                                 Image(badge, "Badge du succès",
                                     Modifier.size(42.dp), contentScale = ContentScale.Fit)
+                            } else {
+                                // Same footprint while the badge loads or if it
+                                // is unavailable: titles stay aligned.
+                                Box(Modifier.size(42.dp)
+                                    .background(raMuted.copy(alpha = 0.18f), RoundedCornerShape(6.dp)))
                             }
                             Text(achievement.title, modifier = Modifier.weight(1f),
                                 color = raText, fontSize = 13.sp,

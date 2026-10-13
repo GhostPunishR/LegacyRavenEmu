@@ -54,8 +54,9 @@ internal class V3RetroBadgeStore(context: Context) {
             connection.readTimeout = 8_000
             connection.setRequestProperty("User-Agent", "RavenEmu/V3-Preview")
             if (connection.responseCode != 200) return null
-            val contentType = connection.contentType.orEmpty().lowercase()
-            if (!contentType.startsWith("image/")) return null
+            // No Content-Type gate: an image host may label badges with a
+            // generic type, and that silently dropped them. The decoder below
+            // is the real check: anything that is not an image yields null.
             connection.inputStream.use { input ->
                 val out = ByteArrayOutputStream()
                 val buffer = ByteArray(8192)
