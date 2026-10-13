@@ -1,71 +1,54 @@
 # Contribution
 
-Les contributions de code, de documentation et de validation sont bienvenues.
+Les contributions de code, de documentation et de validation sont bienvenues. Consultez le [guide du dépôt](https://github.com/GhostPunishR/RavenEmu/blob/main/CONTRIBUTING.md) et le [code de conduite](https://github.com/GhostPunishR/RavenEmu/blob/main/CODE_OF_CONDUCT.md).
 
-## Avant de commencer
+## Choisir le bon périmètre
 
-- recherchez une issue ou une pull request existante;
-- ouvrez une proposition avant un chantier important;
-- gardez le périmètre aussi ciblé que possible;
-- consultez [[Architecture]];
-- identifiez une documentation technique publique pour les comportements matériels.
+| Sujet | Emplacement |
+|---|---|
+| Interface et logique communes | `multiplateforme/shared/` |
+| Lecteur, fichiers et services Android | `multiplateforme/androidApp/` |
+| Hôte Apple et branchements | `multiplateforme/iosApp/` |
+| Ponts JNI/Swift et configuration native | `multiplateforme/native/` |
+| Correction d'un moteur | Dépôt RavenCore ; mise à jour du commit épinglé traitée séparément |
+| Documentation Wiki | `wiki/*.md` dans RavenEmu |
 
-## Originalité du code
+Les anciens modules V2 ne sont pas la cible par défaut. Recherchez une issue existante et discutez les chantiers importants avant de les commencer.
 
-Les moteurs RavenEmu sont écrits pour le projet. Une contribution ne doit pas copier, traduire ou adapter le code d'un autre émulateur.
+## Code et tests
 
-Les références acceptables comprennent:
+N'intégrez pas de code copié, traduit ou adapté d'un autre émulateur. Utilisez documentation matérielle publique, observations reproductibles et tests synthétiques.
 
-- manuels processeur;
-- documentation matérielle publique;
-- formats de fichiers documentés;
-- observations et tests reproductibles;
-- programmes synthétiques écrits pour RavenEmu.
+Aucune ROM commerciale, aucun BIOS protégé, aucune clé ni donnée personnelle ne doit entrer dans les tests ou le dépôt.
 
-## Tests
+Adaptez les contrôles au changement. Pour Android et les règles, les commandes actuelles sont :
 
-Une correction doit ajouter un test capable de reproduire le défaut lorsque cela est possible.
-
-Les tests ne doivent contenir:
-
-- aucune ROM commerciale;
-- aucun BIOS protégé;
-- aucune clé ou donnée personnelle;
-- aucun fichier dont la redistribution est interdite.
-
-Préférez des ROM synthétiques construites par le code de test.
-
-## Vérifications
-
-```bash
-./gradlew test
-./gradlew lint
-./gradlew assembleDebug
+```sh
+./gradlew -p multiplateforme :androidApp:testDebugUnitTest
+./gradlew -p multiplateforme :androidApp:assembleDebug
+./gradlew -p multiplateforme :policy:test
 ```
 
-Adaptez les commandes au périmètre de la modification.
+Voir [[Compilation]] pour les cibles communes et iOS. Les commandes ci-dessus correspondent à la CI ; documentez celles réellement exécutées dans votre PR, sans assimiler compilation et validation sur appareil.
 
-## Pull request
+## Tester sur téléphone
 
-La description doit préciser:
+Un retour utile indique le commit du build, l'appareil, la version Android, la ROM/région et les étapes observées. Documentez audio, vidéo, commandes et sauvegardes séparément. Pour RA, confirmez la reconnaissance et le résultat côté serveur sans publier le compte ou son jeton.
 
-- le problème ou l'objectif;
-- la cause technique si elle est connue;
-- les fichiers et modules touchés;
-- le comportement avant et après;
-- les tests exécutés;
-- les limites restantes;
-- les références techniques utilisées.
+Voir [[Compatibilité des jeux|Compatibilite-des-jeux]] et [[Dépannage|Depannage]].
 
-Évitez de mélanger une refonte, une nouvelle fonctionnalité et des corrections indépendantes dans la même pull request.
+## Modifier le wiki
 
-## Sécurité
+Les pages sont maintenues dans `wiki/`. Le workflow [Publier le Wiki](https://github.com/GhostPunishR/RavenEmu/blob/main/.github/workflows/wiki.yml) les copie vers le dépôt Wiki après un push de ces fichiers sur `main`.
 
-Une vulnérabilité ne doit pas être publiée dans une issue. Utilisez un [avis de sécurité privé](https://github.com/GhostPunishR/RavenEmu/security/advisories/new).
+- Conservez les noms de page existants pour ne pas casser leurs liens.
+- Mettez à jour `_Sidebar.md` lorsqu'une page est ajoutée.
+- Vérifiez les cibles des liens Wiki (par exemple `[[Accueil|Home]]`) et les liens source.
+- N'utilisez pas de tiret cadratin : le workflow le refuse.
+- Distinguez fonction implémentée, validation réelle et travail restant.
 
-## Documents de référence
+## Pull request et sécurité
 
-- [Guide de contribution complet](https://github.com/GhostPunishR/RavenEmu/blob/main/CONTRIBUTING.md)
-- [Code de conduite](https://github.com/GhostPunishR/RavenEmu/blob/main/CODE_OF_CONDUCT.md)
-- [Politique de sécurité](https://github.com/GhostPunishR/RavenEmu/blob/main/SECURITY.md)
-- [Modèle de pull request](https://github.com/GhostPunishR/RavenEmu/blob/main/.github/PULL_REQUEST_TEMPLATE.md)
+Décrivez problème, comportement obtenu, modules touchés, preuves exécutées et limites. Évitez les changements indépendants regroupés dans la même PR.
+
+Une vulnérabilité se signale par [avis de sécurité privé](https://github.com/GhostPunishR/RavenEmu/security/advisories/new), selon la [politique de sécurité](https://github.com/GhostPunishR/RavenEmu/blob/main/SECURITY.md).

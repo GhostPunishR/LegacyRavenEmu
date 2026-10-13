@@ -1,85 +1,86 @@
 # Compilation
 
+**Toutes les commandes de cette page ciblent `multiplateforme/`.** Les anciens projets Gradle et CMake de la V2 restent en héritage hors de ce dossier et ne sont plus construits par la CI active.
+
 ## Prérequis
 
-- Git;
-- JDK 21 recommandé, identique à la CI;
-- Gradle Wrapper fourni par le dépôt;
-- SDK Android avec `compileSdk 37` pour construire l'application;
-- Android NDK `30.0.16248370` et CMake `3.22.1`.
+- Git et le Gradle Wrapper du dépôt ;
+- JDK 21, comme dans la CI ;
+- Android SDK avec API 37 pour le build Android ;
+- outils Android CMake/NDK adaptés au build natif ;
+- accès aux dépendances Gradle, à RavenCore et à rcheevos lors du premier téléchargement.
 
-Les modules JVM peuvent être testés sans SDK Android. Les moteurs C++ se testent séparément sur l'hôte avec un compilateur C++20 et CMake.
+La configuration native exige CMake 3.22.1 ou plus. Le projet multiplateforme ne fixe pas le même numéro de NDK que l'ancien projet V2 : ne recopiez pas ses prérequis comme un épinglage actuel.
 
-## Récupérer le code
+## Récupérer le projet
 
-```bash
+```sh
 git clone https://github.com/GhostPunishR/RavenEmu.git
 cd RavenEmu
 ```
 
-## Lancer les tests
+## Android
 
-```bash
-./gradlew test
+Depuis la racine de RavenEmu :
+
+```sh
+./gradlew -p multiplateforme :androidApp:assembleDebug
 ```
 
-Cette commande vérifie les modules disponibles. Sans SDK Android, elle couvre les contrats, les adaptateurs, les bibliothèques JVM et les implémentations Kotlin de référence.
-
-## Tester les moteurs C++
-
-```bash
-cmake -S cores -B build/native-host \
-  -DRAVENEMU_BUILD_TESTS=ON \
-  -DCMAKE_BUILD_TYPE=Release
-cmake --build build/native-host --parallel
-ctest --test-dir build/native-host --output-on-failure
-```
-
-Pour compiler aussi la frontière JNI sur l'hôte, configurez `native/` : `cmake -S native -B build/native-host-jni`. CMake utilise alors les en-têtes du JDK installé.
-
-## Lint Android
-
-```bash
-./gradlew lint
-```
-
-Le SDK Android doit être configuré.
-
-## Construire l'APK Debug
-
-```bash
-./gradlew :app:android:assembleDebug
-```
-
-Le fichier produit se trouve sous:
+APK produit :
 
 ```text
-app/android/build/outputs/apk/debug/
+multiplateforme/androidApp/build/outputs/apk/debug/androidApp-debug.apk
 ```
 
-## Validation complète
+Pour les tests unitaires Android et les règles du dépôt, la CI utilise :
 
-```bash
-cmake -S cores -B build/native-host -DRAVENEMU_BUILD_TESTS=ON
-cmake --build build/native-host --parallel
-ctest --test-dir build/native-host --output-on-failure
-./gradlew test lint :app:android:assembleDebug
+```sh
+./gradlew -p multiplateforme :androidApp:testDebugUnitTest
+./gradlew -p multiplateforme :policy:test
 ```
 
-C'est la séquence principale exécutée par la CI Android.
+Les tests `policy` sont des tests JVM de fichiers et workflows, sans appareil. Les tests unitaires ne prouvent pas l'exécution correcte d'un jeu sur téléphone.
 
-## Configurer le SDK
+Les tâches du module partagé dépendent de l'environnement et des cibles disponibles. Pour les découvrir :
 
-Utilisez une des méthodes reconnues par Gradle:
+```sh
+./gradlew -p multiplateforme :shared:tasks
+```
 
-- `sdk.dir` dans `local.properties`;
-- variable `ANDROID_HOME`;
-- variable `ANDROID_SDK_ROOT`.
+Ne remplacez pas ces commandes par `./gradlew test` à la racine : cela vise l'ancien projet.
 
-Ne publiez pas un fichier `local.properties` contenant un chemin propre à votre machine.
+## SDK Android
 
-## Release signée
+Configurez le SDK avec les mécanismes Android/Gradle, par exemple `ANDROID_HOME` ou le fichier `local.properties` adapté au projet. Ne versionnez jamais vos chemins locaux, clés ou mots de passe.
 
-La construction Release utilise des secrets de signature configurés dans GitHub Actions. Les clés et mots de passe ne doivent jamais être ajoutés au dépôt.
+Un APK Debug local utilise la signature Debug de votre environnement. Elle peut différer de celle d'un artefact CI ; voir [[Installation]]. Aucune procédure de Release publique signée n'est configurée dans le workflow actuel.
 
-Voir aussi [[Architecture]] et [[Contribution]].
+## iOS sur macOS
+
+Prérequis supplémentaires : Xcode, ses outils de compilation, CMake 3.22.1 ou plus et [XcodeGen](https://github.com/yonaskolb/XcodeGen). L'hôte cible iOS 15.0 ou plus.
+
+Depuis la racine du dépôt :
+
+```sh
+./gradlew -p multiplateforme :shared:linkDebugFrameworkIosSimulatorArm64
+sh multiplateforme/native/build-ios.sh
+```
+
+Pour générer et ouvrir l'hôte :
+
+```sh
+cd multiplateforme/iosApp
+xcodegen generate
+open RavenEmuV3.xcodeproj
+```
+
+Le nom technique du projet Xcode est conservé ; le nom affiché de l'application est RavenEmu. Les scripts Xcode construisent la partie native et intègrent `RavenShared`.
+
+Le framework et le SDK natif peuvent compiler sans que le lecteur iOS soit jouable : import, persistance et boucle du lecteur restent à raccorder. Aucun binaire iOS signé n'est distribué.
+
+## Référence CI
+
+Le [workflow multiplateforme](https://github.com/GhostPunishR/RavenEmu/blob/main/.github/workflows/multiplateforme.yml) construit l'APK Android, exécute ses tests, construit le framework iOS et le SDK natif pour simulateur. Les règles vérifient notamment les actions épinglées et le Wrapper Gradle.
+
+Voir [[Architecture]] et [[Contribution]].

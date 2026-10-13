@@ -1,92 +1,46 @@
 # Installation
 
-## Télécharger RavenEmu Test
+Cette page concerne la nouvelle version multiplateforme. **L'ancien APK `test-latest` appartient à la V2 et n'est plus mis à jour.**
 
-La branche `main` produit automatiquement un seul APK public optimisé :
+## Télécharger la bêta Android
 
-**[Télécharger RavenEmu Test](https://github.com/GhostPunishR/RavenEmu/releases/download/test-latest/RavenEmu-test.apk)**
+Prérequis : Android 8.0 ou plus récent et un compte GitHub connecté pour télécharger un artefact Actions.
 
-Son empreinte SHA-256 est disponible à la même adresse avec l'extension `.sha256` :
+1. Ouvrez le [workflow RavenEmu Multiplateforme](https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml?query=branch%3Amain+is%3Asuccess).
+2. Choisissez une exécution réussie de la branche `main`, avec le job **Android (APK bêta)** réussi.
+3. Dans la zone **Artifacts**, téléchargez **`ravenemu-android-beta`**.
+4. Extrayez l'archive ZIP pour récupérer l'APK.
+5. Ouvrez l'APK sur Android et autorisez l'installation depuis cette source si le système le demande.
 
-[RavenEmu-test.apk.sha256](https://github.com/GhostPunishR/RavenEmu/releases/download/test-latest/RavenEmu-test.apk.sha256)
+Les artefacts sont conservés **7 jours**. S'il n'y en a plus, consultez les exécutions plus récentes ou [[compilez l'application|Compilation]].
 
-La préversion `test-latest` est remplacée après chaque construction réussie de `main`. Le lien reste identique, et le fichier comme son empreinte changent à chaque publication. L'empreinte du **certificat de signature**, elle, ne change pas.
+## Identifier la bonne application
 
-## Installer sur Android
+| Élément | Nouvelle version |
+|---|---|
+| Nom affiché | RavenEmu |
+| Identifiant Android | `com.ravenemu.v3.preview` |
+| Distribution | Artefact GitHub Actions `ravenemu-android-beta` |
+| Variante construite | Debug, avec moteurs natifs Android optimisés |
 
-1. Téléchargez l'APK depuis le lien officiel.
-2. Ouvrez le fichier depuis les téléchargements Android.
-3. Autorisez temporairement l'installation depuis cette source si Android le demande.
-4. Vérifiez que l'application installée se nomme RavenEmu.
+L'application peut cohabiter avec la V2 ; elle ne remplace pas ses données. Après installation, continuez avec [[Premiers pas|Premiers-pas]].
 
-L'APK Test conserve les diagnostics et laisse Android optimiser le moteur. Il reste destiné aux essais, pas à une distribution de production. Son identifiant d'application est `com.ravenemu.app.profil` : il cohabite avec une éventuelle version Release sans l'écraser.
+## Provenance et signature
 
-## Les avertissements d'Android sont normaux
+Téléchargez depuis le workflow officiel et relevez le commit de l'exécution. L'empreinte du certificat Test de la V2 **ne s'applique pas** à cette bêta.
 
-Android affiche des avertissements pour **tout** APK installé en dehors du Play Store. Ils apparaîtront donc à chaque installation de RavenEmu, et ils ne signalent rien d'anormal sur le fichier.
+Le workflow actuel construit `assembleDebug` et ne configure pas la clé Test dédiée et stable de l'ancienne version. Ne supposez donc pas qu'un APK provenant d'une nouvelle exécution pourra toujours mettre à jour l'installation précédente.
 
-Il faut cependant distinguer deux situations très différentes, que les libellés d'Android ne séparent pas toujours clairement.
+Si Android indique une signature incompatible, exportez d'abord toutes vos sauvegardes depuis l'application installée. Une désinstallation ou un effacement des données supprime la bibliothèque privée, les réglages et les sauvegardes internes. Voir [[Sauvegardes et états|Sauvegardes-et-etats]].
 
-### Messages attendus, liés à l'absence d'information
+Une autorisation d'installation hors magasin n'est pas un diagnostic de sécurité. Si Android signale explicitement une application nuisible, ne contournez pas l'alerte ; signalez le message et la provenance du fichier au projet.
 
-**« Autoriser cette source » ou « Installer des applications inconnues ».** Android exige une autorisation explicite pour l'application depuis laquelle vous installez : navigateur, gestionnaire de fichiers, messagerie. L'autorisation est donnée par source, pas globalement.
+## iOS
 
-**« Application non vérifiée », « développeur inconnu », « analyse impossible », ou une proposition d'envoyer le fichier à Google pour analyse.** Play Protect ne connaît ni ce certificat de signature ni ce développeur. Ces messages ne signalent pas un problème trouvé dans le fichier : ils signalent que Google n'a rien à en dire.
+Aucun binaire iOS signé ni téléchargement public n'est distribué. Sur Mac, les développeurs peuvent construire l'hôte et le framework partagé, mais l'import et le lecteur jouable ne sont pas encore raccordés. Voir [[Compilation]].
 
-Une application publiée sur le Play Store ne déclenche pas ces messages, non parce qu'elle serait plus sûre, mais parce que Google l'a vue passer. Un APK signé par une clé auto-signée et distribué depuis GitHub les déclenchera toujours.
+## Jeux
 
-### Alerte à ne jamais ignorer
+Aucune ROM ni aucun contenu protégé n'est fourni. Importez des copies que vous êtes autorisé à utiliser ou des homebrews librement distribués. Aucun fichier BIOS externe n'est demandé par le lecteur GBA actuel.
 
-**« Application dangereuse », « application nuisible bloquée », « cette application peut endommager votre appareil ».** C'est un **verdict**, pas une absence d'information : Play Protect annonce avoir détecté un comportement qu'il juge nuisible dans le fichier analysé.
-
-Si ce message apparaît, n'installez pas l'application, supprimez le fichier, et signalez-le dans une issue du projet en précisant depuis quelle adresse vous l'avez téléchargé. Une préversion officielle de RavenEmu ne devrait pas déclencher ce verdict ; s'il apparaît, quelque chose mérite d'être compris avant d'aller plus loin.
-
-### Ce qu'il ne faut pas faire
-
-- Ne désactivez pas Play Protect de façon générale. Il continue de rendre service pour tout le reste, y compris pour détecter ce que la vérification d'empreinte ne détecte pas.
-- Ne laissez pas l'autorisation « sources inconnues » active en permanence sur votre navigateur. Accordez-la au moment de l'installation, puis retirez-la.
-
-### Ce que la vérification d'empreinte prouve, et ce qu'elle ne prouve pas
-
-Elle prouve **qui a signé** le fichier : si l'empreinte du certificat correspond à celle publiée par le projet, l'APK vient bien de la clé de RavenEmu et n'a pas été modifié depuis.
-
-Elle ne dit **rien du contenu** lui-même. Elle répond aux messages d'absence d'information, qui portent justement sur l'origine du fichier. Elle ne répond pas à un verdict de détection, et ne doit jamais servir à en écarter un.
-
-## Vérifier l'APK avant de l'installer
-
-Chaque préversion publie quatre informations : l'empreinte SHA-256 du fichier, l'empreinte SHA-256 du certificat de signature, le commit source et le nom du package.
-
-```bash
-sha256sum -c RavenEmu-test.apk.sha256
-apksigner verify --print-certs RavenEmu-test.apk
-```
-
-L'empreinte du certificat doit être :
-
-```
-c439aed3f5210f88d92f435f949614cacbb4105ed7967a246abfa051d59feee1
-```
-
-Elle est identique pour toutes les préversions Test, et rappelée dans les notes de chacune. Si `apksigner` en affiche une autre, n'installez pas l'APK.
-
-## Mettre à jour
-
-L'APK Test est signé par une clé dédiée et stable : une nouvelle version s'installe par-dessus la précédente, sans désinstallation et sans perte de données.
-
-Si Android refuse la mise à jour en signalant une signature incompatible, l'application déjà installée ne vient pas de ce dépôt, ou date d'avant l'adoption de cette clé dédiée. Dans ce dernier cas, sauvegardez vos données, désinstallez, puis réinstallez : c'est une opération à faire une seule fois.
-
-Avant toute désinstallation :
-
-- copiez les sauvegardes importantes ;
-- vérifiez l'emplacement choisi pour les fichiers ;
-- notez les réglages personnalisés.
-
-Une désinstallation peut supprimer les données internes de l'application.
-
-## Compiler soi-même
-
-Seul l'APK Test est publié. Un APK Debug se construit localement avec le Gradle Wrapper (voir [[Compilation]]) et ne demande aucun secret de signature. Il n'est pas destiné à circuler.
-
-## Contenu non fourni
-
-RavenEmu ne télécharge et ne distribue ni ROM ni BIOS. Utilisez uniquement des copies de jeux que vous êtes autorisé à employer ou des homebrews librement distribués.
+Source : [workflow multiplateforme](https://github.com/GhostPunishR/RavenEmu/blob/main/.github/workflows/multiplateforme.yml) et [configuration Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/build.gradle.kts).

@@ -1,40 +1,43 @@
 # Premiers pas
 
-## 1. Préparer un dossier de jeux
+Les étapes suivantes concernent la **bêta Android multiplateforme**. Le lecteur iOS n'est pas encore jouable.
 
-Placez vos copies personnelles et vos homebrews dans un dossier accessible par Android. Vous pouvez organiser ce dossier avec des sous-dossiers.
-
-RavenEmu utilise le sélecteur de documents Android. L'application n'a pas besoin d'une permission globale donnant accès à tout le stockage.
-
-## 2. Ajouter le dossier
+## 1. Importer un jeu
 
 1. Ouvrez RavenEmu.
-2. Choisissez l'action permettant d'ajouter un dossier.
-3. Sélectionnez le dossier contenant vos jeux.
-4. Confirmez l'autorisation d'accès proposée par Android.
-5. Attendez la fin de l'analyse de la bibliothèque.
+2. Touchez **+** dans la bibliothèque.
+3. Choisissez un fichier `.gb`, `.gbc` ou `.gba` avec le sélecteur Android.
+4. Attendez la validation et l'ajout du jeu.
 
-La bibliothèque lit les en-têtes et calcule des empreintes pour identifier les fichiers. Elle ne téléverse pas les ROM.
+L'application conserve une copie privée persistante de la ROM, identifiée par SHA-256. Vous n'avez pas à sélectionner de nouveau le fichier d'origine au lancement suivant.
 
-## 3. Lancer un jeu
+Pour plusieurs jeux, ouvrez **⋮ → Importer un dossier**. Les sous-dossiers sont parcourus dans des limites définies et un récapitulatif indique les ajouts, doublons et fichiers refusés. Voir [[Bibliothèque et ROM|Bibliotheque-et-ROM]].
 
-Touchez un jeu dans la vue grille ou liste. RavenEmu sélectionne automatiquement le moteur Game Boy, Game Boy Color ou Game Boy Advance.
+## 2. Lancer une partie
 
-Lors du premier lancement:
+Touchez le jeu dans la grille ou la liste, puis **Jouer** dans sa fiche. Les pages de console et leurs pictogrammes permettent de naviguer dans la bibliothèque.
 
-- vérifiez la disposition des commandes tactiles;
-- choisissez un profil d'écran;
-- activez la surcouche de performance si un jeu GBA semble lent.
+La console Game Boy ou Game Boy Color est choisie d'après l'en-tête de la ROM, et non sa seule extension. Les fichiers GBA sont chargés dans le moteur dédié.
 
-## 4. Quitter proprement
+## 3. Régler l'expérience
 
-Revenez à la bibliothèque avec les commandes de l'application. RavenEmu sauvegarde automatiquement la mémoire de cartouche lorsqu'elle est disponible.
+Dans **Paramètres** :
 
-Évitez de forcer l'arrêt d'Android juste après une modification importante dans un jeu.
+- **Audio** : activation du son et volume ;
+- **Vidéo** : profil Original, DMG vert ou Pocket gris, luminosité et contraste ;
+- **Interface** : retour haptique, taille, espacement et style des commandes ;
+- **Général** : jaquettes en ligne facultatives et diagnostic de performance.
 
-## 5. Personnaliser
+Les profils DMG et Pocket s'appliquent uniquement aux jeux monochromes. Voir [[Affichage et audio|Affichage-et-audio]] et [[Commandes]].
 
-- [[Commandes]] pour le tactile et les manettes physiques
-- [[Affichage et audio|Affichage-et-audio]] pour les profils LCD et le son
-- [[Sauvegardes et états|Sauvegardes-et-etats]] pour distinguer `.sav` et état instantané
-- [[Dépannage|Depannage]] si un jeu manque dans la bibliothèque ou ne démarre pas
+## 4. Conserver sa progression
+
+Utilisez la sauvegarde normale du jeu lorsque celui-ci en possède une. Le menu **⋮** du lecteur propose aussi quatre emplacements d'état avec miniature et date.
+
+Quittez avec les commandes de l'application. Le jeu et l'audio sont suspendus en arrière-plan ; la mémoire de sauvegarde modifiée est persistée périodiquement et aux transitions prévues. Évitez de forcer l'arrêt immédiatement après une sauvegarde.
+
+## 5. Faire une copie externe
+
+Depuis la fiche du jeu, utilisez **Exporter toutes les sauvegardes (.zip)** ou **Exporter .sav**. Conservez l'export hors de l'espace privé de l'application avant de changer d'installation.
+
+Voir [[Sauvegardes et états|Sauvegardes-et-etats]] et [[Dépannage|Depannage]].
