@@ -18,6 +18,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.ghostpunishr.ravenemu.v3
         PRODUCT_NAME: RavenEmuV3
         GENERATE_INFOPLIST_FILE: YES
+        # Name shown under the home-screen icon.
+        INFOPLIST_KEY_CFBundleDisplayName: RavenEmu
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         CODE_SIGN_STYLE: Automatic
         HEADER_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../native/build-ios/$(PLATFORM_NAME)/include"

@@ -233,7 +233,7 @@ fun V3SettingsScreen(
                     GroupTitle("RavenEmu")
                     SettingDescription("Version installée", appVersion)
                     SettingDescription("Créateur", "GhostPunishR")
-                    SettingDescription("Version du projet", "V3 — préversion Android / iOS")
+                    SettingDescription("Version du projet", "Nouvelle version multiplateforme — préversion Android / iOS")
                     SettingDescription("Moteurs natifs", "RavenCore (révision épinglée)")
                     SettingDescription("Licence du projet", "GNU AGPL-3.0")
                     GroupTitle("Informations légales")

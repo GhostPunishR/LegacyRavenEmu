@@ -1,13 +1,15 @@
-name: Android CI
+name: Android CI (V2 0.8.1)
 
+# La V2 0.8.1 n'est plus construite automatiquement : la nouvelle version,
+# dans `multiplateforme/`, a son propre workflow. Ce workflow reste disponible
+# en exécution manuelle (onglet Actions → « Run workflow »), par exemple pour
+# un correctif de la 0.8.1. Les règles du dépôt (`tools/ci-policy`), qu'il
+# exécutait aussi, tournent désormais dans `repository-policy.yml`.
+#
+# La publication Release reste refusée par défaut : elle doit être demandée
+# explicitement, en plus des protections de l'environnement `release` (voir
+# RELEASING.md).
 on:
-  push:
-    branches: [main, master, develop, "claude/**"]
-    tags: ["v*"]
-  pull_request:
-  # Exécution manuelle. La publication Release reste refusée par défaut : elle
-  # doit être demandée explicitement, en plus des protections de
-  # l'environnement `release` (voir RELEASING.md).
   workflow_dispatch:
     inputs:
       publier_release:

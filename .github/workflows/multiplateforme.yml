@@ -1,14 +1,14 @@
-name: RavenEmu V3 Multiplatform
+name: RavenEmu Multiplateforme
 on:
   push:
-    branches: [feature/v3-multiplatform]
+    branches: [main, feature/v3-multiplatform]
     paths:
-      - "v3/**"
-      - ".github/workflows/v3-multiplatform.yml"
+      - "multiplateforme/**"
+      - ".github/workflows/multiplateforme.yml"
   pull_request:
     paths:
-      - "v3/**"
-      - ".github/workflows/v3-multiplatform.yml"
+      - "multiplateforme/**"
+      - ".github/workflows/multiplateforme.yml"
   workflow_dispatch:
 
 permissions:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   android:
-    name: V3 Android shared UI
+    name: Android (APK bêta)
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer le dépôt
@@ -32,20 +32,20 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: Build Android preview
-        run: ./gradlew -p v3 :androidApp:assembleDebug --stacktrace
-      - name: Test GB import validation
-        run: ./gradlew -p v3 :androidApp:testDebugUnitTest --stacktrace
-      - name: Publish unsigned preview APK
+      - name: Construire l'APK bêta
+        run: ./gradlew -p multiplateforme :androidApp:assembleDebug --stacktrace
+      - name: Tests Android
+        run: ./gradlew -p multiplateforme :androidApp:testDebugUnitTest --stacktrace
+      - name: Publier l'APK bêta
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ravenemu-v3-android-preview
-          path: v3/androidApp/build/outputs/apk/debug/*.apk
+          name: ravenemu-android-beta
+          path: multiplateforme/androidApp/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
 
   ios:
-    name: V3 iOS shared framework
+    name: iOS (framework partagé)
     runs-on: macos-latest
     steps:
       - name: Récupérer le dépôt
@@ -62,6 +62,6 @@ jobs:
           distribution: temurin
           java-version: "21"
       - name: Build iOS simulator framework
-        run: ./gradlew -p v3 :shared:linkDebugFrameworkIosSimulatorArm64 --stacktrace
+        run: ./gradlew -p multiplateforme :shared:linkDebugFrameworkIosSimulatorArm64 --stacktrace
       - name: Cross-compile native emulator SDK for iOS simulator
-        run: sh v3/native/build-ios.sh
+        run: sh multiplateforme/native/build-ios.sh

@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "RavenEmuV3"
+rootProject.name = "RavenEmuMultiplateforme"
 include(":shared", ":androidApp")

@@ -1,6 +1,8 @@
-# RavenEmu V3
+# RavenEmu — version multiplateforme
 
-Aperçu de la future interface **identique sur Android et iOS**. Le projet vit dans `v3/` sur la branche `feature/v3-multiplatform` et ne remplace pas encore RavenEmu Android V2.
+Nouvelle version de RavenEmu, à l'interface **identique sur Android et iOS** : l'application installée s'appelle simplement **RavenEmu**. Le projet vit dans `multiplateforme/` (anciennement `v3/`, nom encore utilisé dans l'historique ci-dessous, les paquets Kotlin `com.ravenemu.v3` et l'identifiant Android `com.ravenemu.v3.preview`, conservés pour ne pas perdre les données des testeurs). Son workflow est `.github/workflows/multiplateforme.yml`, qui produit l'APK bêta `ravenemu-android-beta`.
+
+La V2 0.8.1 (racine du dépôt : `app/`, `engine/`, `features/`…) n'est plus construite automatiquement : son workflow `android.yml` ne se lance plus qu'à la main. Elle s'installe à côté de cette version sans être remplacée, les deux applications ayant des identifiants différents.
 
 ## État de la V3
 
@@ -48,12 +50,14 @@ Aperçu de la future interface **identique sur Android et iOS**. Le projet vit d
 
 **Étape 17, Game Boy Advance (Android V3) et icônes de console :** le bouton + et l'import de dossier acceptent les `.gba`, lancés sur le cœur GBA de RavenCore (même révision épinglée, BIOS intégré à RavenCore : aucun fichier BIOS à fournir). La limite de taille d'une ROM passe à 32 Mio, la taille maximale d'une cartouche GBA. Le lecteur suit les dimensions de l'image du cœur (240 × 160 en GBA) et ajoute les gâchettes L et R au-dessus de la croix et des boutons A/B pour les jeux GBA. Les miniatures des save states gardent la taille native. RetroAchievements reçoit la console Game Boy Advance (5) et les jaquettes en ligne, si l'option est activée, viennent du catalogue `Nintendo - Game Boy Advance`. Le type de sauvegarde et l'horloge des cartouches sont détectés automatiquement par RavenCore. Sous la bibliothèque, les points de l'indicateur de pages sont remplacés par des pictogrammes de console dessinés pour RavenEmu (grille pour « Tous les jeux », console verticale pour Game Boy, la même avec un écran en couleurs pour Game Boy Color, console horizontale pour Game Boy Advance) ; toucher une icône ouvre sa page.
 
+**Étape 18, nom et dossier définitifs :** le dossier `v3/` devient `multiplateforme/` et son workflow `multiplateforme.yml` (qui tourne aussi sur `main`) ; l'APK bêta s'appelle `ravenemu-android-beta`. L'application installée s'appelle **RavenEmu** sur Android comme sur iOS, avec l'icône d'origine. Les identifiants techniques (`com.ravenemu.v3.preview`, paquets `com.ravenemu.v3`, clé Keystore RetroAchievements, format des archives de sauvegarde) restent inchangés : une mise à jour garde la bibliothèque, les sauvegardes et la connexion RetroAchievements. Le workflow de la V2 0.8.1 ne se lance plus qu'à la main ; les règles du dépôt tournent dans `repository-policy.yml`.
+
 **Encore à réaliser :** validation sur téléphone de l'authentification RA, reconnaissance Game Boy (notamment Pokémon Bleu), de l'affichage des badges et d'un déblocage synchronisé, import iOS/lecteur jouable, validation sur téléphone de jeux Game Boy Color et Game Boy Advance (performances GBA notamment), skins Delta.
 
 ## Architecture
 
 ```text
-v3/
+multiplateforme/
   shared/       UI Compose et logique Kotlin Multiplatform
   androidApp/   Activité Android et packaging de prévisualisation
   iosApp/       Hôte iOS SwiftUI + spécification XcodeGen
@@ -68,19 +72,19 @@ Prérequis : JDK 21, Android SDK avec API 37, Gradle Wrapper du dépôt.
 À partir de la racine de RavenEmu :
 
 ```sh
-./gradlew -p v3 :androidApp:assembleDebug
+./gradlew -p multiplateforme :androidApp:assembleDebug
 ```
 
-APK : `v3/androidApp/build/outputs/apk/debug/androidApp-debug.apk`.
+APK : `multiplateforme/androidApp/build/outputs/apk/debug/androidApp-debug.apk`.
 
-Pour exécuter les tests Kotlin communs, utilisez les tâches de test disponibles sur votre plateforme et `./gradlew -p v3 :shared:tasks`.
+Pour exécuter les tests Kotlin communs, utilisez les tâches de test disponibles sur votre plateforme et `./gradlew -p multiplateforme :shared:tasks`.
 
 ## iOS (sur macOS)
 
 Prérequis : Xcode, les outils de compilation iOS, JDK 21 et [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```sh
-cd v3/iosApp
+cd multiplateforme/iosApp
 xcodegen generate
 open RavenEmuV3.xcodeproj
 ```
@@ -88,7 +92,7 @@ open RavenEmuV3.xcodeproj
 Sélectionnez le simulateur iOS et démarrez l'application depuis Xcode. Le script de construction de l'hôte compile et intègre `RavenShared` via le Gradle Wrapper du dépôt. Pour tester seulement le framework :
 
 ```sh
-./gradlew -p v3 :shared:linkDebugFrameworkIosSimulatorArm64
+./gradlew -p multiplateforme :shared:linkDebugFrameworkIosSimulatorArm64
 ```
 
 L'application iOS et la compilation Apple nécessitent un Mac avec Xcode. Aucun binaire iOS signé n'est encore distribué.
@@ -98,7 +102,7 @@ L'application iOS et la compilation Apple nécessitent un Mac avec Xcode. Aucun 
 La base native est disponible dans [`native/`](native/README.md). Elle relie les trois cœurs maison depuis le commit épinglé [9f5d4d9 de RavenCore 0.1.0](https://github.com/GhostPunishR/RavenCore/commit/9f5d4d99e40054f84b0e74efa04135edd1ef9288). Les PR #1 à #8 apportent contrôles de sécurité, améliorations d'API, correctifs de portabilité et optimisations des sauvegardes d'état. Le mixeur audio GB dans `apu.hpp` est inchangé ; cette mise à jour n'est pas un correctif du son GB.
 
 - **Android** : `NativeCore.kt` charge la bibliothèque JNI `ravenemu_v3_android`. Elle permet de charger des octets de ROM et de lire les frames ARGB8888, l'audio stéréo et les boutons.
-- **iOS** : `RavenNativeCore.swift` importe la même API C compilée pour l'architecture Apple. Le script `sh v3/native/build-ios.sh` produit les archives C++ nécessaires.
+- **iOS** : `RavenNativeCore.swift` importe la même API C compilée pour l'architecture Apple. Le script `sh multiplateforme/native/build-ios.sh` produit les archives C++ nécessaires.
 
 L'import GB Android charge maintenant les ROMs dans le cœur natif. L'exécution des frames, les commandes tactiles et le flux audio PCM16 sont raccordés dans le lecteur Android de préversion. Une compilation native réussie n'atteste pas encore de l'exécution sur un appareil iOS.
 

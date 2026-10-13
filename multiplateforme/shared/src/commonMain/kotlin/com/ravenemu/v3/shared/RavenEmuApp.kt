@@ -146,7 +146,7 @@ fun RavenEmuApp(
     retroNotice: String? = null,
     settings: V3Settings = V3Settings(),
     onSettingsChange: ((V3Settings) -> Unit)? = null,
-    appVersion: String = "V3 Preview",
+    appVersion: String = "Préversion",
     onOpenLink: ((String) -> Unit)? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }

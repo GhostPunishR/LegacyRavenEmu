@@ -123,7 +123,7 @@ internal class GbSaveTransfer(filesDir: File) {
             }
         }
         val manifestBytes = entries.remove("manifest.json")
-            ?: error("Cette archive n'est pas une sauvegarde RavenEmu V3.")
+            ?: error("Cette archive n'est pas une sauvegarde de cette version de RavenEmu.")
         val manifest = JSONObject(manifestBytes.toString(Charsets.UTF_8))
         require(manifest.getString("format") == FORMAT && manifest.getInt("version") == VERSION) {
             "Format de sauvegarde non pris en charge."
