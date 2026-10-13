@@ -2,15 +2,17 @@ cmake_minimum_required(VERSION 3.22.1)
 project(RavenEmuV3Native LANGUAGES C CXX)
 
 # Lock the emulator engines AND public C interface to a reviewed source commit.
-# RavenCore: merged RetroAchievements memory API (PR #10), native C API
-# and optimized save states. Keep the reviewed immutable commit SHA.
+# RavenCore 0.1.2 (tag v0.1.2): GBA fixes and speed-up from 0.1.1, GB/GBC
+# fixes from the public test suites, HDMA bound fix. C API version 0 and save
+# state formats unchanged (GB/GBC 11, GBA 12, which still loads format 11).
+# Keep the reviewed immutable commit SHA, not the movable tag.
 include(FetchContent)
 set(RAVENEMU_BUILD_LIBRETRO OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(RAVENEMU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(ravenemu_cores
     GIT_REPOSITORY https://github.com/GhostPunishR/RavenCore.git
-    GIT_TAG 34234f6a3ddc488714575c53b7a01bf1f2d7b49d
+    GIT_TAG 0e101d2ed6599e697409ec0a05efceb718a2a51b
     GIT_SHALLOW FALSE
 )
 FetchContent_MakeAvailable(ravenemu_cores)
