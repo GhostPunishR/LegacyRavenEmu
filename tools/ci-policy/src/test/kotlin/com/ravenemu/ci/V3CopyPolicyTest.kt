@@ -72,7 +72,7 @@ class V3CopyPolicyTest {
 
     private companion object {
         const val PORT_HEADER =
-            "// Port of V2 0.8.1 official rcheevos adapter. JNI package changed for V3;\n" +
-                "// event processing, Softcore policy, and SDK requests are identical.\n"
+            "// Port of V2's official rcheevos adapter (native/jni/src/achievements_bridge.cpp).\n" +
+                "// Only the JNI package changes for V3; everything else stays identical.\n"
     }
 }

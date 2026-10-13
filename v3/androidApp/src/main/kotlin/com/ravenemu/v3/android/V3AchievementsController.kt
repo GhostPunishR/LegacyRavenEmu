@@ -133,8 +133,12 @@ internal class V3AchievementsController(
         if (event.kind == "login_error") {
             connected = false
         }
-        val snapshot = client?.snapshot() ?: V3RetroSnapshot()
-        publish(snapshot.copy(error = if (event.kind.endsWith("_error")) event.title else null))
+        // Indicator and leaderboard events can arrive every frame (a running
+        // timer); they change no achievement state, so skip the snapshot copy.
+        if (event.kind !in TRANSIENT_EVENTS) {
+            val snapshot = client?.snapshot() ?: V3RetroSnapshot()
+            publish(snapshot.copy(error = if (event.kind.endsWith("_error")) event.title else null))
+        }
         // The SDK login event includes a secret token; it is saved above
         // and never forwarded to Compose, toasts or diagnostics.
         val publicEvent = if (event.kind == "login") event.copy(extra = "")
@@ -170,5 +174,13 @@ internal class V3AchievementsController(
         } finally {
             dispatcher.close()
         }
+    }
+
+    private companion object {
+        val TRANSIENT_EVENTS = setOf(
+            "progress_show", "progress_hide", "challenge_show", "challenge_hide",
+            "tracker_show", "tracker_hide", "leaderboard_started", "leaderboard_failed",
+            "leaderboard_submitted", "leaderboard_scoreboard",
+        )
     }
 }
