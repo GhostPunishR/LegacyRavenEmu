@@ -1,5 +1,8 @@
 package com.ravenemu.v3.shared
 
+import kotlin.math.pow
+import kotlin.math.roundToInt
+
 /**
  * V3 preferences: portable value object. Android stores this in private
  * SharedPreferences; other hosts can supply their own persistence adapter.
@@ -23,6 +26,13 @@ data class V3Settings(
      * pouvoir l'accepter en connaissance de cause, pas la découvrir.
      */
     val onlineCovers: Boolean = false,
+    /**
+     * LCD colour correction, per console: tones down the very vivid raw
+     * colours to the flatter look of a real reflective screen. Off by
+     * default (the V2 default); a Game Boy game is never affected.
+     */
+    val lcdCorrectionGbc: Boolean = false,
+    val lcdCorrectionGba: Boolean = false,
 ) {
     fun normalized(): V3Settings = copy(
         audioVolume = audioVolume.coerceIn(0, 100),
@@ -35,18 +45,25 @@ data class V3Settings(
     )
 }
 
-/** Apply an optional display treatment after the native GB/GBC frame. */
+/** Apply an optional display treatment after the native GB/GBC/GBA frame. */
 object GbDisplayFilter {
     /**
      * The DMG and Pocket profiles turn the image into shades of one color:
      * on a Game Boy Color game they would erase its colors, so they only
-     * apply to monochrome games. Brightness and contrast apply to all.
+     * apply to monochrome games. The LCD correction only applies to the
+     * colour consoles that have it enabled. Brightness and contrast apply to
+     * all, last.
      */
     fun apply(pixels: IntArray, settings: V3Settings, platform: GamePlatform = GamePlatform.GB) {
         val profile = if (platform == GamePlatform.GB) settings.videoPalette else "original"
         val brightness = settings.videoBrightness
         val contrast = settings.videoContrast
-        if (profile == "original" && brightness == 0 && contrast == 100) return
+        val lcd = when (platform) {
+            GamePlatform.GB -> false
+            GamePlatform.GBC -> settings.lcdCorrectionGbc
+            GamePlatform.GBA -> settings.lcdCorrectionGba
+        }
+        if (profile == "original" && !lcd && brightness == 0 && contrast == 100) return
         for (index in pixels.indices) {
             val color = pixels[index]
             val alpha = color and -0x1000000
@@ -69,11 +86,28 @@ object GbDisplayFilter {
                     b = luminance
                 }
             }
+            if (lcd) {
+                // Same simulation as V2 0.8.1 (calibrated by eye, not
+                // official panel data): ~28 % desaturation towards the Rec.
+                // 709 luminance, then a reflective-panel gamma of 1.15.
+                val luma = (54 * r + 183 * g + 19 * b) ushr 8
+                r = LCD_GAMMA[r + (((luma - r) * LCD_DESATURATION) shr 8)]
+                g = LCD_GAMMA[g + (((luma - g) * LCD_DESATURATION) shr 8)]
+                b = LCD_GAMMA[b + (((luma - b) * LCD_DESATURATION) shr 8)]
+            }
             fun adjust(channel: Int): Int =
                 (((channel - 128) * contrast) / 100 + 128 + brightness * 2)
                     .coerceIn(0, 255)
             pixels[index] = alpha or
                 (adjust(r) shl 16) or (adjust(g) shl 8) or adjust(b)
         }
+    }
+
+    /** Desaturation share towards the luminance, out of 256 (about 28 %). */
+    private const val LCD_DESATURATION = 72
+
+    /** Reflective LCD gamma 1.15: darkens the mid tones a little. */
+    private val LCD_GAMMA = IntArray(256) { v ->
+        (255.0 * (v / 255.0).pow(1.15)).roundToInt().coerceIn(0, 255)
     }
 }

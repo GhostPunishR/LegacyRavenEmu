@@ -106,7 +106,7 @@ fun V3SettingsScreen(
                     }
                     CategoryRow("Général", "Pause, jaquettes et diagnostics") { page = Page.GENERAL }
                     CategoryRow("Audio", "Son du jeu et volume") { page = Page.AUDIO }
-                    CategoryRow("Vidéo", "Couleurs, luminosité et contraste") { page = Page.VIDEO }
+                    CategoryRow("Vidéo", "Couleurs, correction LCD, luminosité et contraste") { page = Page.VIDEO }
                     CategoryRow("Interface", "Vibrations, commandes et style") { page = Page.INTERFACE }
                     CategoryRow("À propos", "Version, auteur, confidentialité et licences") {
                         page = Page.ABOUT
@@ -180,6 +180,19 @@ fun V3SettingsScreen(
                         onSettingsChange != null) {
                         update(settings.copy(videoPalette = "pocket"))
                     }
+                    GroupTitle("Correction des couleurs LCD")
+                    SettingSwitch(
+                        "Game Boy Color",
+                        "Atténue les couleurs très vives pour retrouver l'aspect plus mat de l'écran d'origine.",
+                        settings.lcdCorrectionGbc,
+                        onSettingsChange != null,
+                    ) { update(settings.copy(lcdCorrectionGbc = it)) }
+                    SettingSwitch(
+                        "Game Boy Advance",
+                        "Même correction, réglée à part pour la Game Boy Advance.",
+                        settings.lcdCorrectionGba,
+                        onSettingsChange != null,
+                    ) { update(settings.copy(lcdCorrectionGba = it)) }
                     GroupTitle("Ajustements")
                     SettingSlider("Luminosité", "${settings.videoBrightness}",
                         settings.videoBrightness, -50..50, onSettingsChange != null) {
@@ -192,6 +205,7 @@ fun V3SettingsScreen(
                     TextButton(onClick = {
                         update(settings.copy(
                             videoPalette = "original", videoBrightness = 0, videoContrast = 100,
+                            lcdCorrectionGbc = false, lcdCorrectionGba = false,
                         ))
                     }, enabled = onSettingsChange != null) {
                         Text("Rétablir l'affichage d'origine", color = Accent)

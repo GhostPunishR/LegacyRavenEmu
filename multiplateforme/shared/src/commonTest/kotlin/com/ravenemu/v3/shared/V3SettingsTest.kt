@@ -77,4 +77,34 @@ class V3SettingsTest {
         )
         assertEquals(0xffd43424.toInt(), brighter.single())
     }
+
+    @Test
+    fun lcdCorrectionTonesDownColourGamesOnlyWhenEnabled() {
+        val red = 0xffff0000.toInt()
+        val off = intArrayOf(red)
+        GbDisplayFilter.apply(off, V3Settings(), GamePlatform.GBC)
+        assertEquals(red, off.single(), "Désactivée par défaut")
+
+        val gbc = intArrayOf(red)
+        GbDisplayFilter.apply(gbc, V3Settings(lcdCorrectionGbc = true), GamePlatform.GBC)
+        val r = (gbc.single() ushr 16) and 255
+        val g = (gbc.single() ushr 8) and 255
+        assertTrue(r < 255 && g > 0, "Rouge pur désaturé vers la luminance")
+        assertEquals(0xff, (gbc.single() ushr 24) and 255)
+
+        // Each console has its own switch, and Game Boy games never change.
+        val gba = intArrayOf(red)
+        GbDisplayFilter.apply(gba, V3Settings(lcdCorrectionGbc = true), GamePlatform.GBA)
+        assertEquals(red, gba.single())
+        val gb = intArrayOf(red)
+        GbDisplayFilter.apply(gb, V3Settings(lcdCorrectionGbc = true, lcdCorrectionGba = true), GamePlatform.GB)
+        assertEquals(red, gb.single())
+    }
+
+    @Test
+    fun lcdCorrectionKeepsBlackAndWhite() {
+        val frame = intArrayOf(0xff000000.toInt(), 0xffffffff.toInt())
+        GbDisplayFilter.apply(frame, V3Settings(lcdCorrectionGba = true), GamePlatform.GBA)
+        assertEquals(listOf(0xff000000.toInt(), 0xffffffff.toInt()), frame.toList())
+    }
 }
