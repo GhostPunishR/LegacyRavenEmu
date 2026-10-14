@@ -41,36 +41,31 @@ private const val REPO = "https://github.com/GhostPunishR/RavenEmu"
 /**
  * Réglages → À propos: who makes RavenEmu, under which terms, with which
  * third-party code, and where its source lives. Laid out as the settings
- * categories are: rounded cards of rows, each with an icon.
+ * categories are: rounded cards of rows, each with an icon. Legal documents
+ * and licences open in the app's own reader; only the source code leaves it.
  */
 @Composable
 internal fun V3AboutContent(
     appVersion: String,
     onOpenLink: ((String) -> Unit)?,
-    onOpenNotice: (OpenSourceNotice) -> Unit,
+    onOpenDocument: (ReaderDocument) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
         AboutHeader(appVersion)
 
-        AboutSection("Application") {
-            AboutRow(AboutIcon.VERSION, "Version installée", appVersion)
-            AboutRow(AboutIcon.ENGINE, "Moteurs d'émulation", "RavenCore, développé pour RavenEmu")
-            AboutRow(AboutIcon.LICENSES, "Licence du projet", "GNU Affero General Public License 3.0")
-        }
-
         AboutSection("Informations légales") {
             AboutRow(AboutIcon.TERMS, "Conditions d'utilisation", "Ce que RavenEmu fournit, et votre responsabilité",
-                trailing = "↗", onClick = onOpenLink?.let { open -> { open("$REPO/blob/main/TERMS.md") } })
+                trailing = "›", onClick = { onOpenDocument(LegalDocuments.terms) })
             AboutRow(AboutIcon.PRIVACY, "Politique de confidentialité", "Données échangées et services tiers",
-                trailing = "↗", onClick = onOpenLink?.let { open -> { open("$REPO/blob/main/PRIVACY.md") } })
-            AboutRow(AboutIcon.DOCUMENT, "Licence AGPL-3.0", "Texte complet de la licence du projet",
-                trailing = "↗", onClick = onOpenLink?.let { open -> { open("$REPO/blob/main/LICENSE") } })
+                trailing = "›", onClick = { onOpenDocument(LegalDocuments.privacy) })
+            AboutRow(AboutIcon.DOCUMENT, "Licence AGPL-3.0", "Licence du projet, texte complet",
+                trailing = "›", onClick = { onOpenDocument(LegalDocuments.agpl) })
         }
 
         AboutSection("Licences et crédits") {
             for (notice in OpenSourceNotices.all) {
                 AboutRow(AboutIcon.LICENSES, notice.name, "${notice.license} · ${notice.usage}",
-                    trailing = "›", onClick = { onOpenNotice(notice) })
+                    trailing = "›", onClick = { onOpenDocument(LegalDocuments.of(notice)) })
             }
         }
 
@@ -79,20 +74,6 @@ internal fun V3AboutContent(
                 trailing = "↗", onClick = onOpenLink?.let { open -> { open(REPO) } })
             AboutRow(AboutIcon.SOURCE, "RavenCore", "github.com/GhostPunishR/RavenCore",
                 trailing = "↗", onClick = onOpenLink?.let { open -> { open("https://github.com/GhostPunishR/RavenCore") } })
-        }
-
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            LineIcon(AboutIcon.TRADEMARKS, Muted, Modifier.size(18.dp))
-            Text(
-                "Game Boy, Game Boy Color et Game Boy Advance sont des marques de Nintendo. " +
-                    "RavenEmu n'est ni affilié à Nintendo, ni approuvé par Nintendo. " +
-                    "Aucune ROM, aucun BIOS ni aucun contenu protégé n'est fourni.",
-                color = Muted, fontSize = 12.sp, lineHeight = 17.sp,
-                modifier = Modifier.weight(1f),
-            )
         }
     }
 }
@@ -179,14 +160,9 @@ private fun AboutRow(
 
 /**
  * Outline icons of the About page, on a 24x24 grid. Same drawings as the V2
- * About screen's own icons (res/drawable/ic_about_*.xml), plus an engine chip.
+ * About screen's own icons (res/drawable/ic_about_*.xml).
  */
 private enum class AboutIcon(val strokes: List<String>, val dots: List<Triple<Float, Float, Float>> = emptyList()) {
-    VERSION(listOf("M12.6,3.2H20.8V11.4L11.4,20.8L3.2,12.6Z"), listOf(Triple(17.1f, 5.6f, 1.5f))),
-    ENGINE(listOf(
-        "M7,7H17V17H7Z",
-        "M10,3.5V7M14,3.5V7M10,17V20.5M14,17V20.5M3.5,10H7M3.5,14H7M17,10H20.5M17,14H20.5",
-    )),
     TERMS(listOf("M14,2.8H6.4V21.2H17.6V6.4ZM14,2.8V6.4H17.6", "M9.2,11.4H14.8M9.2,14.6H14.8M9.2,17.8H12.6")),
     PRIVACY(listOf("M12,2.6L20,5.8V12C20,16.6 16.6,20.1 12,21.4C7.4,20.1 4,16.6 4,12V5.8Z", "M12,11.2V15"),
         listOf(Triple(12f, 9.2f, 1.7f))),
@@ -196,10 +172,6 @@ private enum class AboutIcon(val strokes: List<String>, val dots: List<Triple<Fl
     )),
     LICENSES(listOf("M12,2.8V21.2M5.4,6.2L18.6,4.2", "M5.4,6.2L2.4,13.4H8.4ZM18.6,4.2L15.6,11.4H21.6Z", "M8,21.2H16")),
     SOURCE(listOf("M8.2,7.4L3.2,12L8.2,16.6M15.8,7.4L20.8,12L15.8,16.6M13.6,4.4L10.4,19.6")),
-    TRADEMARKS(listOf(
-        "M12,12m-9.2,0a9.2,9.2 0,1 1,18.4 0a9.2,9.2 0,1 1,-18.4 0",
-        "M9.4,16.4V7.6H12.4A2.4,2.4 0,0 1,12.4 12.4H9.4M12.6,12.4L15.2,16.4",
-    )),
 }
 
 @Composable
