@@ -1,5 +1,7 @@
 package com.ravenemu.v3.shared
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -61,6 +63,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.SolidColor
@@ -145,6 +148,7 @@ fun RavenEmuApp(
     onRetroRetry: (() -> Unit)? = null,
     retroNotice: String? = null,
     retroNoticeBadge: ImageBitmap? = null,
+    retroNoticeVisible: Boolean = retroNotice != null,
     settings: V3Settings = V3Settings(),
     onSettingsChange: ((V3Settings) -> Unit)? = null,
     appVersion: String = "Préversion",
@@ -293,6 +297,7 @@ fun RavenEmuApp(
                     onOpenLink = onOpenLink,
                     retroNotice = retroNotice,
                     retroNoticeBadge = retroNoticeBadge,
+                    retroNoticeVisible = retroNoticeVisible,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -549,6 +554,7 @@ private fun GbVideoScreen(
     onOpenLink: ((String) -> Unit)?,
     retroNotice: String?,
     retroNoticeBadge: ImageBitmap?,
+    retroNoticeVisible: Boolean,
     onBack: () -> Unit,
 ) {
     var gameMenuOpen by remember { mutableStateOf(false) }
@@ -634,25 +640,34 @@ private fun GbVideoScreen(
                     textAlign = TextAlign.Center,
                 )
             }
-            if (retroNotice != null) {
+            val noticeAlpha by animateFloatAsState(
+                if (retroNotice != null && retroNoticeVisible) 1f else 0f,
+                animationSpec = tween(durationMillis = 300),
+                label = "retroNotice",
+            )
+            if (retroNotice != null && noticeAlpha > 0f) {
                 Row(
                     Modifier.align(Alignment.TopCenter)
+                        .alpha(noticeAlpha)
                         .padding(top = 10.dp, start = 12.dp, end = 12.dp)
                         .background(RavenSurface, RoundedCornerShape(12.dp))
                         .border(1.dp, RavenAccent, RoundedCornerShape(12.dp))
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // The unlocked achievement's badge; the star only while
-                    // it downloads or when it cannot be fetched (offline).
-                    if (retroNoticeBadge != null) {
-                        Image(
-                            retroNoticeBadge, "Badge du succès",
-                            Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)),
-                            contentScale = ContentScale.Fit,
-                        )
-                    } else {
-                        Text("★", color = RavenAccent, fontSize = 21.sp)
+                    // The unlocked achievement's badge, or the star when it
+                    // could not be fetched in time (offline). Fixed slot: the
+                    // popup keeps the same size either way.
+                    Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                        if (retroNoticeBadge != null) {
+                            Image(
+                                retroNoticeBadge, "Badge du succès",
+                                Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+                                contentScale = ContentScale.Fit,
+                            )
+                        } else {
+                            Text("★", color = RavenAccent, fontSize = 21.sp)
+                        }
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(retroNotice, color = RavenText, fontSize = 12.sp,
