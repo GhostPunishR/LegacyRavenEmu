@@ -9,6 +9,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,12 +58,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -132,6 +136,8 @@ fun RavenEmuApp(
     videoError: String? = null,
     videoMetrics: GbVideoMetrics? = null,
     onButtonChange: ((GbButton, Boolean) -> Unit)? = null,
+    touchControlsVisible: Boolean = true,
+    onScreenTouch: (() -> Unit)? = null,
     onExportAudioDiagnostics: (() -> Unit)? = null,
     onSaveState: ((Int) -> Unit)? = null,
     onLoadState: ((Int) -> Unit)? = null,
@@ -280,6 +286,8 @@ fun RavenEmuApp(
                     error = videoError,
                     metrics = videoMetrics,
                     onButtonChange = onButtonChange,
+                    touchControlsVisible = touchControlsVisible,
+                    onScreenTouch = onScreenTouch,
                     onExportAudioDiagnostics = onExportAudioDiagnostics,
                     onSaveState = onSaveState,
                     onLoadState = onLoadState,
@@ -537,6 +545,8 @@ private fun GbVideoScreen(
     error: String?,
     metrics: GbVideoMetrics?,
     onButtonChange: ((GbButton, Boolean) -> Unit)?,
+    touchControlsVisible: Boolean,
+    onScreenTouch: (() -> Unit)?,
     onExportAudioDiagnostics: (() -> Unit)?,
     onSaveState: ((Int) -> Unit)?,
     onLoadState: ((Int) -> Unit)?,
@@ -614,8 +624,17 @@ private fun GbVideoScreen(
         // Pin the picture to the top of its available area rather than
         // vertically centering it. The remaining space sits below the video,
         // allowing the thumb controls to remain anchored near the safe bottom.
+        val screenTouch by rememberUpdatedState(onScreenTouch)
         BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black),
+            modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black)
+                // Watches touches without taking them, to bring the touch
+                // controls back after a physical controller hid them.
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        screenTouch?.invoke()
+                    }
+                },
             contentAlignment = Alignment.TopCenter,
         ) {
             // 160x144 on GB/GBC, 240x160 on GBA: follow the core's frame.
@@ -675,7 +694,13 @@ private fun GbVideoScreen(
                 }
             }
         }
-        if (onButtonChange != null) {
+        if (onButtonChange != null && !touchControlsVisible) {
+            Text(
+                "Manette connectée · touchez l'écran pour afficher les commandes",
+                Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                color = RavenMuted, fontSize = 12.sp, textAlign = TextAlign.Center,
+            )
+        } else if (onButtonChange != null) {
             GbTouchControls(
                 onButton = onButtonChange,
                 haptics = settings.haptics,

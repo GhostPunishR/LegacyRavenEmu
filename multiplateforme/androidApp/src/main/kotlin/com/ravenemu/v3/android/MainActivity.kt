@@ -6,6 +6,9 @@ import android.provider.OpenableColumns
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.util.Log
 import android.widget.Toast
 import java.io.File
@@ -20,6 +23,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +65,40 @@ class MainActivity : ComponentActivity() {
     // Written by the emulation thread, read by the UI thread.
     @Volatile private var activeAudio: AndroidGbAudioOutput? = null
     @Volatile private var lastAudioReport: String = "Aucune session audio enregistrée.\n"
+    // Physical controller. Its events are taken only while the player accepts
+    // input; elsewhere the D-pad keeps navigating the app as usual.
+    private val gamepad = GamepadMapper()
+    private var gamepadInputEnabled = false
+    private var gamepadInUse by mutableStateOf(false)
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (gamepadInputEnabled && foreground && gamepad.handles(event.keyCode)) {
+            gamepad.key(event.keyCode, event.action, event.repeatCount)?.let { (button, pressed) ->
+                gameSession.setButton(button, pressed)
+            }
+            gamepadInUse = true
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (gamepadInputEnabled && foreground &&
+            event.isFromSource(InputDevice.SOURCE_JOYSTICK) &&
+            event.action == MotionEvent.ACTION_MOVE
+        ) {
+            val changes = gamepad.axes(
+                event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                event.getAxisValue(MotionEvent.AXIS_HAT_Y),
+                event.getAxisValue(MotionEvent.AXIS_X),
+                event.getAxisValue(MotionEvent.AXIS_Y),
+            )
+            for ((button, pressed) in changes) gameSession.setButton(button, pressed)
+            if (changes.isNotEmpty()) gamepadInUse = true
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
 
     override fun onResume() {
         super.onResume()
@@ -71,6 +109,7 @@ class MainActivity : ComponentActivity() {
         foreground = false
         activeAudio?.stopNow()
         gameSession.releaseAllButtons()
+        gamepad.reset()
         // A lifecycle stop can terminate the process soon after this callback;
         // commit changed SRAM before returning rather than relying on a job.
         try {
@@ -210,6 +249,12 @@ class MainActivity : ComponentActivity() {
             var stateSlots by remember { mutableStateOf(emptyList<GbStateSlot>()) }
             var restoringState by remember { mutableStateOf(false) }
             var pausedForGameMenu by remember { mutableStateOf(false) }
+            // The controller reaches the game only while it runs on screen.
+            SideEffect {
+                val accepts = videoEnabled && !pausedForGameMenu
+                if (!accepts && gamepadInputEnabled) gamepad.reset()
+                gamepadInputEnabled = accepts
+            }
             var stateRevision by remember { mutableStateOf(0) }
             val scope = rememberCoroutineScope()
             var retroSnapshot by remember { mutableStateOf(V3RetroSnapshot()) }
@@ -994,6 +1039,9 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 },
+                touchControlsVisible = !gamepadInUse,
+                // Touching the screen brings the touch controls back.
+                onScreenTouch = { gamepadInUse = false },
                 onButtonChange = { button: GbButton, pressed: Boolean ->
                     if (videoEnabled && foreground && !pausedForGameMenu) {
                         gameSession.setButton(button, pressed)
