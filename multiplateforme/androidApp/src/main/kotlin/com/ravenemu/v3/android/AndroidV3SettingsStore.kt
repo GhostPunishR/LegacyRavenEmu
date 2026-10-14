@@ -19,6 +19,10 @@ internal class AndroidV3SettingsStore(context: Context) {
         controlsGap = prefs.getInt("controls_gap", 46),
         controlsStyle = prefs.getString("controls_style", "classic") ?: "classic",
         onlineCovers = prefs.getBoolean("online_covers", false),
+        lcdCorrectionGbc = prefs.getBoolean("lcd_correction_gbc", false),
+        lcdCorrectionGba = prefs.getBoolean("lcd_correction_gba", false),
+        cartridgeRumble = prefs.getBoolean("cartridge_rumble", true),
+        retroHardcore = prefs.getBoolean("retro_hardcore", false),
     ).normalized()
 
     fun write(settings: V3Settings) {
@@ -35,6 +39,10 @@ internal class AndroidV3SettingsStore(context: Context) {
             .putInt("controls_gap", safe.controlsGap)
             .putString("controls_style", safe.controlsStyle)
             .putBoolean("online_covers", safe.onlineCovers)
+            .putBoolean("lcd_correction_gbc", safe.lcdCorrectionGbc)
+            .putBoolean("lcd_correction_gba", safe.lcdCorrectionGba)
+            .putBoolean("cartridge_rumble", safe.cartridgeRumble)
+            .putBoolean("retro_hardcore", safe.retroHardcore)
             .apply()
     }
 }

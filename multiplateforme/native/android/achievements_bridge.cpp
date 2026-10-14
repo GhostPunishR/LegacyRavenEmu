@@ -5,6 +5,7 @@
 #include <rc_error.h>
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -65,6 +66,12 @@ std::string achievement_image(const rc_client_achievement_t& a) {
     const auto* ready = a.state == RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED ? a.badge_url : a.badge_locked_url;
     return image_url(ready, [&](char* b, std::size_t n) {
         return rc_client_achievement_get_image_url(&a, a.state, b, n);
+    });
+}
+// Le badge en couleur, même verrouillé : celui de la progression d'un succès.
+std::string achievement_colour_image(const rc_client_achievement_t& a) {
+    return image_url(a.badge_url, [&](char* b, std::size_t n) {
+        return rc_client_achievement_get_image_url(&a, RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED, b, n);
     });
 }
 Client& client(const rc_client_t* rc) { return *static_cast<Client*>(rc_client_get_userdata(rc)); }
@@ -154,7 +161,9 @@ void event_handler(const rc_client_event_t* event, rc_client_t* rc) {
             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_SHOW ? "challenge_show" :
             event->type == RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_HIDE ? "challenge_hide" :
             "progress_show";
-        c.event(kind, a.title, a.measured_progress, std::to_string(a.id).c_str(), achievement_image(a).c_str());
+        const std::string image = std::strcmp(kind, "progress_show") == 0
+            ? achievement_colour_image(a) : achievement_image(a);
+        c.event(kind, a.title, a.measured_progress, std::to_string(a.id).c_str(), image.c_str());
     } else if (event->type == RC_CLIENT_EVENT_LEADERBOARD_TRACKER_SHOW ||
                event->type == RC_CLIENT_EVENT_LEADERBOARD_TRACKER_UPDATE ||
                event->type == RC_CLIENT_EVENT_LEADERBOARD_TRACKER_HIDE) {
@@ -272,6 +281,11 @@ JNIEXPORT jstring JNICALL JNI_RA(richPresence)(JNIEnv* env, jclass, jlong h) {
 }
 JNIEXPORT jboolean JNICALL JNI_RA(hardcore)(JNIEnv*, jclass, jlong h) {
     return rc_client_get_hardcore_enabled(client(h).rc) ? JNI_TRUE : JNI_FALSE;
+}
+// Enabling Hardcore with a game loaded makes the SDK raise RC_CLIENT_EVENT_RESET
+// ("hardcore_reset"): the frontend must then reset the game.
+JNIEXPORT void JNICALL JNI_RA(setHardcore)(JNIEnv*, jclass, jlong h, jboolean enabled) {
+    rc_client_set_hardcore_enabled(client(h).rc, enabled ? 1 : 0);
 }
 JNIEXPORT jboolean JNICALL JNI_RA(canPause)(JNIEnv*, jclass, jlong h) {
     return rc_client_can_pause(client(h).rc, nullptr) ? JNI_TRUE : JNI_FALSE;

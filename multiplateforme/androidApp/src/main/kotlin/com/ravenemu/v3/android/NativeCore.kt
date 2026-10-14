@@ -81,6 +81,12 @@ class NativeCore(system: Int) : AutoCloseable {
 
     data class BatterySnapshot(val bytes: ByteArray, val generation: Long)
 
+    /**
+     * True while the cartridge's rumble motor runs (GB MBC5 Rumble, GBA Drill
+     * Dozer and WarioWare: Twisted!). Sample it after each frame.
+     */
+    fun rumbleActive(): Boolean = nativeRumbleActive(requireOpen())
+
     /** Only copy when the core reports changed battery-backed storage. */
     fun batteryDirty(): Boolean = nativeBatteryDirty(requireOpen())
 
@@ -126,6 +132,7 @@ class NativeCore(system: Int) : AutoCloseable {
     private external fun nativeStateSize(pointer: Long): Int
     private external fun nativeSaveState(pointer: Long, output: ByteArray): Boolean
     private external fun nativeLoadState(pointer: Long, input: ByteArray): Boolean
+    private external fun nativeRumbleActive(pointer: Long): Boolean
     private external fun nativeBatteryDirty(pointer: Long): Boolean
     private external fun nativeCopyBatteryGeneration(
         pointer: Long, output: ByteArray, generation: LongArray,

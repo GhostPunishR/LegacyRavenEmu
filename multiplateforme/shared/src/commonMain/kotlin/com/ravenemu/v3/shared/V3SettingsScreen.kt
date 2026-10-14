@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -23,6 +24,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,12 +68,22 @@ fun V3SettingsScreen(
     onRetroLogin: ((String, String) -> Unit)? = null,
     onRetroDisconnect: (() -> Unit)? = null,
     onRetroRetry: (() -> Unit)? = null,
+    hardcoreAvailable: Boolean = false,
+    deltaSkins: List<DeltaSkinEntry> = emptyList(),
+    onImportSkin: (() -> Unit)? = null,
+    onToggleSkin: ((String) -> Unit)? = null,
+    onDeleteSkin: ((String) -> Unit)? = null,
     aboutOnly: Boolean,
     onBack: () -> Unit,
 ) {
     var page by remember(aboutOnly) {
         mutableStateOf(if (aboutOnly) Page.ABOUT else Page.HOME)
     }
+    // A legal document or licence open in the reader, over the About page.
+    var openDocument by remember { mutableStateOf<ReaderDocument?>(null) }
+    val scroll = rememberScrollState()
+    LaunchedEffect(openDocument) { scroll.scrollTo(0) }
+    var skinToDelete by remember { mutableStateOf<DeltaSkinEntry?>(null) }
     val update: (V3Settings) -> Unit = { updated ->
         onSettingsChange?.invoke(updated.normalized())
     }
@@ -81,19 +94,22 @@ fun V3SettingsScreen(
         ) {
             IconButton(
                 onClick = {
-                    if (page == Page.HOME || aboutOnly) onBack()
+                    if (openDocument != null) openDocument = null
+                    else if (page == Page.HOME || aboutOnly) onBack()
                     else page = Page.HOME
                 },
                 modifier = Modifier.size(48.dp),
             ) { Text("‹", color = TextMain, fontSize = 30.sp) }
-            Text(page.label, color = TextMain, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text(openDocument?.title ?: page.label, color = TextMain, fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            Modifier.fillMaxSize().verticalScroll(scroll)
                 .padding(horizontal = 18.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            when (page) {
+            val reading = openDocument
+            if (reading != null) V3DocumentReader(reading) else when (page) {
                 Page.HOME -> {
                     if (onRetroLogin != null) {
                         CategoryRow("RetroAchievements", "Compte, succès et progression") {
@@ -102,8 +118,8 @@ fun V3SettingsScreen(
                     }
                     CategoryRow("Général", "Pause, jaquettes et diagnostics") { page = Page.GENERAL }
                     CategoryRow("Audio", "Son du jeu et volume") { page = Page.AUDIO }
-                    CategoryRow("Vidéo", "Couleurs, luminosité et contraste") { page = Page.VIDEO }
-                    CategoryRow("Interface", "Vibrations, commandes et style") { page = Page.INTERFACE }
+                    CategoryRow("Vidéo", "Couleurs, correction LCD, luminosité et contraste") { page = Page.VIDEO }
+                    CategoryRow("Interface", "Vibrations, commandes, style et Skin Delta") { page = Page.INTERFACE }
                     CategoryRow("À propos", "Version, auteur, confidentialité et licences") {
                         page = Page.ABOUT
                     }
@@ -118,6 +134,15 @@ fun V3SettingsScreen(
                         onRetry = onRetroRetry,
                         onOpenLink = onOpenLink,
                     )
+                    if (hardcoreAvailable) {
+                        GroupTitle("Mode Hardcore")
+                        SettingSwitch(
+                            "Mode Hardcore",
+                            "Succès comptés en Hardcore. Le chargement des sauvegardes d'état est désactivé et les pauses sont limitées. L'activer redémarre le jeu en cours.",
+                            settings.retroHardcore,
+                            onSettingsChange != null,
+                        ) { update(settings.copy(retroHardcore = it)) }
+                    }
                 }
                 Page.GENERAL -> {
                     GroupTitle("Émulation")
@@ -176,6 +201,19 @@ fun V3SettingsScreen(
                         onSettingsChange != null) {
                         update(settings.copy(videoPalette = "pocket"))
                     }
+                    GroupTitle("Correction des couleurs LCD")
+                    SettingSwitch(
+                        "Game Boy Color",
+                        "Atténue les couleurs très vives pour retrouver l'aspect plus mat de l'écran d'origine.",
+                        settings.lcdCorrectionGbc,
+                        onSettingsChange != null,
+                    ) { update(settings.copy(lcdCorrectionGbc = it)) }
+                    SettingSwitch(
+                        "Game Boy Advance",
+                        "Même correction, réglée à part pour la Game Boy Advance.",
+                        settings.lcdCorrectionGba,
+                        onSettingsChange != null,
+                    ) { update(settings.copy(lcdCorrectionGba = it)) }
                     GroupTitle("Ajustements")
                     SettingSlider("Luminosité", "${settings.videoBrightness}",
                         settings.videoBrightness, -50..50, onSettingsChange != null) {
@@ -188,6 +226,7 @@ fun V3SettingsScreen(
                     TextButton(onClick = {
                         update(settings.copy(
                             videoPalette = "original", videoBrightness = 0, videoContrast = 100,
+                            lcdCorrectionGbc = false, lcdCorrectionGba = false,
                         ))
                     }, enabled = onSettingsChange != null) {
                         Text("Rétablir l'affichage d'origine", color = Accent)
@@ -201,6 +240,12 @@ fun V3SettingsScreen(
                         settings.haptics,
                         onSettingsChange != null,
                     ) { update(settings.copy(haptics = it)) }
+                    SettingSwitch(
+                        "Vibration de la cartouche",
+                        "Fait vibrer le téléphone avec les jeux équipés d'un moteur de vibration (Drill Dozer, WarioWare: Twisted!, cartouches Game Boy Rumble).",
+                        settings.cartridgeRumble,
+                        onSettingsChange != null,
+                    ) { update(settings.copy(cartridgeRumble = it)) }
                     SettingSlider(
                         "Taille des commandes", "${settings.controlsScale} %",
                         settings.controlsScale, 80..115, onSettingsChange != null,
@@ -218,7 +263,7 @@ fun V3SettingsScreen(
                         onSettingsChange != null) {
                         update(settings.copy(controlsStyle = "contrast"))
                     }
-                    Text("Le gestionnaire de skins Delta et le déplacement libre des boutons seront migrés séparément.",
+                    Text("Le déplacement libre des boutons sera ajouté plus tard.",
                         color = Muted, fontSize = 12.sp)
                     TextButton(onClick = {
                         update(settings.copy(
@@ -228,31 +273,59 @@ fun V3SettingsScreen(
                     }, enabled = onSettingsChange != null) {
                         Text("Réinitialiser les commandes", color = Accent)
                     }
+                    GroupTitle("Skin Delta")
+                    Text(
+                        "RavenEmu lit les skins au format .deltaskin, en portrait. Ce projet n'est ni affilié à Delta, ni approuvé par ses auteurs : aucun skin n'est fourni, vous importez les vôtres.",
+                        color = Muted, fontSize = 12.sp,
+                    )
+                    TextButton(onClick = { onImportSkin?.invoke() }, enabled = onImportSkin != null) {
+                        Text("Importer un fichier .deltaskin", color = Accent)
+                    }
+                    if (deltaSkins.isEmpty()) {
+                        Text("Aucun skin installé : commandes classiques.", color = Muted, fontSize = 12.sp)
+                    }
+                    for (skin in deltaSkins) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(skin.name, color = TextMain, fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium)
+                                Text(skin.console + if (skin.selected) " · utilisé" else "",
+                                    color = if (skin.selected) Accent else Muted, fontSize = 12.sp)
+                            }
+                            TextButton(onClick = { onToggleSkin?.invoke(skin.id) }, enabled = onToggleSkin != null) {
+                                Text(if (skin.selected) "Retirer" else "Utiliser", color = Accent, fontSize = 13.sp)
+                            }
+                            TextButton(onClick = { skinToDelete = skin }, enabled = onDeleteSkin != null) {
+                                Text("Supprimer", color = Muted, fontSize = 13.sp)
+                            }
+                        }
+                    }
                 }
                 Page.ABOUT -> {
-                    GroupTitle("RavenEmu")
-                    SettingDescription("Version installée", appVersion)
-                    SettingDescription("Créateur", "GhostPunishR")
-                    SettingDescription("Version du projet", "Nouvelle version multiplateforme — préversion Android / iOS")
-                    SettingDescription("Moteurs natifs", "RavenCore (révision épinglée)")
-                    SettingDescription("Licence du projet", "GNU AGPL-3.0")
-                    GroupTitle("Informations légales")
-                    ExternalRow("Conditions d'utilisation", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenEmu/blob/main/TERMS.md")
-                    ExternalRow("Politique de confidentialité", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenEmu/blob/main/PRIVACY.md")
-                    ExternalRow("Licence AGPL-3.0", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenEmu/blob/main/LICENSE")
-                    GroupTitle("Code source")
-                    ExternalRow("RavenEmu — GitHub", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenEmu")
-                    ExternalRow("RavenCore — GitHub", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenCore")
-                    Text("Aucune ROM commerciale ni BIOS propriétaire n'est distribué avec RavenEmu.",
-                        color = Muted, fontSize = 12.sp)
+                    V3AboutContent(
+                        onOpenLink = onOpenLink,
+                        onOpenDocument = { openDocument = it },
+                    )
                 }
             }
         }
+    }
+    skinToDelete?.let { skin ->
+        AlertDialog(
+            onDismissRequest = { skinToDelete = null },
+            title = { Text("Supprimer ce skin ?") },
+            text = { Text("${skin.name} sera supprimé de l'appareil. Les commandes classiques reviennent s'il était utilisé.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteSkin?.invoke(skin.id)
+                    skinToDelete = null
+                }) { Text("Supprimer") }
+            },
+            dismissButton = { TextButton(onClick = { skinToDelete = null }) { Text("Annuler") } },
+        )
     }
 }
 
@@ -351,9 +424,3 @@ private fun ChoiceRow(
     }
 }
 
-@Composable
-private fun ExternalRow(title: String, open: ((String) -> Unit)?, url: String) {
-    TextButton(onClick = { open?.invoke(url) }, enabled = open != null) {
-        Text(title + " ↗", color = Accent, fontSize = 14.sp)
-    }
-}

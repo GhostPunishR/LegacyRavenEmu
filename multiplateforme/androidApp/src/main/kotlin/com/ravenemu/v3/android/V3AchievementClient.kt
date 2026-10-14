@@ -7,12 +7,18 @@ import com.ravenemu.v3.shared.V3AchievementEntry
 import java.net.URL
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import org.json.JSONObject
 import javax.net.ssl.HttpsURLConnection
 
 /** Owned by the session thread (or the account dialog worker). Never by an HTTP worker. */
 internal class V3AchievementClient(
     private val readMemory: ((Int, Int) -> ByteArray)? = null,
+    /** Durable journal for unlocks earned offline; null in tests. */
+    private val journal: V3AwardJournal? = null,
+    /** The account this client signs in, owner of the journaled awards. */
+    private val account: String = "",
     private val onEvent: (Event) -> Unit,
 ) : AutoCloseable {
     data class Event(val kind: String, val title: String, val detail: String, val extra: String, val image: String)
@@ -21,6 +27,11 @@ internal class V3AchievementClient(
     private val closed = AtomicBoolean(false)
     private val responses = ConcurrentLinkedQueue<Response>()
     private val http = Executors.newFixedThreadPool(2) { Thread(it, "RavenEmu-RA-HTTP").apply { isDaemon = true } }
+    private val replayWorker = Executors.newSingleThreadScheduledExecutor {
+        Thread(it, "RavenEmu-RA-Replay").apply { isDaemon = true }
+    }
+    private var replayStarted = false
+    private var warnedAboutJournal = false
     private val memory = readMemory?.let { reader ->
         NativeAchievementsBridge.Memory { address, count -> reader(address, count) }
     }
@@ -59,6 +70,9 @@ internal class V3AchievementClient(
     fun login(username: String, secret: String, token: Boolean) = NativeAchievementsBridge.login(handle, username, secret, token)
     fun load(console: Int, rom: ByteArray) = NativeAchievementsBridge.load(handle, console, rom)
     fun reset() = NativeAchievementsBridge.reset(handle)
+    fun setHardcore(enabled: Boolean) = NativeAchievementsBridge.setHardcore(handle, enabled)
+    fun hardcore(): Boolean = NativeAchievementsBridge.hardcore(handle)
+    fun canPause(): Boolean = NativeAchievementsBridge.canPause(handle)
 
     fun tick(frame: Boolean) {
         if (closed.get()) return
@@ -69,35 +83,96 @@ internal class V3AchievementClient(
         NativeAchievementsBridge.tick(handle, memory, frame)
         NativeAchievementsBridge.events(handle).asList().chunked(5).forEach {
             when (it[0]) {
-                "login" -> status = "Chargement des succès…"
-                "game", "online" -> status = "Connecté • Mode normal (Softcore)"
+                "login" -> {
+                    status = "Chargement des succès…"
+                    resendStoredAwards(it[1], it[3])
+                }
+                "game", "online" -> status = if (NativeAchievementsBridge.hardcore(handle))
+                    "Connecté • Mode Hardcore" else "Connecté • Mode normal (Softcore)"
                 "login_error", "game_error", "offline" -> status = it[1]
             }
             onEvent(Event(it[0], it[1], it[2], it[3], it[4]))
         }
         NativeAchievementsBridge.requests(handle).asList().chunked(4).forEach { record ->
+            // Journal BEFORE dispatch: the app closing, or the network being
+            // gone, must not lose a genuine SDK unlock. The SDK stays its owner
+            // for this session; the journal only serves the next one.
+            val stored = if (journal != null && account.isNotBlank() &&
+                V3AwardPolicy.isSdkAward(record[1], record[2])
+            ) V3AwardJournal.Award(account, record[1], record[2], record[3]) else null
+            if (stored != null) {
+                val kept = runCatching { journal?.remember(stored) == true }.getOrDefault(false)
+                if (!kept && !warnedAboutJournal) {
+                    warnedAboutJournal = true
+                    onEvent(Event("notice", "Succès hors ligne",
+                        "Le stockage sécurisé est indisponible ou plein : gardez le jeu ouvert jusqu'à la synchronisation.",
+                        "", ""))
+                }
+            }
             http.execute {
                 val response = request(record)
+                if (stored != null && awardAccepted(response)) {
+                    runCatching { journal?.acknowledge(stored) }
+                }
                 if (!closed.get()) responses.add(response)
             }
         }
     }
 
-    private fun request(record: List<String>): Response {
+    /** Resend unlocks journaled by an earlier session, once the same account is signed in. */
+    private fun resendStoredAwards(user: String, token: String) {
+        val queue = journal ?: return
+        if (replayStarted || token.isBlank()) return
+        replayStarted = true
+        // Captured before this session's game loads, so the SDK and the replay
+        // worker never both retry the same new award.
+        val pending = runCatching { queue.forAccount(user) }.getOrDefault(emptyList())
+        if (pending.isEmpty()) return
+        val replay = AwardReplay(pending)
+        replayWorker.execute(object : Runnable {
+            override fun run() {
+                val delay = replay.attempt({ !closed.get() && queue.isCurrent() }) { entry ->
+                    val post = V3AwardPolicy.authenticatedReplay(entry.url, entry.post, user, token)
+                    if (post == null) false
+                    else {
+                        val result = send(entry.url, post, entry.contentType)
+                        awardAccepted(result) &&
+                            runCatching { queue.acknowledge(entry); true }.getOrDefault(false)
+                    }
+                }
+                if (delay != null && !closed.get() && queue.isCurrent()) {
+                    // Shutdown can race this scheduling; it must not escape the worker.
+                    runCatching { replayWorker.schedule(this, delay, TimeUnit.MILLISECONDS) }
+                }
+            }
+        })
+    }
+
+    private fun awardAccepted(response: Response): Boolean {
+        if (response.status !in 200..299) return false
+        return runCatching {
+            JSONObject(String(response.body, Charsets.UTF_8)).optBoolean("Success", false)
+        }.getOrDefault(false)
+    }
+
+    private fun request(record: List<String>): Response =
+        send(record[1], record[2], record[3]).copy(id = record[0].toInt())
+
+    private fun send(address: String, post: String, contentType: String): Response {
         var connection: HttpsURLConnection? = null
         return try {
-            val url = URL(record[1])
+            val url = URL(address)
             require(url.protocol == "https" && url.host == "retroachievements.org" && url.port in listOf(-1, 443))
             connection = url.openConnection() as HttpsURLConnection
             connection.instanceFollowRedirects = false // Never forward credentials to another host.
             connection.connectTimeout = 10_000
             connection.readTimeout = 15_000
             connection.setRequestProperty("User-Agent", "RavenEmu/V3-Preview (Android; rcheevos/12.5.0)")
-            if (record[2].isNotEmpty()) {
+            if (post.isNotEmpty()) {
                 connection.requestMethod = "POST"
                 connection.doOutput = true
-                connection.setRequestProperty("Content-Type", record[3])
-                connection.outputStream.use { it.write(record[2].toByteArray(Charsets.UTF_8)) }
+                connection.setRequestProperty("Content-Type", contentType)
+                connection.outputStream.use { it.write(post.toByteArray(Charsets.UTF_8)) }
             }
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
@@ -112,10 +187,10 @@ internal class V3AchievementClient(
                 }
                 output.toByteArray()
             } ?: ByteArray(0)
-            Response(record[0].toInt(), body, status)
+            Response(0, body, status)
         } catch (_: Exception) {
             // The SDK retries transient unlock failures. No credentials or request URLs in logs.
-            Response(record[0].toInt(), ByteArray(0), -2)
+            Response(0, ByteArray(0), -2)
         } finally {
             connection?.disconnect()
         }
@@ -123,6 +198,7 @@ internal class V3AchievementClient(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
+        replayWorker.shutdownNow()
         http.shutdownNow()
         responses.clear()
         NativeAchievementsBridge.destroy(handle)

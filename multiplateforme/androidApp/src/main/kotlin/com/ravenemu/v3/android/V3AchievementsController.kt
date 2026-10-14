@@ -7,6 +7,7 @@ import com.ravenemu.v3.shared.GamePlatform
 import com.ravenemu.v3.shared.RomImportPolicy
 import com.ravenemu.v3.shared.V3RetroSnapshot
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -23,6 +24,7 @@ internal class V3AchievementsController(
     private val onEvent: (V3AchievementClient.Event) -> Unit,
 ) {
     private val account = V3AchievementAccount(context.applicationContext)
+    private val journal = V3AwardJournal(context.applicationContext)
     private val main = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "RavenEmu-V3-RetroAchievements").apply { isDaemon = true }
@@ -35,6 +37,12 @@ internal class V3AchievementsController(
     private var currentUser = ""
     private var lastSnapshotMs = 0L
     private var stopped = false
+    // Hardcore needs RetroAchievements' approval: wanted AND approved.
+    private var hardcoreWanted = false
+
+    /** Read by the UI: true while the SDK runs this session in Hardcore. */
+    @Volatile var hardcoreActive: Boolean = false
+        private set
 
     /** Persisted token is used only after a prior, explicit login. */
     suspend fun restore() = withContext(dispatcher) {
@@ -90,8 +98,31 @@ internal class V3AchievementsController(
         if (!stopped) client?.reset()
     }
 
+    /**
+     * Hardcore on or off. Turning it on with a game loaded makes the SDK ask
+     * for a reset, which [handleEvent] performs. Turning it off is immediate.
+     */
+    suspend fun setHardcore(enabled: Boolean) = withContext(dispatcher) {
+        hardcoreWanted = enabled && HardcoreAvailability.APPROVED
+        client?.setHardcore(hardcoreWanted)
+        hardcoreActive = client?.hardcore() ?: false
+    }
+
+    /**
+     * The game menu pauses the game. In Hardcore the SDK limits how often a
+     * game may pause; it records the pause when it allows it. Blocks the
+     * caller only for the SDK thread's current step.
+     */
+    fun requestPause(): Boolean {
+        if (!hardcoreActive || stopped) return true
+        return runBlocking(dispatcher) { client?.canPause() ?: true }
+    }
+
     suspend fun disconnect() = withContext(dispatcher) {
         account.clear()
+        // Signing out forgets this device's unsent unlocks too (V2 rule):
+        // they belong to an account that is no longer signed in here.
+        runCatching { journal.clear() }
         client?.close()
         client = null
         connected = false
@@ -105,9 +136,14 @@ internal class V3AchievementsController(
         currentUser = username
         val fresh = V3AchievementClient(
             readMemory = { address, count -> session.readAchievementMemory(address, count) },
+            journal = journal,
+            account = username,
             onEvent = { event -> handleEvent(event) },
         )
         client = fresh
+        // Before the game loads, so switching it on needs no reset.
+        fresh.setHardcore(hardcoreWanted)
+        hardcoreActive = fresh.hardcore()
         fresh.login(username, secret, token)
         publish(V3RetroSnapshot(status = "Connexion en cours…", busy = true))
         // Never retain the plaintext password; it is needed only for this
@@ -135,6 +171,13 @@ internal class V3AchievementsController(
         if (event.kind == "login_error") {
             connected = false
         }
+        if (event.kind == "hardcore_reset") {
+            // Required by rcheevos before Hardcore processing can resume:
+            // the game restarts from power-on, and so does the SDK's state.
+            runCatching { session.resetGame() }
+            client?.reset()
+        }
+        hardcoreActive = client?.hardcore() ?: false
         // Indicator and leaderboard events can arrive every frame (a running
         // timer); they change no achievement state, so skip the snapshot copy.
         if (event.kind !in TRANSIENT_EVENTS) {

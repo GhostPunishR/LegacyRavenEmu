@@ -6,6 +6,9 @@ import android.provider.OpenableColumns
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.util.Log
 import android.widget.Toast
 import java.io.File
@@ -19,7 +22,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +35,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import com.ravenemu.v3.android.deltaskin.DeltaSkinControllerConfiguration
+import com.ravenemu.v3.android.deltaskin.DeltaSkinPlayer
+import com.ravenemu.v3.android.deltaskin.V3DeltaSkins
+import com.ravenemu.v3.shared.DeltaSkinEntry
 import com.ravenemu.v3.shared.GameEntry
 import com.ravenemu.v3.shared.GbFolderImportSummary
 import com.ravenemu.v3.shared.GbDisplayFilter
@@ -40,6 +49,9 @@ import com.ravenemu.v3.shared.GbVideoMetrics
 import com.ravenemu.v3.shared.GbVideoMetricsAccumulator
 import com.ravenemu.v3.shared.LoadedGameInfo
 import com.ravenemu.v3.shared.RavenEmuApp
+import com.ravenemu.v3.shared.RetroIndicatorState
+import com.ravenemu.v3.shared.RetroNoticeText
+import com.ravenemu.v3.shared.RetroProgress
 import com.ravenemu.v3.shared.V3Settings
 import com.ravenemu.v3.shared.V3RetroSnapshot
 import kotlinx.coroutines.CancellationException
@@ -61,6 +73,41 @@ class MainActivity : ComponentActivity() {
     // Written by the emulation thread, read by the UI thread.
     @Volatile private var activeAudio: AndroidGbAudioOutput? = null
     @Volatile private var lastAudioReport: String = "Aucune session audio enregistrée.\n"
+    // Physical controller. Its events are taken only while the player accepts
+    // input; elsewhere the D-pad keeps navigating the app as usual.
+    private val gamepad = GamepadMapper()
+    private val cartridgeRumble by lazy { CartridgeRumble(applicationContext) }
+    private var gamepadInputEnabled = false
+    private var gamepadInUse by mutableStateOf(false)
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (gamepadInputEnabled && foreground && gamepad.handles(event.keyCode)) {
+            gamepad.key(event.keyCode, event.action, event.repeatCount)?.let { (button, pressed) ->
+                gameSession.setButton(button, pressed)
+            }
+            gamepadInUse = true
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (gamepadInputEnabled && foreground &&
+            event.isFromSource(InputDevice.SOURCE_JOYSTICK) &&
+            event.action == MotionEvent.ACTION_MOVE
+        ) {
+            val changes = gamepad.axes(
+                event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                event.getAxisValue(MotionEvent.AXIS_HAT_Y),
+                event.getAxisValue(MotionEvent.AXIS_X),
+                event.getAxisValue(MotionEvent.AXIS_Y),
+            )
+            for ((button, pressed) in changes) gameSession.setButton(button, pressed)
+            if (changes.isNotEmpty()) gamepadInUse = true
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
 
     override fun onResume() {
         super.onResume()
@@ -71,6 +118,7 @@ class MainActivity : ComponentActivity() {
         foreground = false
         activeAudio?.stopNow()
         gameSession.releaseAllButtons()
+        gamepad.reset()
         // A lifecycle stop can terminate the process soon after this callback;
         // commit changed SRAM before returning rather than relying on a job.
         try {
@@ -186,7 +234,7 @@ class MainActivity : ComponentActivity() {
             val appVersion = remember {
                 runCatching {
                     packageManager.getPackageInfo(packageName, 0).versionName
-                }.getOrNull() ?: "0.1.0-preview"
+                }.getOrNull() ?: "0.1.0 - Bêta"
             }
             var loadedGame by remember { mutableStateOf<LoadedGameInfo?>(null) }
             var loading by remember { mutableStateOf(false) }
@@ -210,6 +258,12 @@ class MainActivity : ComponentActivity() {
             var stateSlots by remember { mutableStateOf(emptyList<GbStateSlot>()) }
             var restoringState by remember { mutableStateOf(false) }
             var pausedForGameMenu by remember { mutableStateOf(false) }
+            // The controller reaches the game only while it runs on screen.
+            SideEffect {
+                val accepts = videoEnabled && !pausedForGameMenu
+                if (!accepts && gamepadInputEnabled) gamepad.reset()
+                gamepadInputEnabled = accepts
+            }
             var stateRevision by remember { mutableStateOf(0) }
             val scope = rememberCoroutineScope()
             var retroSnapshot by remember { mutableStateOf(V3RetroSnapshot()) }
@@ -246,20 +300,44 @@ class MainActivity : ComponentActivity() {
             var retroNoticeVisible by remember { mutableStateOf(false) }
             // Unlocks wait their turn: several often fire on the same frame,
             // and each used to replace the previous popup at once.
-            val retroUnlocks = remember { mutableStateListOf<RetroUnlock>() }
+            val retroUnlocks = remember { mutableStateListOf<RetroPopup>() }
+            // Challenges, measured progress and leaderboard trackers stay on
+            // screen until the SDK hides them (RA compliance requirement).
+            val retroIndicatorState = remember { RetroIndicatorState() }
+            var retroIndicators by remember { mutableStateOf(emptyList<String>()) }
+            var retroProgress by remember { mutableStateOf<RetroProgress?>(null) }
             val retro = remember {
                 V3AchievementsController(
                     applicationContext, gameSession,
                     onSnapshot = { snapshot -> retroSnapshot = snapshot },
                     onEvent = { event ->
-                        if (event.kind == "achievement" && retroUnlocks.size < MAX_QUEUED_UNLOCKS) {
-                            retroUnlocks.add(RetroUnlock(event.title, event.extra, event.image))
+                        if (event.kind == "login" || event.kind == "game") {
+                            // A new session or game: earlier indicators are void.
+                            retroIndicatorState.clear()
+                            retroIndicators = emptyList()
+                            retroProgress = null
+                        }
+                        if (retroIndicatorState.handles(event.kind)) {
+                            retroIndicatorState.update(event.kind, event.extra, event.title, event.detail, event.image)
+                            retroIndicators = retroIndicatorState.labels
+                            retroProgress = retroIndicatorState.progress
+                        }
+                        val popup = RetroNoticeText.of(event.kind, event.title, event.detail, event.extra)
+                        if (popup != null && retroUnlocks.size < MAX_QUEUED_UNLOCKS) {
+                            // Only an unlock has a badge; other notices keep the star.
+                            val badge = if (event.kind == "achievement") event.image else ""
+                            retroUnlocks.add(RetroPopup(popup, badge))
                         }
                         if (event.kind == "login_error" || event.kind == "login") {
                             retroBusy = false
                         }
                     },
                 ).also { retroController = it }
+            }
+            // Effective only once RetroAchievements approved the app.
+            LaunchedEffect(retro, userSettings.retroHardcore) {
+                runCatching { retro.setHardcore(userSettings.retroHardcore) }
+                    .onFailure { Log.w("RavenEmuRetro", "Hardcore switch failed", it) }
             }
             LaunchedEffect(retro) {
                 try {
@@ -270,6 +348,16 @@ class MainActivity : ComponentActivity() {
                         error = "Connexion RetroAchievements indisponible.",
                     )
                 }
+            }
+            // The progress popup shows the achievement's badge; the set's
+            // badges are usually loaded already.
+            LaunchedEffect(retroProgress?.badgeUrl) {
+                val url = retroProgress?.badgeUrl.orEmpty()
+                if (url.isBlank() || url in retroImages) return@LaunchedEffect
+                val badge = withContext(Dispatchers.IO) {
+                    runCatching { retroBadgeStore.load(url) }.getOrNull()?.asImageBitmap()
+                }
+                if (badge != null) retroImages = retroImages + (url to badge)
             }
             // One popup at a time, each for the same duration. The badge is
             // fetched before the popup opens, so it never changes size while
@@ -290,7 +378,7 @@ class MainActivity : ComponentActivity() {
                         if (badge != null) retroImages = retroImages + (url to badge)
                     }
                     retroNoticeBadge = badge
-                    retroNotice = "Succès débloqué · ${unlock.title} (${unlock.points} pts)"
+                    retroNotice = unlock.text
                     retroNoticeVisible = true
                     delay(4_800)
                     // Fade out with the same content, then clear it.
@@ -409,6 +497,7 @@ class MainActivity : ComponentActivity() {
                     // UI thread, nanosecond pacing, and late frames are caught
                     // up rather than dropped, so the audio never starves.
                     withContext(gbEmulationDispatcher) {
+                        val rumble = if (playbackSettings.cartridgeRumble) cartridgeRumble else null
                         val pacer = GbFramePacer(periodNanos)
                         pacer.reset(System.nanoTime())
                         var lastBatteryCheckNanos = System.nanoTime()
@@ -434,6 +523,9 @@ class MainActivity : ComponentActivity() {
                                         sink.close()
                                         output = null
                                     }
+                                }
+                                if (rumble != null) {
+                                    if (gameSession.rumbleActive) rumble.pulse() else rumble.release()
                                 }
                                 var conversionNanos = 0L
                                 if (renderVideo) {
@@ -486,6 +578,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 } finally {
+                    cartridgeRumble.stop()
                     if (activeAudio === output) activeAudio = null
                     output?.let { lastAudioReport = it.exportReport() }
                     output?.close()
@@ -547,6 +640,37 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+
+            // Delta skins: installed list, and the skin of the running game.
+            val deltaSkins = remember { V3DeltaSkins(applicationContext) }
+            var skinEntries by remember { mutableStateOf(emptyList<DeltaSkinEntry>()) }
+            var skinConfiguration by remember { mutableStateOf<DeltaSkinControllerConfiguration?>(null) }
+            fun refreshSkins() {
+                scope.launch {
+                    skinEntries = runCatching { withContext(Dispatchers.IO) { deltaSkins.entries() } }
+                        .onFailure { Log.w("RavenEmuSkins", "Cannot list skins", it) }
+                        .getOrDefault(emptyList())
+                }
+            }
+            LaunchedEffect(Unit) { refreshSkins() }
+            LaunchedEffect(loadedGame?.platform, skinEntries, userSettings.haptics) {
+                val platform = loadedGame?.platform
+                skinConfiguration = if (platform == null) null else runCatching {
+                    withContext(Dispatchers.IO) { deltaSkins.configuration(platform, userSettings.haptics) }
+                }.getOrNull()
+            }
+            val skinPicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocument(),
+            ) { uri ->
+                if (uri != null) scope.launch {
+                    val message = runCatching { withContext(Dispatchers.IO) { deltaSkins.import(uri) } }
+                        .getOrElse { "Importation du skin impossible" }
+                    Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+                    refreshSkins()
+                }
+            }
+
+            val activeSkin = skinConfiguration
 
             val documentPicker = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocument(),
@@ -735,6 +859,20 @@ class MainActivity : ComponentActivity() {
                 retroNotice = retroNotice,
                 retroNoticeBadge = retroNoticeBadge,
                 retroNoticeVisible = retroNoticeVisible,
+                retroIndicators = retroIndicators,
+                retroProgress = retroProgress,
+                hardcoreAvailable = HardcoreAvailability.APPROVED,
+                // Hardcore forbids restoring a save state (saving stays allowed).
+                stateLoadAllowed = !retro.hardcoreActive,
+                onRequestGameMenu = {
+                    retro.requestPause().also { allowed ->
+                        if (!allowed) Toast.makeText(
+                            applicationContext,
+                            "Mode Hardcore : pause indisponible pour le moment.",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
                 onRetroLogin = { username, password ->
                     if (!retroBusy) {
                         retroBusy = true
@@ -994,6 +1132,51 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 },
+                skinControls = if (activeSkin == null) null else @Composable { image: ImageBitmap?, openMenu: () -> Unit ->
+                    val configuration: DeltaSkinControllerConfiguration = activeSkin
+                    DeltaSkinPlayer(
+                        configuration = configuration,
+                        frame = image,
+                        onButtons = { changes ->
+                            if (videoEnabled && foreground && !pausedForGameMenu) {
+                                for (button in changes.released) gameSession.setButton(button, false)
+                                for (button in changes.pressed) gameSession.setButton(button, true)
+                            }
+                        },
+                        onMenu = openMenu,
+                        onError = { code ->
+                            Log.w("RavenEmuSkins", "Skin fallback: $code")
+                            val platform = loadedGame?.platform
+                            scope.launch(Dispatchers.IO) {
+                                if (platform != null) deltaSkins.fallback(platform, configuration.skinSha256)
+                            }
+                            skinConfiguration = null
+                            gameSession.releaseAllButtons()
+                            Toast.makeText(applicationContext,
+                                "Skin invalide : commandes classiques restaurées",
+                                Toast.LENGTH_LONG).show()
+                            refreshSkins()
+                        },
+                    )
+                },
+                deltaSkins = skinEntries,
+                onImportSkin = { skinPicker.launch(arrayOf("*/*")) },
+                onToggleSkin = { id ->
+                    scope.launch {
+                        runCatching { withContext(Dispatchers.IO) { deltaSkins.toggle(id) } }
+                        refreshSkins()
+                    }
+                },
+                onDeleteSkin = { id ->
+                    scope.launch {
+                        runCatching { withContext(Dispatchers.IO) { deltaSkins.delete(id) } }
+                        Toast.makeText(applicationContext, "Skin supprimé", Toast.LENGTH_SHORT).show()
+                        refreshSkins()
+                    }
+                },
+                touchControlsVisible = !gamepadInUse,
+                // Touching the screen brings the touch controls back.
+                onScreenTouch = { gamepadInUse = false },
                 onButtonChange = { button: GbButton, pressed: Boolean ->
                     if (videoEnabled && foreground && !pausedForGameMenu) {
                         gameSession.setButton(button, pressed)
@@ -1067,7 +1250,11 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 onLoadState = { slot ->
-                    if (!stateOperationBusy && loadedGame != null && videoEnabled) {
+                    if (retro.hardcoreActive) {
+                        Toast.makeText(applicationContext,
+                            "Mode Hardcore : le chargement d'un état est désactivé.",
+                            Toast.LENGTH_LONG).show()
+                    } else if (!stateOperationBusy && loadedGame != null && videoEnabled) {
                         stateOperationBusy = true
                         restoringState = true
                         activeAudio?.stopNow()
@@ -1141,4 +1328,4 @@ private const val MAX_RETRO_IMAGES = 600
 /** A burst beyond this is not worth minutes of popups; the list keeps them all. */
 private const val MAX_QUEUED_UNLOCKS = 20
 
-private data class RetroUnlock(val title: String, val points: String, val badgeUrl: String)
+private data class RetroPopup(val text: String, val badgeUrl: String)

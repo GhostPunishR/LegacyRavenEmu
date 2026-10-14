@@ -137,6 +137,15 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
         if (read == count) bytes else bytes.copyOf(read)
     }
 
+    /** Power-cycle the running game (Hardcore requires it when switched on). */
+    fun resetGame() = synchronized(lock) {
+        check(!closed) { "La session a été fermée." }
+        val core = active ?: return@synchronized
+        for (button in heldButtons) core.button(button.nativeCode, false)
+        heldButtons.clear()
+        core.reset()
+    }
+
     /** Serialize state operations with both emulation and battery saves. */
     fun saveStateSlot(slot: Int = 0, preview: ByteArray? = null) = synchronized(saveLock) {
         val (key, state) = synchronized(lock) {
@@ -203,8 +212,13 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
             check(!closed) { "La session a été fermée." }
             val core = active ?: return@synchronized null
             core.frameInto(pixels)
+            rumbleActive = core.rumbleActive()
             core.readAudioInto(audio)
         }
+
+    /** The cartridge motor's state after the last frame (see NativeCore). */
+    @Volatile var rumbleActive: Boolean = false
+        private set
 
     fun refreshRateHz(): Double? = synchronized(lock) {
         if (closed) null else active?.fps
