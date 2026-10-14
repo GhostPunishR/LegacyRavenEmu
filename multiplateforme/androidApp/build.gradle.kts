@@ -42,6 +42,8 @@ dependencies {
     implementation(project(":shared"))
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    // Box/Image/offset for the Delta skin player; same Compose version as :shared.
+    implementation("org.jetbrains.compose.foundation:foundation:1.12.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:2.4.21")
     testImplementation("org.json:json:20240303")
