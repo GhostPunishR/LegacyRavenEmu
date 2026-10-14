@@ -113,7 +113,7 @@ fun V3SettingsScreen(
                     CategoryRow("Général", "Pause, jaquettes et diagnostics") { page = Page.GENERAL }
                     CategoryRow("Audio", "Son du jeu et volume") { page = Page.AUDIO }
                     CategoryRow("Vidéo", "Couleurs, correction LCD, luminosité et contraste") { page = Page.VIDEO }
-                    CategoryRow("Interface", "Vibrations, commandes, style et skins") { page = Page.INTERFACE }
+                    CategoryRow("Interface", "Vibrations, commandes, style et Skin Delta") { page = Page.INTERFACE }
                     CategoryRow("À propos", "Version, auteur, confidentialité et licences") {
                         page = Page.ABOUT
                     }
@@ -257,7 +257,7 @@ fun V3SettingsScreen(
                         onSettingsChange != null) {
                         update(settings.copy(controlsStyle = "contrast"))
                     }
-                    Text("Le gestionnaire de skins Delta et le déplacement libre des boutons seront migrés séparément.",
+                    Text("Le déplacement libre des boutons sera ajouté plus tard.",
                         color = Muted, fontSize = 12.sp)
                     TextButton(onClick = {
                         update(settings.copy(
@@ -267,7 +267,7 @@ fun V3SettingsScreen(
                     }, enabled = onSettingsChange != null) {
                         Text("Réinitialiser les commandes", color = Accent)
                     }
-                    GroupTitle("Skins de manette")
+                    GroupTitle("Skin Delta")
                     Text(
                         "RavenEmu lit les skins au format .deltaskin, en portrait. Ce projet n'est ni affilié à Delta, ni approuvé par ses auteurs : aucun skin n'est fourni, vous importez les vôtres.",
                         color = Muted, fontSize = 12.sp,
@@ -299,38 +299,11 @@ fun V3SettingsScreen(
                     }
                 }
                 Page.ABOUT -> {
-                    GroupTitle("RavenEmu")
-                    SettingDescription("Version installée", appVersion)
-                    SettingDescription("Créateur", "GhostPunishR")
-                    SettingDescription("Version du projet", "Nouvelle version multiplateforme — préversion Android / iOS")
-                    SettingDescription("Moteurs natifs", "RavenCore (révision épinglée)")
-                    SettingDescription("Licence du projet", "GNU AGPL-3.0")
-                    GroupTitle("Informations légales")
-                    ExternalRow("Conditions d'utilisation", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenEmu/blob/main/TERMS.md")
-                    ExternalRow("Politique de confidentialité", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenEmu/blob/main/PRIVACY.md")
-                    ExternalRow("Licence AGPL-3.0", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenEmu/blob/main/LICENSE")
-                    GroupTitle("Licences et crédits")
-                    for (notice in OpenSourceNotices.all) {
-                        Column(
-                            Modifier.fillMaxWidth().clickable { openNotice = notice },
-                            verticalArrangement = Arrangement.spacedBy(3.dp),
-                        ) {
-                            Text(notice.name, color = TextMain, fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium)
-                            Text("${notice.license} · ${notice.usage}",
-                                color = Muted, fontSize = 12.sp)
-                        }
-                    }
-                    GroupTitle("Code source")
-                    ExternalRow("RavenEmu — GitHub", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenEmu")
-                    ExternalRow("RavenCore — GitHub", onOpenLink,
-                        "https://github.com/GhostPunishR/RavenCore")
-                    Text("Aucune ROM commerciale ni BIOS propriétaire n'est distribué avec RavenEmu.",
-                        color = Muted, fontSize = 12.sp)
+                    V3AboutContent(
+                        appVersion = appVersion,
+                        onOpenLink = onOpenLink,
+                        onOpenNotice = { openNotice = it },
+                    )
                 }
             }
         }
@@ -470,9 +443,3 @@ private fun ChoiceRow(
     }
 }
 
-@Composable
-private fun ExternalRow(title: String, open: ((String) -> Unit)?, url: String) {
-    TextButton(onClick = { open?.invoke(url) }, enabled = open != null) {
-        Text(title + " ↗", color = Accent, fontSize = 14.sp)
-    }
-}
