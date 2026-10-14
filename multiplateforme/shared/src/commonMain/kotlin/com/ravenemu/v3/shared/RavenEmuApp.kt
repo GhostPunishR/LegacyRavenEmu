@@ -157,6 +157,7 @@ fun RavenEmuApp(
     retroNoticeBadge: ImageBitmap? = null,
     retroNoticeVisible: Boolean = retroNotice != null,
     retroIndicators: List<String> = emptyList(),
+    retroProgress: RetroProgress? = null,
     hardcoreAvailable: Boolean = false,
     stateLoadAllowed: Boolean = true,
     onRequestGameMenu: (() -> Boolean)? = null,
@@ -323,6 +324,7 @@ fun RavenEmuApp(
                     retroNoticeBadge = retroNoticeBadge,
                     retroNoticeVisible = retroNoticeVisible,
                     retroIndicators = retroIndicators,
+                    retroProgress = retroProgress,
                     stateLoadAllowed = stateLoadAllowed,
                     onRequestGameMenu = onRequestGameMenu,
                     skinControls = skinControls,
@@ -586,6 +588,7 @@ private fun GbVideoScreen(
     retroNoticeBadge: ImageBitmap?,
     retroNoticeVisible: Boolean,
     retroIndicators: List<String>,
+    retroProgress: RetroProgress?,
     stateLoadAllowed: Boolean,
     onRequestGameMenu: (() -> Boolean)?,
     skinControls: (@Composable (frame: ImageBitmap?, openMenu: () -> Unit) -> Unit)?,
@@ -652,7 +655,8 @@ private fun GbVideoScreen(
             // picture itself; its menu button opens the game menu.
             Box(Modifier.fillMaxWidth().weight(1f).background(Color.Black)) {
                 skinControls(frame) { setGameMenu(true) }
-                RetroOverlays(retroIndicators, retroNotice, retroNoticeBadge, retroNoticeVisible)
+                RetroOverlays(retroIndicators, retroNotice, retroNoticeBadge, retroNoticeVisible,
+                    retroProgress, retroProgress?.let { retroImages[it.badgeUrl] })
             }
         } else {
             // Pin the picture to the top of its available area rather than
@@ -693,7 +697,8 @@ private fun GbVideoScreen(
                         textAlign = TextAlign.Center,
                     )
                 }
-                RetroOverlays(retroIndicators, retroNotice, retroNoticeBadge, retroNoticeVisible)
+                RetroOverlays(retroIndicators, retroNotice, retroNoticeBadge, retroNoticeVisible,
+                    retroProgress, retroProgress?.let { retroImages[it.badgeUrl] })
             }
             if (onButtonChange != null && !touchControlsVisible) {
                 Text(
@@ -1252,9 +1257,10 @@ private fun oneDecimal(value: Double): String =
     ((value * 10.0).roundToInt() / 10.0).toString()
 
 /**
- * RetroAchievements overlays of the player: persistent indicators at the
- * bottom, the one-at-a-time popup at the top. Shared by the classic layout
- * and Delta skins.
+ * RetroAchievements overlays of the player: challenge and tracker lines at
+ * the bottom; at the top, the one-at-a-time popup and, under it, the
+ * measured progress of an achievement, both with the achievement's badge.
+ * Shared by the classic layout and Delta skins.
  */
 @Composable
 private fun BoxScope.RetroOverlays(
@@ -1262,9 +1268,11 @@ private fun BoxScope.RetroOverlays(
     retroNotice: String?,
     retroNoticeBadge: ImageBitmap?,
     retroNoticeVisible: Boolean,
+    retroProgress: RetroProgress?,
+    retroProgressBadge: ImageBitmap?,
 ) {
     if (retroIndicators.isNotEmpty()) {
-        // Persistent, non-interactive: challenges, progress, trackers.
+        // Persistent, non-interactive: challenges and trackers.
         Column(
             Modifier.align(Alignment.BottomCenter)
                 .padding(bottom = 10.dp, start = 12.dp, end = 12.dp)
@@ -1283,33 +1291,70 @@ private fun BoxScope.RetroOverlays(
         animationSpec = tween(durationMillis = 300),
         label = "retroNotice",
     )
-    if (retroNotice != null && noticeAlpha > 0f) {
-        Row(
-            Modifier.align(Alignment.TopCenter)
-                .alpha(noticeAlpha)
-                .padding(top = 10.dp, start = 12.dp, end = 12.dp)
-                .background(RavenSurface, RoundedCornerShape(12.dp))
-                .border(1.dp, RavenAccent, RoundedCornerShape(12.dp))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // The unlocked achievement's badge, or the star when it
-            // could not be fetched in time (offline). Fixed slot: the
-            // popup keeps the same size either way.
-            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                if (retroNoticeBadge != null) {
-                    Image(
-                        retroNoticeBadge, "Badge du succès",
-                        Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
-                        contentScale = ContentScale.Fit,
-                    )
-                } else {
-                    Text("★", color = RavenAccent, fontSize = 21.sp)
-                }
-            }
-            Spacer(Modifier.width(8.dp))
-            Text(retroNotice, color = RavenText, fontSize = 12.sp,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
+    // Kept while fading out, so the card leaves with its last content.
+    // Plain holder, not state: it only follows the parameters.
+    val held = remember { HeldProgress() }
+    if (retroProgress != null) {
+        held.progress = retroProgress
+        held.badge = retroProgressBadge
+    }
+    val progressAlpha by animateFloatAsState(
+        if (retroProgress != null) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "retroProgress",
+    )
+    val showNotice = retroNotice != null && noticeAlpha > 0f
+    val progress = held.progress
+    val showProgress = progress != null && progressAlpha > 0f
+    if (!showNotice && !showProgress) return
+    Column(
+        Modifier.align(Alignment.TopCenter).padding(top = 10.dp, start = 12.dp, end = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (showNotice) {
+            RetroPopupCard(retroNotice.orEmpty(), retroNoticeBadge, noticeAlpha)
         }
+        if (showProgress && progress != null) {
+            val text = listOf("Progression · ${progress.title}", progress.detail)
+                .filter { it.isNotBlank() }.joinToString("\n")
+            RetroPopupCard(text, held.badge, progressAlpha)
+        }
+    }
+}
+
+private class HeldProgress {
+    var progress: RetroProgress? = null
+    var badge: ImageBitmap? = null
+}
+
+/**
+ * One RetroAchievements popup: the achievement's badge, or the star when it
+ * is not available (offline, or a notice without achievement), then the text.
+ * Fixed badge slot: the popup keeps the same size either way.
+ */
+@Composable
+private fun RetroPopupCard(text: String, badge: ImageBitmap?, alpha: Float) {
+    Row(
+        Modifier.alpha(alpha)
+            .background(RavenSurface, RoundedCornerShape(12.dp))
+            .border(1.dp, RavenAccent, RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+            if (badge != null) {
+                Image(
+                    badge, "Badge du succès",
+                    Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                Text("★", color = RavenAccent, fontSize = 21.sp)
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(text, color = RavenText, fontSize = 12.sp,
+            maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }

@@ -51,6 +51,7 @@ import com.ravenemu.v3.shared.LoadedGameInfo
 import com.ravenemu.v3.shared.RavenEmuApp
 import com.ravenemu.v3.shared.RetroIndicatorState
 import com.ravenemu.v3.shared.RetroNoticeText
+import com.ravenemu.v3.shared.RetroProgress
 import com.ravenemu.v3.shared.V3Settings
 import com.ravenemu.v3.shared.V3RetroSnapshot
 import kotlinx.coroutines.CancellationException
@@ -304,6 +305,7 @@ class MainActivity : ComponentActivity() {
             // screen until the SDK hides them (RA compliance requirement).
             val retroIndicatorState = remember { RetroIndicatorState() }
             var retroIndicators by remember { mutableStateOf(emptyList<String>()) }
+            var retroProgress by remember { mutableStateOf<RetroProgress?>(null) }
             val retro = remember {
                 V3AchievementsController(
                     applicationContext, gameSession,
@@ -313,10 +315,12 @@ class MainActivity : ComponentActivity() {
                             // A new session or game: earlier indicators are void.
                             retroIndicatorState.clear()
                             retroIndicators = emptyList()
+                            retroProgress = null
                         }
                         if (retroIndicatorState.handles(event.kind)) {
-                            retroIndicatorState.update(event.kind, event.extra, event.title, event.detail)
+                            retroIndicatorState.update(event.kind, event.extra, event.title, event.detail, event.image)
                             retroIndicators = retroIndicatorState.labels
+                            retroProgress = retroIndicatorState.progress
                         }
                         val popup = RetroNoticeText.of(event.kind, event.title, event.detail, event.extra)
                         if (popup != null && retroUnlocks.size < MAX_QUEUED_UNLOCKS) {
@@ -344,6 +348,16 @@ class MainActivity : ComponentActivity() {
                         error = "Connexion RetroAchievements indisponible.",
                     )
                 }
+            }
+            // The progress popup shows the achievement's badge; the set's
+            // badges are usually loaded already.
+            LaunchedEffect(retroProgress?.badgeUrl) {
+                val url = retroProgress?.badgeUrl.orEmpty()
+                if (url.isBlank() || url in retroImages) return@LaunchedEffect
+                val badge = withContext(Dispatchers.IO) {
+                    runCatching { retroBadgeStore.load(url) }.getOrNull()?.asImageBitmap()
+                }
+                if (badge != null) retroImages = retroImages + (url to badge)
             }
             // One popup at a time, each for the same duration. The badge is
             // fetched before the popup opens, so it never changes size while
@@ -846,6 +860,7 @@ class MainActivity : ComponentActivity() {
                 retroNoticeBadge = retroNoticeBadge,
                 retroNoticeVisible = retroNoticeVisible,
                 retroIndicators = retroIndicators,
+                retroProgress = retroProgress,
                 hardcoreAvailable = HardcoreAvailability.APPROVED,
                 // Hardcore forbids restoring a save state (saving stays allowed).
                 stateLoadAllowed = !retro.hardcoreActive,

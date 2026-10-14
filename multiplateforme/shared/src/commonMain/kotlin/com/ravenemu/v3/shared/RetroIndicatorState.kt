@@ -1,5 +1,8 @@
 package com.ravenemu.v3.shared
 
+/** Measured progress of one achievement, shown like an unlock popup. */
+data class RetroProgress(val title: String, val detail: String, val badgeUrl: String)
+
 /**
  * Persistent RetroAchievements status while playing: active challenges,
  * measured progress and leaderboard trackers. Unlike popups, each one stays
@@ -8,24 +11,38 @@ package com.ravenemu.v3.shared
 class RetroIndicatorState {
     private val active = linkedMapOf<String, String>()
 
-    /** Lines to show, oldest first. */
+    /** Challenge and tracker lines to show, oldest first. */
     val labels: List<String> get() = active.values.toList()
+
+    /**
+     * The measured progress on screen, if any. rcheevos has one progress
+     * indicator, which can switch achievements; its timer's HIDE carries no
+     * achievement identifier.
+     */
+    var progress: RetroProgress? = null
+        private set
 
     /** True for the event kinds this state handles. */
     fun handles(kind: String): Boolean = kind.substringBeforeLast('_') in FAMILIES &&
         (kind.endsWith("_show") || kind.endsWith("_hide"))
 
-    fun update(kind: String, id: String, title: String, detail: String) {
+    fun update(kind: String, id: String, title: String, detail: String, badgeUrl: String = "") {
         if (!handles(kind)) return
         val family = kind.substringBeforeLast('_')
-        // rcheevos has one progress indicator, which can switch achievements;
-        // its timer's HIDE carries no achievement identifier.
-        val key = if (family == "progress") family else "$family:$id"
-        if (kind.endsWith("_hide")) active.remove(key)
+        val hide = kind.endsWith("_hide")
+        if (family == "progress") {
+            progress = if (hide) null else RetroProgress(title, detail, badgeUrl)
+            return
+        }
+        val key = "$family:$id"
+        if (hide) active.remove(key)
         else active[key] = listOf(title, detail).filter { it.isNotBlank() }.joinToString(" • ")
     }
 
-    fun clear() = active.clear()
+    fun clear() {
+        active.clear()
+        progress = null
+    }
 
     private companion object {
         val FAMILIES = setOf("challenge", "progress", "tracker")
