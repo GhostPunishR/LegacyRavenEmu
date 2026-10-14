@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -30,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,6 +74,7 @@ fun V3SettingsScreen(
     var page by remember(aboutOnly) {
         mutableStateOf(if (aboutOnly) Page.ABOUT else Page.HOME)
     }
+    var openNotice by remember { mutableStateOf<OpenSourceNotice?>(null) }
     val update: (V3Settings) -> Unit = { updated ->
         onSettingsChange?.invoke(updated.normalized())
     }
@@ -243,6 +247,18 @@ fun V3SettingsScreen(
                         "https://github.com/GhostPunishR/RavenEmu/blob/main/PRIVACY.md")
                     ExternalRow("Licence AGPL-3.0", onOpenLink,
                         "https://github.com/GhostPunishR/RavenEmu/blob/main/LICENSE")
+                    GroupTitle("Licences et crédits")
+                    for (notice in OpenSourceNotices.all) {
+                        Column(
+                            Modifier.fillMaxWidth().clickable { openNotice = notice },
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            Text(notice.name, color = TextMain, fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium)
+                            Text("${notice.license} · ${notice.usage}",
+                                color = Muted, fontSize = 12.sp)
+                        }
+                    }
                     GroupTitle("Code source")
                     ExternalRow("RavenEmu — GitHub", onOpenLink,
                         "https://github.com/GhostPunishR/RavenEmu")
@@ -253,6 +269,30 @@ fun V3SettingsScreen(
                 }
             }
         }
+    }
+    openNotice?.let { notice ->
+        AlertDialog(
+            onDismissRequest = { openNotice = null },
+            title = { Text(notice.name) },
+            text = {
+                // The full licence text, as each licence requires.
+                Column(
+                    Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(notice.license, fontWeight = FontWeight.SemiBold)
+                    Text(notice.text, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { openNotice = null }) { Text("Fermer") }
+            },
+            dismissButton = {
+                TextButton(onClick = { onOpenLink?.invoke(notice.url) }, enabled = onOpenLink != null) {
+                    Text("Site du projet")
+                }
+            },
+        )
     }
 }
 
