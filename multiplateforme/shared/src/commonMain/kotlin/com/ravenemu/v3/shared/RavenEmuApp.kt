@@ -155,6 +155,7 @@ fun RavenEmuApp(
     retroNotice: String? = null,
     retroNoticeBadge: ImageBitmap? = null,
     retroNoticeVisible: Boolean = retroNotice != null,
+    retroIndicators: List<String> = emptyList(),
     settings: V3Settings = V3Settings(),
     onSettingsChange: ((V3Settings) -> Unit)? = null,
     appVersion: String = "Préversion",
@@ -306,6 +307,7 @@ fun RavenEmuApp(
                     retroNotice = retroNotice,
                     retroNoticeBadge = retroNoticeBadge,
                     retroNoticeVisible = retroNoticeVisible,
+                    retroIndicators = retroIndicators,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -565,6 +567,7 @@ private fun GbVideoScreen(
     retroNotice: String?,
     retroNoticeBadge: ImageBitmap?,
     retroNoticeVisible: Boolean,
+    retroIndicators: List<String>,
     onBack: () -> Unit,
 ) {
     var gameMenuOpen by remember { mutableStateOf(false) }
@@ -658,6 +661,21 @@ private fun GbVideoScreen(
                     modifier = Modifier.padding(20.dp),
                     textAlign = TextAlign.Center,
                 )
+            }
+            if (retroIndicators.isNotEmpty()) {
+                // Persistent, non-interactive: challenges, progress, trackers.
+                Column(
+                    Modifier.align(Alignment.BottomCenter)
+                        .padding(bottom = 10.dp, start = 12.dp, end = 12.dp)
+                        .background(RavenSurface.copy(alpha = 0.88f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    for (label in retroIndicators.take(4)) {
+                        Text(label, color = RavenText, fontSize = 12.sp,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
             }
             val noticeAlpha by animateFloatAsState(
                 if (retroNotice != null && retroNoticeVisible) 1f else 0f,

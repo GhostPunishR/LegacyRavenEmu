@@ -44,6 +44,8 @@ import com.ravenemu.v3.shared.GbVideoMetrics
 import com.ravenemu.v3.shared.GbVideoMetricsAccumulator
 import com.ravenemu.v3.shared.LoadedGameInfo
 import com.ravenemu.v3.shared.RavenEmuApp
+import com.ravenemu.v3.shared.RetroIndicatorState
+import com.ravenemu.v3.shared.RetroNoticeText
 import com.ravenemu.v3.shared.V3Settings
 import com.ravenemu.v3.shared.V3RetroSnapshot
 import kotlinx.coroutines.CancellationException
@@ -292,14 +294,30 @@ class MainActivity : ComponentActivity() {
             var retroNoticeVisible by remember { mutableStateOf(false) }
             // Unlocks wait their turn: several often fire on the same frame,
             // and each used to replace the previous popup at once.
-            val retroUnlocks = remember { mutableStateListOf<RetroUnlock>() }
+            val retroUnlocks = remember { mutableStateListOf<RetroPopup>() }
+            // Challenges, measured progress and leaderboard trackers stay on
+            // screen until the SDK hides them (RA compliance requirement).
+            val retroIndicatorState = remember { RetroIndicatorState() }
+            var retroIndicators by remember { mutableStateOf(emptyList<String>()) }
             val retro = remember {
                 V3AchievementsController(
                     applicationContext, gameSession,
                     onSnapshot = { snapshot -> retroSnapshot = snapshot },
                     onEvent = { event ->
-                        if (event.kind == "achievement" && retroUnlocks.size < MAX_QUEUED_UNLOCKS) {
-                            retroUnlocks.add(RetroUnlock(event.title, event.extra, event.image))
+                        if (event.kind == "login" || event.kind == "game") {
+                            // A new session or game: earlier indicators are void.
+                            retroIndicatorState.clear()
+                            retroIndicators = emptyList()
+                        }
+                        if (retroIndicatorState.handles(event.kind)) {
+                            retroIndicatorState.update(event.kind, event.extra, event.title, event.detail)
+                            retroIndicators = retroIndicatorState.labels
+                        }
+                        val popup = RetroNoticeText.of(event.kind, event.title, event.detail, event.extra)
+                        if (popup != null && retroUnlocks.size < MAX_QUEUED_UNLOCKS) {
+                            // Only an unlock has a badge; other notices keep the star.
+                            val badge = if (event.kind == "achievement") event.image else ""
+                            retroUnlocks.add(RetroPopup(popup, badge))
                         }
                         if (event.kind == "login_error" || event.kind == "login") {
                             retroBusy = false
@@ -336,7 +354,7 @@ class MainActivity : ComponentActivity() {
                         if (badge != null) retroImages = retroImages + (url to badge)
                     }
                     retroNoticeBadge = badge
-                    retroNotice = "Succès débloqué · ${unlock.title} (${unlock.points} pts)"
+                    retroNotice = unlock.text
                     retroNoticeVisible = true
                     delay(4_800)
                     // Fade out with the same content, then clear it.
@@ -786,6 +804,7 @@ class MainActivity : ComponentActivity() {
                 retroNotice = retroNotice,
                 retroNoticeBadge = retroNoticeBadge,
                 retroNoticeVisible = retroNoticeVisible,
+                retroIndicators = retroIndicators,
                 onRetroLogin = { username, password ->
                     if (!retroBusy) {
                         retroBusy = true
@@ -1195,4 +1214,4 @@ private const val MAX_RETRO_IMAGES = 600
 /** A burst beyond this is not worth minutes of popups; the list keeps them all. */
 private const val MAX_QUEUED_UNLOCKS = 20
 
-private data class RetroUnlock(val title: String, val points: String, val badgeUrl: String)
+private data class RetroPopup(val text: String, val badgeUrl: String)
