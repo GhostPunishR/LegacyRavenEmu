@@ -23,6 +23,7 @@ internal class V3AchievementsController(
     private val onEvent: (V3AchievementClient.Event) -> Unit,
 ) {
     private val account = V3AchievementAccount(context.applicationContext)
+    private val journal = V3AwardJournal(context.applicationContext)
     private val main = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "RavenEmu-V3-RetroAchievements").apply { isDaemon = true }
@@ -92,6 +93,9 @@ internal class V3AchievementsController(
 
     suspend fun disconnect() = withContext(dispatcher) {
         account.clear()
+        // Signing out forgets this device's unsent unlocks too (V2 rule):
+        // they belong to an account that is no longer signed in here.
+        runCatching { journal.clear() }
         client?.close()
         client = null
         connected = false
@@ -105,6 +109,8 @@ internal class V3AchievementsController(
         currentUser = username
         val fresh = V3AchievementClient(
             readMemory = { address, count -> session.readAchievementMemory(address, count) },
+            journal = journal,
+            account = username,
             onEvent = { event -> handleEvent(event) },
         )
         client = fresh
