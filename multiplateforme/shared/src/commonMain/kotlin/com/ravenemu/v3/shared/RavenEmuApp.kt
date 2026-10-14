@@ -1316,7 +1316,7 @@ private fun BoxScope.RetroOverlays(
             RetroPopupCard(retroNotice.orEmpty(), retroNoticeBadge, noticeAlpha)
         }
         if (showProgress && progress != null) {
-            val text = listOf("Progression · ${progress.title}", progress.detail)
+            val text = listOf(progress.title, progress.detail)
                 .filter { it.isNotBlank() }.joinToString("\n")
             RetroPopupCard(text, held.badge, progressAlpha)
         }
