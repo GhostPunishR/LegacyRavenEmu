@@ -22,6 +22,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +35,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import com.ravenemu.v3.android.deltaskin.DeltaSkinControllerConfiguration
+import com.ravenemu.v3.android.deltaskin.DeltaSkinPlayer
+import com.ravenemu.v3.android.deltaskin.V3DeltaSkins
+import com.ravenemu.v3.shared.DeltaSkinEntry
 import com.ravenemu.v3.shared.GameEntry
 import com.ravenemu.v3.shared.GbFolderImportSummary
 import com.ravenemu.v3.shared.GbDisplayFilter
@@ -622,6 +627,37 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // Delta skins: installed list, and the skin of the running game.
+            val deltaSkins = remember { V3DeltaSkins(applicationContext) }
+            var skinEntries by remember { mutableStateOf(emptyList<DeltaSkinEntry>()) }
+            var skinConfiguration by remember { mutableStateOf<DeltaSkinControllerConfiguration?>(null) }
+            fun refreshSkins() {
+                scope.launch {
+                    skinEntries = runCatching { withContext(Dispatchers.IO) { deltaSkins.entries() } }
+                        .onFailure { Log.w("RavenEmuSkins", "Cannot list skins", it) }
+                        .getOrDefault(emptyList())
+                }
+            }
+            LaunchedEffect(Unit) { refreshSkins() }
+            LaunchedEffect(loadedGame?.platform, skinEntries, userSettings.haptics) {
+                val platform = loadedGame?.platform
+                skinConfiguration = if (platform == null) null else runCatching {
+                    withContext(Dispatchers.IO) { deltaSkins.configuration(platform, userSettings.haptics) }
+                }.getOrNull()
+            }
+            val skinPicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocument(),
+            ) { uri ->
+                if (uri != null) scope.launch {
+                    val message = runCatching { withContext(Dispatchers.IO) { deltaSkins.import(uri) } }
+                        .getOrElse { "Importation du skin impossible" }
+                    Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+                    refreshSkins()
+                }
+            }
+
+            val activeSkin = skinConfiguration
+
             val documentPicker = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocument(),
             ) { uri ->
@@ -1079,6 +1115,48 @@ class MainActivity : ComponentActivity() {
                         } catch (error: Exception) {
                             Log.e("RavenEmuSaves", "Battery save on player exit failed", error)
                         }
+                    }
+                },
+                skinControls = if (activeSkin == null) null else @Composable { image: ImageBitmap?, openMenu: () -> Unit ->
+                    val configuration: DeltaSkinControllerConfiguration = activeSkin
+                    DeltaSkinPlayer(
+                        configuration = configuration,
+                        frame = image,
+                        onButtons = { changes ->
+                            if (videoEnabled && foreground && !pausedForGameMenu) {
+                                for (button in changes.released) gameSession.setButton(button, false)
+                                for (button in changes.pressed) gameSession.setButton(button, true)
+                            }
+                        },
+                        onMenu = openMenu,
+                        onError = { code ->
+                            Log.w("RavenEmuSkins", "Skin fallback: $code")
+                            val platform = loadedGame?.platform
+                            scope.launch(Dispatchers.IO) {
+                                if (platform != null) deltaSkins.fallback(platform, configuration.skinSha256)
+                            }
+                            skinConfiguration = null
+                            gameSession.releaseAllButtons()
+                            Toast.makeText(applicationContext,
+                                "Skin invalide : commandes classiques restaurées",
+                                Toast.LENGTH_LONG).show()
+                            refreshSkins()
+                        },
+                    )
+                },
+                deltaSkins = skinEntries,
+                onImportSkin = { skinPicker.launch(arrayOf("*/*")) },
+                onToggleSkin = { id ->
+                    scope.launch {
+                        runCatching { withContext(Dispatchers.IO) { deltaSkins.toggle(id) } }
+                        refreshSkins()
+                    }
+                },
+                onDeleteSkin = { id ->
+                    scope.launch {
+                        runCatching { withContext(Dispatchers.IO) { deltaSkins.delete(id) } }
+                        Toast.makeText(applicationContext, "Skin supprimé", Toast.LENGTH_SHORT).show()
+                        refreshSkins()
                     }
                 },
                 touchControlsVisible = !gamepadInUse,

@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -159,6 +160,12 @@ fun RavenEmuApp(
     hardcoreAvailable: Boolean = false,
     stateLoadAllowed: Boolean = true,
     onRequestGameMenu: (() -> Boolean)? = null,
+    /** Android Delta skin for the running game, or null for the classic controls. */
+    skinControls: (@Composable (frame: ImageBitmap?, openMenu: () -> Unit) -> Unit)? = null,
+    deltaSkins: List<DeltaSkinEntry> = emptyList(),
+    onImportSkin: (() -> Unit)? = null,
+    onToggleSkin: ((String) -> Unit)? = null,
+    onDeleteSkin: ((String) -> Unit)? = null,
     settings: V3Settings = V3Settings(),
     onSettingsChange: ((V3Settings) -> Unit)? = null,
     appVersion: String = "Préversion",
@@ -273,6 +280,10 @@ fun RavenEmuApp(
                     onRetroDisconnect = onRetroDisconnect,
                     onRetroRetry = onRetroRetry,
                     hardcoreAvailable = hardcoreAvailable,
+                    deltaSkins = deltaSkins,
+                    onImportSkin = onImportSkin,
+                    onToggleSkin = onToggleSkin,
+                    onDeleteSkin = onDeleteSkin,
                     onBack = { screen = RavenScreen.LIBRARY },
                 )
                 RavenScreen.ABOUT -> V3SettingsScreen(
@@ -314,6 +325,7 @@ fun RavenEmuApp(
                     retroIndicators = retroIndicators,
                     stateLoadAllowed = stateLoadAllowed,
                     onRequestGameMenu = onRequestGameMenu,
+                    skinControls = skinControls,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -576,6 +588,7 @@ private fun GbVideoScreen(
     retroIndicators: List<String>,
     stateLoadAllowed: Boolean,
     onRequestGameMenu: (() -> Boolean)?,
+    skinControls: (@Composable (frame: ImageBitmap?, openMenu: () -> Unit) -> Unit)?,
     onBack: () -> Unit,
 ) {
     var gameMenuOpen by remember { mutableStateOf(false) }
@@ -634,112 +647,73 @@ private fun GbVideoScreen(
                 color = RavenMuted, fontSize = 10.sp, maxLines = 1,
             )
         }
-        // Pin the picture to the top of its available area rather than
-        // vertically centering it. The remaining space sits below the video,
-        // allowing the thumb controls to remain anchored near the safe bottom.
-        val screenTouch by rememberUpdatedState(onScreenTouch)
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black)
-                // Watches touches without taking them, to bring the touch
-                // controls back after a physical controller hid them.
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        screenTouch?.invoke()
-                    }
-                },
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            // 160x144 on GB/GBC, 240x160 on GBA: follow the core's frame.
-            val aspect = if (frame != null && frame.height > 0) {
-                frame.width.toFloat() / frame.height
-            } else if (platform == GamePlatform.GBA) 240f / 160f else 160f / 144f
-            val pictureHeight = minOf(maxHeight, maxWidth / aspect)
-            val pictureWidth = pictureHeight * aspect
-            if (frame != null) {
-                Image(
-                    bitmap = frame,
-                    contentDescription = "Image du jeu ${platformLabel(platform)}",
-                    modifier = Modifier.width(pictureWidth).height(pictureHeight),
-                    contentScale = ContentScale.Fit,
-                    filterQuality = FilterQuality.None,
-                )
-            } else {
-                Text(
-                    if (error == null) "Préparation de l'image du jeu..." else error,
-                    color = if (error == null) RavenMuted else RavenDanger,
-                    modifier = Modifier.padding(20.dp),
-                    textAlign = TextAlign.Center,
-                )
+        if (skinControls != null) {
+            // A Delta skin draws the whole controller and places the game
+            // picture itself; its menu button opens the game menu.
+            Box(Modifier.fillMaxWidth().weight(1f).background(Color.Black)) {
+                skinControls(frame) { setGameMenu(true) }
+                RetroOverlays(retroIndicators, retroNotice, retroNoticeBadge, retroNoticeVisible)
             }
-            if (retroIndicators.isNotEmpty()) {
-                // Persistent, non-interactive: challenges, progress, trackers.
-                Column(
-                    Modifier.align(Alignment.BottomCenter)
-                        .padding(bottom = 10.dp, start = 12.dp, end = 12.dp)
-                        .background(RavenSurface.copy(alpha = 0.88f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    for (label in retroIndicators.take(4)) {
-                        Text(label, color = RavenText, fontSize = 12.sp,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-            val noticeAlpha by animateFloatAsState(
-                if (retroNotice != null && retroNoticeVisible) 1f else 0f,
-                animationSpec = tween(durationMillis = 300),
-                label = "retroNotice",
-            )
-            if (retroNotice != null && noticeAlpha > 0f) {
-                Row(
-                    Modifier.align(Alignment.TopCenter)
-                        .alpha(noticeAlpha)
-                        .padding(top = 10.dp, start = 12.dp, end = 12.dp)
-                        .background(RavenSurface, RoundedCornerShape(12.dp))
-                        .border(1.dp, RavenAccent, RoundedCornerShape(12.dp))
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // The unlocked achievement's badge, or the star when it
-                    // could not be fetched in time (offline). Fixed slot: the
-                    // popup keeps the same size either way.
-                    Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                        if (retroNoticeBadge != null) {
-                            Image(
-                                retroNoticeBadge, "Badge du succès",
-                                Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
-                                contentScale = ContentScale.Fit,
-                            )
-                        } else {
-                            Text("★", color = RavenAccent, fontSize = 21.sp)
+        } else {
+            // Pin the picture to the top of its available area rather than
+            // vertically centering it. The remaining space sits below the video,
+            // allowing the thumb controls to remain anchored near the safe bottom.
+            val screenTouch by rememberUpdatedState(onScreenTouch)
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black)
+                    // Watches touches without taking them, to bring the touch
+                    // controls back after a physical controller hid them.
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            screenTouch?.invoke()
                         }
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Text(retroNotice, color = RavenText, fontSize = 12.sp,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    },
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                // 160x144 on GB/GBC, 240x160 on GBA: follow the core's frame.
+                val aspect = if (frame != null && frame.height > 0) {
+                    frame.width.toFloat() / frame.height
+                } else if (platform == GamePlatform.GBA) 240f / 160f else 160f / 144f
+                val pictureHeight = minOf(maxHeight, maxWidth / aspect)
+                val pictureWidth = pictureHeight * aspect
+                if (frame != null) {
+                    Image(
+                        bitmap = frame,
+                        contentDescription = "Image du jeu ${platformLabel(platform)}",
+                        modifier = Modifier.width(pictureWidth).height(pictureHeight),
+                        contentScale = ContentScale.Fit,
+                        filterQuality = FilterQuality.None,
+                    )
+                } else {
+                    Text(
+                        if (error == null) "Préparation de l'image du jeu..." else error,
+                        color = if (error == null) RavenMuted else RavenDanger,
+                        modifier = Modifier.padding(20.dp),
+                        textAlign = TextAlign.Center,
+                    )
                 }
+                RetroOverlays(retroIndicators, retroNotice, retroNoticeBadge, retroNoticeVisible)
             }
-        }
-        if (onButtonChange != null && !touchControlsVisible) {
-            Text(
-                "Manette connectée · touchez l'écran pour afficher les commandes",
-                Modifier.fillMaxWidth().padding(vertical = 14.dp),
-                color = RavenMuted, fontSize = 12.sp, textAlign = TextAlign.Center,
-            )
-        } else if (onButtonChange != null) {
-            GbTouchControls(
-                onButton = onButtonChange,
-                haptics = settings.haptics,
-                scalePercent = settings.controlsScale,
-                verticalGapDp = settings.controlsGap,
-                highContrast = settings.controlsStyle == "contrast",
-                shoulders = platform == GamePlatform.GBA,
-                // Keep the lower pills slightly above the system navigation bar,
-                // matching the requested default control placement.
-                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
-            )
+            if (onButtonChange != null && !touchControlsVisible) {
+                Text(
+                    "Manette connectée · touchez l'écran pour afficher les commandes",
+                    Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                    color = RavenMuted, fontSize = 12.sp, textAlign = TextAlign.Center,
+                )
+            } else if (onButtonChange != null) {
+                GbTouchControls(
+                    onButton = onButtonChange,
+                    haptics = settings.haptics,
+                    scalePercent = settings.controlsScale,
+                    verticalGapDp = settings.controlsGap,
+                    highContrast = settings.controlsStyle == "contrast",
+                    shoulders = platform == GamePlatform.GBA,
+                    // Keep the lower pills slightly above the system navigation bar,
+                    // matching the requested default control placement.
+                    modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
+                )
+            }
         }
 
     }
@@ -1276,3 +1250,66 @@ private fun RavenIcon(icon: RavenGlyph, tint: Color) {
 
 private fun oneDecimal(value: Double): String =
     ((value * 10.0).roundToInt() / 10.0).toString()
+
+/**
+ * RetroAchievements overlays of the player: persistent indicators at the
+ * bottom, the one-at-a-time popup at the top. Shared by the classic layout
+ * and Delta skins.
+ */
+@Composable
+private fun BoxScope.RetroOverlays(
+    retroIndicators: List<String>,
+    retroNotice: String?,
+    retroNoticeBadge: ImageBitmap?,
+    retroNoticeVisible: Boolean,
+) {
+    if (retroIndicators.isNotEmpty()) {
+        // Persistent, non-interactive: challenges, progress, trackers.
+        Column(
+            Modifier.align(Alignment.BottomCenter)
+                .padding(bottom = 10.dp, start = 12.dp, end = 12.dp)
+                .background(RavenSurface.copy(alpha = 0.88f), RoundedCornerShape(10.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            for (label in retroIndicators.take(4)) {
+                Text(label, color = RavenText, fontSize = 12.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+    val noticeAlpha by animateFloatAsState(
+        if (retroNotice != null && retroNoticeVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "retroNotice",
+    )
+    if (retroNotice != null && noticeAlpha > 0f) {
+        Row(
+            Modifier.align(Alignment.TopCenter)
+                .alpha(noticeAlpha)
+                .padding(top = 10.dp, start = 12.dp, end = 12.dp)
+                .background(RavenSurface, RoundedCornerShape(12.dp))
+                .border(1.dp, RavenAccent, RoundedCornerShape(12.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // The unlocked achievement's badge, or the star when it
+            // could not be fetched in time (offline). Fixed slot: the
+            // popup keeps the same size either way.
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                if (retroNoticeBadge != null) {
+                    Image(
+                        retroNoticeBadge, "Badge du succès",
+                        Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    Text("★", color = RavenAccent, fontSize = 21.sp)
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(retroNotice, color = RavenText, fontSize = 12.sp,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}

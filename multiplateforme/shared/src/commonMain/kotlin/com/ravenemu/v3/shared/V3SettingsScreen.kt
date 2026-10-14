@@ -69,6 +69,10 @@ fun V3SettingsScreen(
     onRetroDisconnect: (() -> Unit)? = null,
     onRetroRetry: (() -> Unit)? = null,
     hardcoreAvailable: Boolean = false,
+    deltaSkins: List<DeltaSkinEntry> = emptyList(),
+    onImportSkin: (() -> Unit)? = null,
+    onToggleSkin: ((String) -> Unit)? = null,
+    onDeleteSkin: ((String) -> Unit)? = null,
     aboutOnly: Boolean,
     onBack: () -> Unit,
 ) {
@@ -76,6 +80,7 @@ fun V3SettingsScreen(
         mutableStateOf(if (aboutOnly) Page.ABOUT else Page.HOME)
     }
     var openNotice by remember { mutableStateOf<OpenSourceNotice?>(null) }
+    var skinToDelete by remember { mutableStateOf<DeltaSkinEntry?>(null) }
     val update: (V3Settings) -> Unit = { updated ->
         onSettingsChange?.invoke(updated.normalized())
     }
@@ -108,7 +113,7 @@ fun V3SettingsScreen(
                     CategoryRow("Général", "Pause, jaquettes et diagnostics") { page = Page.GENERAL }
                     CategoryRow("Audio", "Son du jeu et volume") { page = Page.AUDIO }
                     CategoryRow("Vidéo", "Couleurs, correction LCD, luminosité et contraste") { page = Page.VIDEO }
-                    CategoryRow("Interface", "Vibrations, commandes et style") { page = Page.INTERFACE }
+                    CategoryRow("Interface", "Vibrations, commandes, style et skins") { page = Page.INTERFACE }
                     CategoryRow("À propos", "Version, auteur, confidentialité et licences") {
                         page = Page.ABOUT
                     }
@@ -262,6 +267,36 @@ fun V3SettingsScreen(
                     }, enabled = onSettingsChange != null) {
                         Text("Réinitialiser les commandes", color = Accent)
                     }
+                    GroupTitle("Skins de manette")
+                    Text(
+                        "RavenEmu lit les skins au format .deltaskin, en portrait. Ce projet n'est ni affilié à Delta, ni approuvé par ses auteurs : aucun skin n'est fourni, vous importez les vôtres.",
+                        color = Muted, fontSize = 12.sp,
+                    )
+                    TextButton(onClick = { onImportSkin?.invoke() }, enabled = onImportSkin != null) {
+                        Text("Importer un fichier .deltaskin", color = Accent)
+                    }
+                    if (deltaSkins.isEmpty()) {
+                        Text("Aucun skin installé : commandes classiques.", color = Muted, fontSize = 12.sp)
+                    }
+                    for (skin in deltaSkins) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(skin.name, color = TextMain, fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium)
+                                Text(skin.console + if (skin.selected) " · utilisé" else "",
+                                    color = if (skin.selected) Accent else Muted, fontSize = 12.sp)
+                            }
+                            TextButton(onClick = { onToggleSkin?.invoke(skin.id) }, enabled = onToggleSkin != null) {
+                                Text(if (skin.selected) "Retirer" else "Utiliser", color = Accent, fontSize = 13.sp)
+                            }
+                            TextButton(onClick = { skinToDelete = skin }, enabled = onDeleteSkin != null) {
+                                Text("Supprimer", color = Muted, fontSize = 13.sp)
+                            }
+                        }
+                    }
                 }
                 Page.ABOUT -> {
                     GroupTitle("RavenEmu")
@@ -299,6 +334,20 @@ fun V3SettingsScreen(
                 }
             }
         }
+    }
+    skinToDelete?.let { skin ->
+        AlertDialog(
+            onDismissRequest = { skinToDelete = null },
+            title = { Text("Supprimer ce skin ?") },
+            text = { Text("${skin.name} sera supprimé de l'appareil. Les commandes classiques reviennent s'il était utilisé.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteSkin?.invoke(skin.id)
+                    skinToDelete = null
+                }) { Text("Supprimer") }
+            },
+            dismissButton = { TextButton(onClick = { skinToDelete = null }) { Text("Annuler") } },
+        )
     }
     openNotice?.let { notice ->
         AlertDialog(
