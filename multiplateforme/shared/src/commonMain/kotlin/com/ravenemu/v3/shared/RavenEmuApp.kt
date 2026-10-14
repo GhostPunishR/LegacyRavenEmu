@@ -168,7 +168,7 @@ fun RavenEmuApp(
     onDeleteSkin: ((String) -> Unit)? = null,
     settings: V3Settings = V3Settings(),
     onSettingsChange: ((V3Settings) -> Unit)? = null,
-    appVersion: String = "Préversion",
+    appVersion: String = "0.1.0 - Bêta",
     onOpenLink: ((String) -> Unit)? = null,
 ) {
     var screen by remember { mutableStateOf(RavenScreen.LIBRARY) }

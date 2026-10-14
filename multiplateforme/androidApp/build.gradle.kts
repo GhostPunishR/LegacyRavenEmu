@@ -14,7 +14,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0-preview"
+        versionName = "0.1.0 - Bêta"
     }
     buildTypes {
         // APK bêta publié par la CI : même identifiant et même signature que

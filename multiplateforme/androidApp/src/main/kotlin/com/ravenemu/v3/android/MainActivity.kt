@@ -233,7 +233,7 @@ class MainActivity : ComponentActivity() {
             val appVersion = remember {
                 runCatching {
                     packageManager.getPackageInfo(packageName, 0).versionName
-                }.getOrNull() ?: "0.1.0-preview"
+                }.getOrNull() ?: "0.1.0 - Bêta"
             }
             var loadedGame by remember { mutableStateOf<LoadedGameInfo?>(null) }
             var loading by remember { mutableStateOf(false) }
