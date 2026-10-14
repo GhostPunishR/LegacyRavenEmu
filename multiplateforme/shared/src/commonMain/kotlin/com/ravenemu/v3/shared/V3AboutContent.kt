@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -46,13 +45,10 @@ private const val REPO = "https://github.com/GhostPunishR/RavenEmu"
  */
 @Composable
 internal fun V3AboutContent(
-    appVersion: String,
     onOpenLink: ((String) -> Unit)?,
     onOpenDocument: (ReaderDocument) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        AboutHeader(appVersion)
-
         AboutSection("Informations légales") {
             AboutRow(AboutIcon.TERMS, "Conditions d'utilisation", "Ce que RavenEmu fournit, et votre responsabilité",
                 trailing = "›", onClick = { onOpenDocument(LegalDocuments.terms) })
@@ -76,44 +72,6 @@ internal fun V3AboutContent(
                 trailing = "↗", onClick = onOpenLink?.let { open -> { open("https://github.com/GhostPunishR/RavenCore") } })
         }
     }
-}
-
-@Composable
-private fun AboutHeader(appVersion: String) {
-    Column(
-        Modifier.fillMaxWidth()
-            .background(CardSurface, RoundedCornerShape(18.dp))
-            .border(1.dp, CardOutline.copy(alpha = 0.7f), RoundedCornerShape(18.dp))
-            .padding(horizontal = 20.dp, vertical = 22.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Text("RavenEmu", color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-        Text(
-            "Émulateur Game Boy, Game Boy Color et Game Boy Advance",
-            color = Muted, fontSize = 13.sp, textAlign = TextAlign.Center,
-        )
-        Row(
-            Modifier.padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Chip("Version $appVersion")
-            Chip("Android · iOS")
-        }
-        Text("Créé par GhostPunishR", color = Accent, fontSize = 13.sp,
-            fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 6.dp))
-    }
-}
-
-@Composable
-private fun Chip(label: String) {
-    Text(
-        label,
-        color = TextMain, fontSize = 12.sp,
-        modifier = Modifier
-            .background(Accent.copy(alpha = 0.14f), RoundedCornerShape(50))
-            .padding(horizontal = 12.dp, vertical = 5.dp),
-    )
 }
 
 @Composable

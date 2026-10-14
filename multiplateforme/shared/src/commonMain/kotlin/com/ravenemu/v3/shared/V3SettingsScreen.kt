@@ -306,7 +306,6 @@ fun V3SettingsScreen(
                 }
                 Page.ABOUT -> {
                     V3AboutContent(
-                        appVersion = appVersion,
                         onOpenLink = onOpenLink,
                         onOpenDocument = { openDocument = it },
                     )
