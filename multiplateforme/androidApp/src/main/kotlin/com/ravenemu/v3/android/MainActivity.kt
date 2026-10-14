@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
     // Physical controller. Its events are taken only while the player accepts
     // input; elsewhere the D-pad keeps navigating the app as usual.
     private val gamepad = GamepadMapper()
+    private val cartridgeRumble by lazy { CartridgeRumble(applicationContext) }
     private var gamepadInputEnabled = false
     private var gamepadInUse by mutableStateOf(false)
 
@@ -454,6 +455,7 @@ class MainActivity : ComponentActivity() {
                     // UI thread, nanosecond pacing, and late frames are caught
                     // up rather than dropped, so the audio never starves.
                     withContext(gbEmulationDispatcher) {
+                        val rumble = if (playbackSettings.cartridgeRumble) cartridgeRumble else null
                         val pacer = GbFramePacer(periodNanos)
                         pacer.reset(System.nanoTime())
                         var lastBatteryCheckNanos = System.nanoTime()
@@ -479,6 +481,9 @@ class MainActivity : ComponentActivity() {
                                         sink.close()
                                         output = null
                                     }
+                                }
+                                if (rumble != null) {
+                                    if (gameSession.rumbleActive) rumble.pulse() else rumble.release()
                                 }
                                 var conversionNanos = 0L
                                 if (renderVideo) {
@@ -531,6 +536,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 } finally {
+                    cartridgeRumble.stop()
                     if (activeAudio === output) activeAudio = null
                     output?.let { lastAudioReport = it.exportReport() }
                     output?.close()

@@ -33,6 +33,8 @@ data class V3Settings(
      */
     val lcdCorrectionGbc: Boolean = false,
     val lcdCorrectionGba: Boolean = false,
+    /** Rumble cartridges drive the phone's vibrator. */
+    val cartridgeRumble: Boolean = true,
 ) {
     fun normalized(): V3Settings = copy(
         audioVolume = audioVolume.coerceIn(0, 100),

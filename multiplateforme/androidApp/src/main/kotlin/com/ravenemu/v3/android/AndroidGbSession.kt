@@ -203,8 +203,13 @@ class AndroidGbSession(private val resolver: ContentResolver, filesDir: File) : 
             check(!closed) { "La session a été fermée." }
             val core = active ?: return@synchronized null
             core.frameInto(pixels)
+            rumbleActive = core.rumbleActive()
             core.readAudioInto(audio)
         }
+
+    /** The cartridge motor's state after the last frame (see NativeCore). */
+    @Volatile var rumbleActive: Boolean = false
+        private set
 
     fun refreshRateHz(): Double? = synchronized(lock) {
         if (closed) null else active?.fps

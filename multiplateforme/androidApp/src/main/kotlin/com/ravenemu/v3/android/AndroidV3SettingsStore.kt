@@ -21,6 +21,7 @@ internal class AndroidV3SettingsStore(context: Context) {
         onlineCovers = prefs.getBoolean("online_covers", false),
         lcdCorrectionGbc = prefs.getBoolean("lcd_correction_gbc", false),
         lcdCorrectionGba = prefs.getBoolean("lcd_correction_gba", false),
+        cartridgeRumble = prefs.getBoolean("cartridge_rumble", true),
     ).normalized()
 
     fun write(settings: V3Settings) {
@@ -39,6 +40,7 @@ internal class AndroidV3SettingsStore(context: Context) {
             .putBoolean("online_covers", safe.onlineCovers)
             .putBoolean("lcd_correction_gbc", safe.lcdCorrectionGbc)
             .putBoolean("lcd_correction_gba", safe.lcdCorrectionGba)
+            .putBoolean("cartridge_rumble", safe.cartridgeRumble)
             .apply()
     }
 }

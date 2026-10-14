@@ -18,6 +18,7 @@ class V3SettingsTest {
         assertEquals(100, defaults.controlsScale)
         assertEquals(46, defaults.controlsGap)
         assertEquals("classic", defaults.controlsStyle)
+        assertTrue(defaults.cartridgeRumble, "La vibration de cartouche est active par défaut")
 
         val frame = intArrayOf(0xff102030.toInt(), 0xff8899aa.toInt())
         val reference = frame.copyOf()

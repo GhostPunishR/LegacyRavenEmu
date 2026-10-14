@@ -219,6 +219,12 @@ fun V3SettingsScreen(
                         settings.haptics,
                         onSettingsChange != null,
                     ) { update(settings.copy(haptics = it)) }
+                    SettingSwitch(
+                        "Vibration de la cartouche",
+                        "Fait vibrer le téléphone avec les jeux équipés d'un moteur de vibration (Drill Dozer, WarioWare: Twisted!, cartouches Game Boy Rumble).",
+                        settings.cartridgeRumble,
+                        onSettingsChange != null,
+                    ) { update(settings.copy(cartridgeRumble = it)) }
                     SettingSlider(
                         "Taille des commandes", "${settings.controlsScale} %",
                         settings.controlsScale, 80..115, onSettingsChange != null,

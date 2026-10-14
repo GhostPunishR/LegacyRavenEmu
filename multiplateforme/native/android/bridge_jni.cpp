@@ -135,6 +135,10 @@ Java_com_ravenemu_v3_android_NativeCore_nativeLoadState(
     return ok ? JNI_TRUE : JNI_FALSE;
 }
 JNIEXPORT jboolean JNICALL
+Java_com_ravenemu_v3_android_NativeCore_nativeRumbleActive(JNIEnv*, jobject, jlong pointer) {
+    return ravenemu_v3_rumble_active(handle(pointer)) ? JNI_TRUE : JNI_FALSE;
+}
+JNIEXPORT jboolean JNICALL
 Java_com_ravenemu_v3_android_NativeCore_nativeBatteryDirty(JNIEnv*, jobject, jlong pointer) {
     return ravenemu_v3_battery_dirty(handle(pointer)) ? JNI_TRUE : JNI_FALSE;
 }
