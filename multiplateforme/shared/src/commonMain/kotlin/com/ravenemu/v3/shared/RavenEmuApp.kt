@@ -156,6 +156,9 @@ fun RavenEmuApp(
     retroNoticeBadge: ImageBitmap? = null,
     retroNoticeVisible: Boolean = retroNotice != null,
     retroIndicators: List<String> = emptyList(),
+    hardcoreAvailable: Boolean = false,
+    stateLoadAllowed: Boolean = true,
+    onRequestGameMenu: (() -> Boolean)? = null,
     settings: V3Settings = V3Settings(),
     onSettingsChange: ((V3Settings) -> Unit)? = null,
     appVersion: String = "Préversion",
@@ -269,6 +272,7 @@ fun RavenEmuApp(
                     onRetroLogin = onRetroLogin,
                     onRetroDisconnect = onRetroDisconnect,
                     onRetroRetry = onRetroRetry,
+                    hardcoreAvailable = hardcoreAvailable,
                     onBack = { screen = RavenScreen.LIBRARY },
                 )
                 RavenScreen.ABOUT -> V3SettingsScreen(
@@ -308,6 +312,8 @@ fun RavenEmuApp(
                     retroNoticeBadge = retroNoticeBadge,
                     retroNoticeVisible = retroNoticeVisible,
                     retroIndicators = retroIndicators,
+                    stateLoadAllowed = stateLoadAllowed,
+                    onRequestGameMenu = onRequestGameMenu,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -568,6 +574,8 @@ private fun GbVideoScreen(
     retroNoticeBadge: ImageBitmap?,
     retroNoticeVisible: Boolean,
     retroIndicators: List<String>,
+    stateLoadAllowed: Boolean,
+    onRequestGameMenu: (() -> Boolean)?,
     onBack: () -> Unit,
 ) {
     var gameMenuOpen by remember { mutableStateOf(false) }
@@ -576,6 +584,8 @@ private fun GbVideoScreen(
     var confirmation by remember { mutableStateOf<Pair<Int, String>?>(null) }
     fun setGameMenu(open: Boolean) {
         if (gameMenuOpen == open) return
+        // Hardcore may refuse a pause (the host says why).
+        if (open && onRequestGameMenu?.invoke() == false) return
         gameMenuOpen = open
         onGameMenuVisibilityChange?.invoke(open)
     }
@@ -868,7 +878,8 @@ private fun GbVideoScreen(
                                 ) { Text("Sauver", fontSize = 12.sp) }
                                 OutlinedButton(
                                     modifier = Modifier.weight(1f),
-                                    enabled = occupied && !stateOperationBusy && onLoadState != null,
+                                    enabled = occupied && stateLoadAllowed && !stateOperationBusy &&
+                                        onLoadState != null,
                                     onClick = {
                                         onLoadState?.invoke(selectedSlot)
                                         setGameMenu(false)

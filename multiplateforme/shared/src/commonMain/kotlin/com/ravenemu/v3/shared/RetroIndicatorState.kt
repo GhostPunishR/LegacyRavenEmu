@@ -41,7 +41,7 @@ object RetroNoticeText {
             "leaderboard_failed" -> "Classement annulé · $title"
             "leaderboard_submitted" -> "Classement envoyé · $title"
             "leaderboard_scoreboard" -> "Classement terminé · $title"
-            "notice", "offline", "online" -> title
+            "notice", "offline", "online", "hardcore_reset" -> title
             else -> return null
         }
         // An unlock's description is long; the popup keeps it to the title.

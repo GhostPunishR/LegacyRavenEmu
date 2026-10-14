@@ -68,6 +68,7 @@ fun V3SettingsScreen(
     onRetroLogin: ((String, String) -> Unit)? = null,
     onRetroDisconnect: (() -> Unit)? = null,
     onRetroRetry: (() -> Unit)? = null,
+    hardcoreAvailable: Boolean = false,
     aboutOnly: Boolean,
     onBack: () -> Unit,
 ) {
@@ -122,6 +123,15 @@ fun V3SettingsScreen(
                         onRetry = onRetroRetry,
                         onOpenLink = onOpenLink,
                     )
+                    if (hardcoreAvailable) {
+                        GroupTitle("Mode Hardcore")
+                        SettingSwitch(
+                            "Mode Hardcore",
+                            "Succès comptés en Hardcore. Le chargement des sauvegardes d'état est désactivé et les pauses sont limitées. L'activer redémarre le jeu en cours.",
+                            settings.retroHardcore,
+                            onSettingsChange != null,
+                        ) { update(settings.copy(retroHardcore = it)) }
+                    }
                 }
                 Page.GENERAL -> {
                     GroupTitle("Émulation")

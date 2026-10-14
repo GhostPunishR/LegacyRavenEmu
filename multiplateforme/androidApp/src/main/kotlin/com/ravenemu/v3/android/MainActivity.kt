@@ -325,6 +325,11 @@ class MainActivity : ComponentActivity() {
                     },
                 ).also { retroController = it }
             }
+            // Effective only once RetroAchievements approved the app.
+            LaunchedEffect(retro, userSettings.retroHardcore) {
+                runCatching { retro.setHardcore(userSettings.retroHardcore) }
+                    .onFailure { Log.w("RavenEmuRetro", "Hardcore switch failed", it) }
+            }
             LaunchedEffect(retro) {
                 try {
                     retro.restore()
@@ -805,6 +810,18 @@ class MainActivity : ComponentActivity() {
                 retroNoticeBadge = retroNoticeBadge,
                 retroNoticeVisible = retroNoticeVisible,
                 retroIndicators = retroIndicators,
+                hardcoreAvailable = HardcoreAvailability.APPROVED,
+                // Hardcore forbids restoring a save state (saving stays allowed).
+                stateLoadAllowed = !retro.hardcoreActive,
+                onRequestGameMenu = {
+                    retro.requestPause().also { allowed ->
+                        if (!allowed) Toast.makeText(
+                            applicationContext,
+                            "Mode Hardcore : pause indisponible pour le moment.",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
                 onRetroLogin = { username, password ->
                     if (!retroBusy) {
                         retroBusy = true
@@ -1140,7 +1157,11 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 onLoadState = { slot ->
-                    if (!stateOperationBusy && loadedGame != null && videoEnabled) {
+                    if (retro.hardcoreActive) {
+                        Toast.makeText(applicationContext,
+                            "Mode Hardcore : le chargement d'un état est désactivé.",
+                            Toast.LENGTH_LONG).show()
+                    } else if (!stateOperationBusy && loadedGame != null && videoEnabled) {
                         stateOperationBusy = true
                         restoringState = true
                         activeAudio?.stopNow()

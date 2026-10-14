@@ -35,6 +35,12 @@ data class V3Settings(
     val lcdCorrectionGba: Boolean = false,
     /** Rumble cartridges drive the phone's vibrator. */
     val cartridgeRumble: Boolean = true,
+    /**
+     * RetroAchievements Hardcore, as chosen by the player. It only takes
+     * effect once RetroAchievements has approved the app (Android:
+     * HardcoreAvailability.APPROVED); until then the switch is not shown.
+     */
+    val retroHardcore: Boolean = false,
 ) {
     fun normalized(): V3Settings = copy(
         audioVolume = audioVolume.coerceIn(0, 100),

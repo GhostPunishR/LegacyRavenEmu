@@ -273,6 +273,11 @@ JNIEXPORT jstring JNICALL JNI_RA(richPresence)(JNIEnv* env, jclass, jlong h) {
 JNIEXPORT jboolean JNICALL JNI_RA(hardcore)(JNIEnv*, jclass, jlong h) {
     return rc_client_get_hardcore_enabled(client(h).rc) ? JNI_TRUE : JNI_FALSE;
 }
+// Enabling Hardcore with a game loaded makes the SDK raise RC_CLIENT_EVENT_RESET
+// ("hardcore_reset"): the frontend must then reset the game.
+JNIEXPORT void JNICALL JNI_RA(setHardcore)(JNIEnv*, jclass, jlong h, jboolean enabled) {
+    rc_client_set_hardcore_enabled(client(h).rc, enabled ? 1 : 0);
+}
 JNIEXPORT jboolean JNICALL JNI_RA(canPause)(JNIEnv*, jclass, jlong h) {
     return rc_client_can_pause(client(h).rc, nullptr) ? JNI_TRUE : JNI_FALSE;
 }

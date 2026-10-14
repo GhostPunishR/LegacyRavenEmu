@@ -70,6 +70,9 @@ internal class V3AchievementClient(
     fun login(username: String, secret: String, token: Boolean) = NativeAchievementsBridge.login(handle, username, secret, token)
     fun load(console: Int, rom: ByteArray) = NativeAchievementsBridge.load(handle, console, rom)
     fun reset() = NativeAchievementsBridge.reset(handle)
+    fun setHardcore(enabled: Boolean) = NativeAchievementsBridge.setHardcore(handle, enabled)
+    fun hardcore(): Boolean = NativeAchievementsBridge.hardcore(handle)
+    fun canPause(): Boolean = NativeAchievementsBridge.canPause(handle)
 
     fun tick(frame: Boolean) {
         if (closed.get()) return
@@ -84,7 +87,8 @@ internal class V3AchievementClient(
                     status = "Chargement des succès…"
                     resendStoredAwards(it[1], it[3])
                 }
-                "game", "online" -> status = "Connecté • Mode normal (Softcore)"
+                "game", "online" -> status = if (NativeAchievementsBridge.hardcore(handle))
+                    "Connecté • Mode Hardcore" else "Connecté • Mode normal (Softcore)"
                 "login_error", "game_error", "offline" -> status = it[1]
             }
             onEvent(Event(it[0], it[1], it[2], it[3], it[4]))

@@ -22,6 +22,7 @@ internal class AndroidV3SettingsStore(context: Context) {
         lcdCorrectionGbc = prefs.getBoolean("lcd_correction_gbc", false),
         lcdCorrectionGba = prefs.getBoolean("lcd_correction_gba", false),
         cartridgeRumble = prefs.getBoolean("cartridge_rumble", true),
+        retroHardcore = prefs.getBoolean("retro_hardcore", false),
     ).normalized()
 
     fun write(settings: V3Settings) {
@@ -41,6 +42,7 @@ internal class AndroidV3SettingsStore(context: Context) {
             .putBoolean("lcd_correction_gbc", safe.lcdCorrectionGbc)
             .putBoolean("lcd_correction_gba", safe.lcdCorrectionGba)
             .putBoolean("cartridge_rumble", safe.cartridgeRumble)
+            .putBoolean("retro_hardcore", safe.retroHardcore)
             .apply()
     }
 }
