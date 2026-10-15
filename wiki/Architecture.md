@@ -44,7 +44,7 @@ Les archives de sauvegarde contiennent un manifeste et des empreintes, pas de RO
 
 Les dossiers racine `app/`, `engine/`, `features/`, `platform/`, `cores/` et `native/` appartiennent à la V2 conservée. Les modifier ne met pas automatiquement à jour la nouvelle application ou RavenCore.
 
-Les noms `com.ravenemu.v3`, `com.ravenemu.v3.preview` et certains noms Xcode restent volontairement stables pour préserver l'identité de la nouvelle application et les données des testeurs.
+Les paquets Kotlin sont `com.ravenemu.android` et `com.ravenemu.shared`, l’identifiant Android `com.ravenemu.preview` et le projet Xcode `RavenEmu`. Le changement d’identité crée une application distincte des anciennes préversions : leurs données privées ne sont pas transférées automatiquement.
 
 ## Ajouter ou modifier une fonction
 

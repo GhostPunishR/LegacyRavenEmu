@@ -19,7 +19,7 @@ Les artefacts sont conservés **7 jours**. S'il n'y en a plus, consultez les ex�
 | Élément | Nouvelle version |
 |---|---|
 | Nom affiché | RavenEmu |
-| Identifiant Android | `com.ravenemu.v3.preview` |
+| Identifiant Android | `com.ravenemu.preview` |
 | Distribution | Artefact GitHub Actions `ravenemu-android-beta` |
 | Variante construite | Debug, avec moteurs natifs Android optimisés |
 
@@ -44,3 +44,5 @@ Aucun binaire iOS signé ni téléchargement public n'est distribué. Sur Mac, l
 Aucune ROM ni aucun contenu protégé n'est fourni. Importez des copies que vous êtes autorisé à utiliser ou des homebrews librement distribués. Aucun fichier BIOS externe n'est demandé par le lecteur GBA actuel.
 
 Source : [workflow multiplateforme](https://github.com/GhostPunishR/RavenEmu/blob/main/.github/workflows/multiplateforme.yml) et [configuration Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/build.gradle.kts).
+
+Le nouvel identifiant crée aussi une installation distincte des anciennes préversions. Exportez leurs sauvegardes avant désinstallation, puis réimportez les ROM et sauvegardes et reconnectez RetroAchievements. Les archives historiques restent importables.

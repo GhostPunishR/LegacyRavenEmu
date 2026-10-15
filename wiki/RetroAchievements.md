@@ -36,4 +36,4 @@ Aucune ROM ni sauvegarde n'est téléversée. Pour les détails de conservation 
 
 Indiquez le commit RavenEmu, l'appareil, la console, le jeu/région, l'étape qui échoue et le message visible. Ne publiez ni mot de passe, ni jeton, ni ROM. Voir [[Dépannage|Depannage]].
 
-Source : [contrôleur Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/v3/android/V3AchievementsController.kt).
+Source : [contrôleur Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/android/AchievementsController.kt).

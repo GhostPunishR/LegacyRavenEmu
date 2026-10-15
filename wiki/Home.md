@@ -2,7 +2,7 @@
 
 Bienvenue dans la documentation de la **nouvelle version multiplateforme de RavenEmu**. Le projet actif se trouve dans [`multiplateforme/`](https://github.com/GhostPunishR/RavenEmu/tree/main/multiplateforme) et utilise les moteurs C++20 du dépôt [RavenCore](https://github.com/GhostPunishR/RavenCore).
 
-L'application installée s'appelle **RavenEmu**. Les noms techniques V3 encore présents dans les paquets et les fichiers ne désignent pas une autre application.
+L'application installée s'appelle **RavenEmu**. Les paquets Kotlin et les noms des fichiers sont désormais sans marqueur de génération.
 
 ## Disponibilité
 
@@ -34,7 +34,7 @@ La compatibilité GBC/GBA, les performances sur téléphone et les déblocages R
 
 Le code V2 0.8.1 hors de `multiplateforme/` reste dans le dépôt en héritage. Son ancien APK `test-latest` n'est plus mis à jour. Les fonctions de la V2, notamment les skins et les manettes, ne doivent pas être considérées comme automatiquement disponibles dans la nouvelle version.
 
-La nouvelle application utilise `com.ravenemu.v3.preview` sur Android et peut cohabiter avec la V2. Les bibliothèques, réglages et connexions sont séparés.
+La nouvelle application utilise `com.ravenemu.preview` sur Android et peut cohabiter avec la V2. Les bibliothèques, réglages et connexions sont séparés.
 
 ## Liens officiels
 
@@ -44,3 +44,5 @@ La nouvelle application utilise `com.ravenemu.v3.preview` sur Android et peut co
 - [Issues](https://github.com/GhostPunishR/RavenEmu/issues)
 
 Aucun jeu n'est fourni. Exportez les sauvegardes importantes avant de désinstaller ou d'effacer les données de RavenEmu.
+
+Le nouvel identifiant sépare également cette installation des anciennes préversions : exportez leurs sauvegardes avant désinstallation. Voir [[Installation]].

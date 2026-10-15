@@ -1,4 +1,4 @@
-// Ported from the V2 0.8.1 rcheevos adapter (native/jni/src/achievements_bridge.cpp,
+// Ported from the RavenEmu 0.8.1 rcheevos adapter (native/jni/src/achievements_bridge.cpp,
 // now legacy and frozen). This copy is the maintained one from here on.
 #include <jni.h>
 #include <rc_client.h>
@@ -263,7 +263,7 @@ template<typename T, typename F> T guarded(JNIEnv* env, T fallback, F f) {
     }
 }
 }
-#define JNI_RA(name) Java_com_ravenemu_v3_android_NativeAchievementsBridge_##name
+#define JNI_RA(name) Java_com_ravenemu_android_NativeAchievementsBridge_##name
 extern "C" {
 JNIEXPORT jobjectArray JNICALL JNI_RA(summary)(JNIEnv* env, jclass, jlong h) {
     return guarded<jobjectArray>(env, nullptr, [&] { auto data = summary_records(client(h).rc); return drain(env, data); });

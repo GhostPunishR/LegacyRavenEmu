@@ -1,4 +1,4 @@
-// Independent Gradle project: the existing Android V2 build is untouched.
+// Independent Gradle project: the existing Android RavenEmu 0.8.1 build is untouched.
 plugins {
     id("com.android.application") version "9.3.3" apply false
     id("com.android.kotlin.multiplatform.library") version "9.3.3" apply false

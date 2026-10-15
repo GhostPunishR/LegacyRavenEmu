@@ -50,4 +50,4 @@ Sans correspondance ou sans réseau, le jeu conserve un emplacement neutre. Aucu
 
 La copie de la ROM, l'index, les jaquettes et les sauvegardes internes disparaissent après désinstallation ou effacement des données. Sauvegardez vos originaux et [[exportez votre progression|Sauvegardes-et-etats]].
 
-Source : [bibliothèque Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/v3/android/GbRomLibrary.kt).
+Source : [bibliothèque Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/android/GbRomLibrary.kt).

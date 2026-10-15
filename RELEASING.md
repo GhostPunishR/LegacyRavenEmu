@@ -8,7 +8,7 @@ Le canal actuel est la **bêta Android multiplateforme**, produite par le [workf
 |---|---|
 | Commande | `./gradlew -p multiplateforme :androidApp:assembleBeta` |
 | Variante | Beta : la variante Debug (même signature) sans le drapeau débogable, pour un lecteur optimisé |
-| Identifiant | `com.ravenemu.v3.preview` |
+| Identifiant | `com.ravenemu.preview` |
 | Nom affiché | RavenEmu |
 | Artefact Actions | `ravenemu-android-beta` |
 | APK source | `multiplateforme/androidApp/build/outputs/apk/beta/androidApp-beta.apk` |
@@ -19,6 +19,8 @@ Le workflow traite les pushs sur ses branches déclarées, les pull requests pou
 Pour télécharger une bêta, choisissez une exécution réussie de `main` dans [GitHub Actions](https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml?query=branch%3Amain+is%3Asuccess), puis l'artefact Android. Un compte GitHub connecté est requis. Consultez le [guide d'installation](https://github.com/GhostPunishR/RavenEmu/wiki/Installation).
 
 ## Signature et mises à jour
+
+Le nouvel identifiant crée une application distincte des anciennes préversions : exporter leurs sauvegardes avant désinstallation, puis réimporter les ROM et sauvegardes et reconnecter RetroAchievements. Les archives historiques restent importables.
 
 La bêta utilise la signature Debug du build. Le workflow ne configure pas la clé Test dédiée et stable de la V2 ; une mise à jour par-dessus un autre APK n'est donc pas garantie si le certificat diffère.
 

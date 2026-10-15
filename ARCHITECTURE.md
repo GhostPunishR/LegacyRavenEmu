@@ -36,7 +36,7 @@ RetroAchievements utilise rcheevos et le pont Android maintenu dans `multiplatef
 - Android conserve la bibliothèque, les jaquettes et les sauvegardes dans son espace privé, avec le SHA-256 de la ROM comme identité.
 - Les imports passent par le sélecteur Android et ne nécessitent pas d'accès global au stockage.
 - Les ZIP de sauvegarde contiennent un manifeste et des empreintes, pas de ROM.
-- Les identifiants `com.ravenemu.v3` et `com.ravenemu.v3.preview` restent stables pour préserver les données des testeurs.
+- Les paquets sont `com.ravenemu.android` et `com.ravenemu.shared`, et l’identifiant Android est `com.ravenemu.preview`. Ce changement d’identité nécessite d’exporter puis de réimporter les sauvegardes des anciennes préversions ; leurs données privées ne sont pas transférées automatiquement.
 
 ## État des plateformes
 
