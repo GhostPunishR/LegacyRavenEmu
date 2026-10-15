@@ -1,56 +1,31 @@
-# RavenEmu
+# LegacyRavenEmu
 
-[![Build multiplateforme](https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml/badge.svg)](https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml)
+## Français
 
-**RavenEmu** est un émulateur open source **Game Boy, Game Boy Color et Game Boy Advance**. La nouvelle version partage son interface entre Android et iOS et utilise les moteurs C++20 de [RavenCore](https://github.com/GhostPunishR/RavenCore).
+Ce dépôt est conservé **à titre historique**. Le développement de RavenEmu a déménagé et ce dépôt n’est plus maintenu.
 
-[Site officiel](https://ghostpunishr.github.io/RavenEmu/) · [Wiki](https://github.com/GhostPunishR/RavenEmu/wiki) · [Signaler un problème](https://github.com/GhostPunishR/RavenEmu/issues)
+### → [Rejoindre le nouveau dépôt RavenEmu](https://github.com/GhostPunishR/RavenEmu)
 
-## État du projet
+Pour contribuer, signaler un bug ou proposer une amélioration, utilisez exclusivement le nouveau dépôt :
 
-| Plateforme | Disponibilité |
-|---|---|
-| Android 8.0 et plus | Bêta avec bibliothèque, lecteur GB/GBC/GBA, audio et sauvegardes |
-| iOS | En développement : interface partagée présente, lecteur jouable à connecter. Aucun binaire distribué |
+- [Guide de contribution](https://github.com/GhostPunishR/RavenEmu/blob/main/CONTRIBUTING.md)
+- [Signaler un problème](https://github.com/GhostPunishR/RavenEmu/issues)
+- [Proposer une modification](https://github.com/GhostPunishR/RavenEmu/pulls)
 
-La compatibilité dépend du jeu et de l'appareil. Les performances GBC/GBA et les déblocages RetroAchievements restent à valider sur téléphone.
+Les anciennes sources restent consultables ici sous licence [AGPL-3.0](LICENSE).
 
-## Fonctionnalités Android
+---
 
-- Import d'un jeu ou d'un dossier, bibliothèque persistante, recherche et vues grille/liste.
-- Commandes tactiles et réglages de l'image et du son.
-- Sauvegardes de cartouche, quatre emplacements d'état et transfert ZIP ou `.sav`.
-- Jaquettes manuelles ou recherche en ligne facultative, désactivée par défaut.
-- RetroAchievements Softcore intégré, avec connexion facultative. Hardcore désactivé.
+## English
 
-Aucun jeu n'est fourni. RavenEmu fonctionne sans publicité ni télémétrie et ne téléverse pas vos ROM ou sauvegardes. Les échanges des fonctions en ligne sont décrits dans [PRIVACY.md](PRIVACY.md).
+This repository is kept **for historical reference**. RavenEmu development has moved, and this repository is no longer maintained.
 
-## Installer la bêta
+### → [Go to the new RavenEmu repository](https://github.com/GhostPunishR/RavenEmu)
 
-1. Ouvrez les [builds officiels de `main`](https://github.com/GhostPunishR/RavenEmu/actions/workflows/multiplateforme.yml?query=branch%3Amain+is%3Asuccess) et choisissez une exécution réussie.
-2. Téléchargez l'artefact **`ravenemu-android-beta`**, puis extrayez l'APK du ZIP.
-3. Installez l'APK sur Android et importez vos jeux avec **+** ou **Importer un dossier**.
+Please use the new repository for all contributions, bug reports and feature requests:
 
-Un compte GitHub connecté est requis ; les artefacts sont conservés 7 jours. Exportez vos sauvegardes avant toute désinstallation. Voir le [guide d'installation](https://github.com/GhostPunishR/RavenEmu/wiki/Installation).
+- [Contributing guide](https://github.com/GhostPunishR/RavenEmu/blob/main/CONTRIBUTING.md)
+- [Report an issue](https://github.com/GhostPunishR/RavenEmu/issues)
+- [Submit a change](https://github.com/GhostPunishR/RavenEmu/pulls)
 
-## Compiler
-
-Avec JDK 21, le SDK Android API 37 et les outils natifs Android :
-
-```sh
-git clone https://github.com/GhostPunishR/RavenEmu.git
-cd RavenEmu
-./gradlew -p multiplateforme :androidApp:assembleDebug
-```
-
-Les prérequis détaillés, tests et instructions iOS sont dans le [guide de compilation](https://github.com/GhostPunishR/RavenEmu/wiki/Compilation).
-
-Le projet actif se trouve dans **[`multiplateforme/`](multiplateforme/README.md)**. La V2 0.8.1 est conservée en héritage ; son ancien APK `test-latest` n'est plus mis à jour.
-
-## Contribuer et licence
-
-Consultez le [guide de contribution](CONTRIBUTING.md) et le [code de conduite](CODE_OF_CONDUCT.md). Pour une vulnérabilité, suivez la [politique de sécurité](SECURITY.md).
-
-Licence **[AGPL-3.0](LICENSE)**. © 2026 GhostPunishR.
-
-Game Boy, Game Boy Color et Game Boy Advance sont des marques de Nintendo. RavenEmu n'est ni affilié à Nintendo, ni approuvé par Nintendo.
+The historical source code remains available here under the [AGPL-3.0 license](LICENSE).
