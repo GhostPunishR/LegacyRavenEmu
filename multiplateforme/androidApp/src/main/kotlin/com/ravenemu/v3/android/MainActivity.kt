@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.content.pm.ActivityInfo
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -19,6 +20,9 @@ import java.util.Date
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -79,8 +83,14 @@ class MainActivity : ComponentActivity() {
     private val cartridgeRumble by lazy { CartridgeRumble(applicationContext) }
     private var gamepadInputEnabled = false
     private var gamepadInUse by mutableStateOf(false)
+    // Bumped by the controller's Home key to open the game menu.
+    private var gameMenuRequests by mutableStateOf(0)
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (gamepadInputEnabled && foreground && event.keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) gameMenuRequests++
+            return true
+        }
         if (gamepadInputEnabled && foreground && gamepad.handles(event.keyCode)) {
             gamepad.key(event.keyCode, event.action, event.repeatCount)?.let { (button, pressed) ->
                 gameSession.setButton(button, pressed)
@@ -258,6 +268,25 @@ class MainActivity : ComponentActivity() {
             var stateSlots by remember { mutableStateOf(emptyList<GbStateSlot>()) }
             var restoringState by remember { mutableStateOf(false) }
             var pausedForGameMenu by remember { mutableStateOf(false) }
+            // Controller mode: landscape and full screen while a game runs.
+            var controllerMode by remember { mutableStateOf(false) }
+            val controllerLayout = controllerMode && videoEnabled
+            LaunchedEffect(controllerLayout) {
+                requestedOrientation = if (controllerLayout) {
+                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                } else {
+                    ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    if (controllerLayout) {
+                        systemBarsBehavior =
+                            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                        hide(WindowInsetsCompat.Type.systemBars())
+                    } else {
+                        show(WindowInsetsCompat.Type.systemBars())
+                    }
+                }
+            }
             // The controller reaches the game only while it runs on screen.
             SideEffect {
                 val accepts = videoEnabled && !pausedForGameMenu
@@ -1175,6 +1204,9 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 touchControlsVisible = !gamepadInUse,
+                controllerMode = controllerMode,
+                onControllerModeChange = { controllerMode = it },
+                gameMenuRequests = gameMenuRequests,
                 // Touching the screen brings the touch controls back.
                 onScreenTouch = { gamepadInUse = false },
                 onButtonChange = { button: GbButton, pressed: Boolean ->

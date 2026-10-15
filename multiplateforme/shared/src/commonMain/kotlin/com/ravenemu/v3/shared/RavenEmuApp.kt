@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.selection.selectable
@@ -51,6 +52,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
@@ -163,6 +165,11 @@ fun RavenEmuApp(
     onRequestGameMenu: (() -> Boolean)? = null,
     /** Android Delta skin for the running game, or null for the classic controls. */
     skinControls: (@Composable (frame: ImageBitmap?, openMenu: () -> Unit) -> Unit)? = null,
+    /** Controller mode: landscape, full screen, no touch controls (host rotates). */
+    controllerMode: Boolean = false,
+    onControllerModeChange: ((Boolean) -> Unit)? = null,
+    /** Bumped by the host to open the game menu (controller's Home key). */
+    gameMenuRequests: Int = 0,
     deltaSkins: List<DeltaSkinEntry> = emptyList(),
     onImportSkin: (() -> Unit)? = null,
     onToggleSkin: ((String) -> Unit)? = null,
@@ -328,6 +335,9 @@ fun RavenEmuApp(
                     stateLoadAllowed = stateLoadAllowed,
                     onRequestGameMenu = onRequestGameMenu,
                     skinControls = skinControls,
+                    controllerMode = controllerMode,
+                    onControllerModeChange = onControllerModeChange,
+                    gameMenuRequests = gameMenuRequests,
                     onBack = {
                         onStopVideo?.invoke()
                         screen = RavenScreen.LIBRARY
@@ -592,6 +602,9 @@ private fun GbVideoScreen(
     stateLoadAllowed: Boolean,
     onRequestGameMenu: (() -> Boolean)?,
     skinControls: (@Composable (frame: ImageBitmap?, openMenu: () -> Unit) -> Unit)?,
+    controllerMode: Boolean,
+    onControllerModeChange: ((Boolean) -> Unit)?,
+    gameMenuRequests: Int,
     onBack: () -> Unit,
 ) {
     var gameMenuOpen by remember { mutableStateOf(false) }
@@ -605,7 +618,49 @@ private fun GbVideoScreen(
         gameMenuOpen = open
         onGameMenuVisibilityChange?.invoke(open)
     }
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
+    // Only requests made while this screen is shown open the menu.
+    var seenMenuRequests by remember { mutableStateOf(gameMenuRequests) }
+    LaunchedEffect(gameMenuRequests) {
+        if (gameMenuRequests != seenMenuRequests) {
+            seenMenuRequests = gameMenuRequests
+            setGameMenu(true)
+        }
+    }
+    if (controllerMode) {
+        // Controller mode: the picture alone, as large as the screen allows.
+        // No bar and no touch controls; a touch opens the game menu.
+        BoxWithConstraints(
+            Modifier.fillMaxSize().background(Color.Black)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { setGameMenu(true) },
+            contentAlignment = Alignment.Center,
+        ) {
+            val aspect = if (frame != null && frame.height > 0) {
+                frame.width.toFloat() / frame.height
+            } else if (platform == GamePlatform.GBA) 240f / 160f else 160f / 144f
+            val pictureHeight = minOf(maxHeight, maxWidth / aspect)
+            if (frame != null) {
+                Image(
+                    bitmap = frame,
+                    contentDescription = "Image du jeu ${platformLabel(platform)}",
+                    modifier = Modifier.width(pictureHeight * aspect).height(pictureHeight),
+                    contentScale = ContentScale.Fit,
+                    filterQuality = FilterQuality.None,
+                )
+            } else {
+                Text(
+                    if (error == null) "Préparation de l'image du jeu..." else error,
+                    color = if (error == null) RavenMuted else RavenDanger,
+                    modifier = Modifier.padding(20.dp),
+                    textAlign = TextAlign.Center,
+                )
+            }
+            RetroOverlays(retroIndicators, retroNotice, retroNoticeBadge, retroNoticeVisible,
+                retroProgress, retroProgress?.let { retroImages[it.badgeUrl] })
+        }
+    } else Column(Modifier.fillMaxSize().background(Color.Black)) {
         Row(
             Modifier.fillMaxWidth().height(48.dp).background(RavenBackground),
             verticalAlignment = Alignment.CenterVertically,
@@ -756,6 +811,18 @@ private fun GbVideoScreen(
                     ) { Text("RetroAchievements  ·  ${retroSnapshot.status}") }
                 }
                 Text(title, color = RavenSecondary, fontSize = 13.sp)
+                if (onControllerModeChange != null) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Mode manette", color = RavenText, fontSize = 15.sp)
+                            Text("Paysage plein écran, sans commandes tactiles. Touchez l'écran " +
+                                "ou le bouton Home de la manette pour revenir à ce menu.",
+                                color = RavenMuted, fontSize = 12.sp, lineHeight = 16.sp)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(checked = controllerMode, onCheckedChange = onControllerModeChange)
+                    }
+                }
                 Text("Partie en pause · 4 emplacements de sauvegarde",
                     color = RavenMuted, fontSize = 12.sp)
                 // Compact switcher: only the selected slot is expanded.
@@ -1316,7 +1383,7 @@ private fun BoxScope.RetroOverlays(
             RetroPopupCard(retroNotice.orEmpty(), retroNoticeBadge, noticeAlpha)
         }
         if (showProgress && progress != null) {
-            val text = listOf(progress.title, progress.detail)
+            val text = listOf("Progression · ${progress.title}", progress.detail)
                 .filter { it.isNotBlank() }.joinToString("\n")
             RetroPopupCard(text, held.badge, progressAlpha)
         }
