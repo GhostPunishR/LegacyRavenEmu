@@ -72,7 +72,7 @@ Pour générer et ouvrir l'hôte :
 ```sh
 cd multiplateforme/iosApp
 xcodegen generate
-open RavenEmuV3.xcodeproj
+open RavenEmu.xcodeproj
 ```
 
 Le nom technique du projet Xcode est conservé ; le nom affiché de l'application est RavenEmu. Les scripts Xcode construisent la partie native et intègrent `RavenShared`.

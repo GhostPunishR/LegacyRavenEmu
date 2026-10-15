@@ -61,4 +61,4 @@ Lorsqu'un ancien jeu GB est reclassé comme GBC d'après son en-tête, sa sauveg
 
 Le stockage et le transfert iOS ne sont pas encore raccordés. Avant de désinstaller Android, vérifiez vos exports et gardez-les hors du stockage privé de RavenEmu. Ne publiez pas vos sauvegardes personnelles dans une issue.
 
-Sources : [transfert de sauvegardes](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/v3/android/GbSaveTransfer.kt) et [gestion des emplacements](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/v3/android/GbSaveStateStore.kt).
+Sources : [transfert de sauvegardes](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/android/GbSaveTransfer.kt) et [gestion des emplacements](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/android/GbSaveStateStore.kt).

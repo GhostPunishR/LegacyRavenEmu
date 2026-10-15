@@ -1,16 +1,16 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
-    // Delta skin manifests (info.json), as in V2's skins module.
+    // Delta skin manifests (info.json), as in RavenEmu 0.8.1's skins module.
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
-    namespace = "com.ravenemu.v3.android"
+    namespace = "com.ravenemu.android"
     compileSdk = 37
     defaultConfig {
         // Distinct preview ID: cannot overwrite the existing RavenEmu Android app.
-        applicationId = "com.ravenemu.v3.preview"
+        applicationId = "com.ravenemu.preview"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -20,7 +20,7 @@ android {
         // APK bêta publié par la CI : même identifiant et même signature que
         // l'APK Debug (une mise à jour garde les données), mais non débogable.
         // Un APK débogable fait tourner le code Kotlin du lecteur (son, image,
-        // cadence) moins optimisé ; la V2 publiait pour cela sa variante
+        // cadence) moins optimisé ; la version 0.8.1 de RavenEmu publiait pour cela sa variante
         // « profil ». L'APK Debug reste disponible pour le débogage local.
         create("beta") {
             initWith(getByName("debug"))

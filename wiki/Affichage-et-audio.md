@@ -35,4 +35,4 @@ Ces valeurs sont des diagnostics, **pas une garantie de FPS affichés à l'écra
 
 Pour les craquements, décalages ou lenteurs, consultez [[Dépannage|Depannage]].
 
-Sources : [réglages](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/shared/src/commonMain/kotlin/com/ravenemu/v3/shared/V3SettingsScreen.kt) et [sortie audio Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/v3/android/AndroidGbAudioOutput.kt).
+Sources : [réglages](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/shared/src/commonMain/kotlin/com/ravenemu/shared/SettingsScreen.kt) et [sortie audio Android](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/androidApp/src/main/kotlin/com/ravenemu/android/AndroidGbAudioOutput.kt).

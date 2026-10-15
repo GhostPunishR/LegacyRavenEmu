@@ -18,4 +18,4 @@ La migration du gestionnaire Delta et du déplacement libre des commandes figure
 
 Suivez [[Feuille de route|Feuille-de-route]] et les [issues](https://github.com/GhostPunishR/RavenEmu/issues).
 
-Source : [écran Interface actuel](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/shared/src/commonMain/kotlin/com/ravenemu/v3/shared/V3SettingsScreen.kt).
+Source : [écran Interface actuel](https://github.com/GhostPunishR/RavenEmu/blob/main/multiplateforme/shared/src/commonMain/kotlin/com/ravenemu/shared/SettingsScreen.kt).

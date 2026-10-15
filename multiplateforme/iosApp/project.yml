@@ -1,4 +1,4 @@
-name: RavenEmuV3
+name: RavenEmu
 options:
   deploymentTarget:
     iOS: "15.0"
@@ -8,15 +8,15 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "15.0"
     TARGETED_DEVICE_FAMILY: "1,2"
 targets:
-  RavenEmuV3:
+  RavenEmu:
     type: application
     platform: iOS
     sources:
       - path: Sources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.ghostpunishr.ravenemu.v3
-        PRODUCT_NAME: RavenEmuV3
+        PRODUCT_BUNDLE_IDENTIFIER: com.ghostpunishr.ravenemu
+        PRODUCT_NAME: RavenEmu
         GENERATE_INFOPLIST_FILE: YES
         # Name shown under the home-screen icon.
         INFOPLIST_KEY_CFBundleDisplayName: RavenEmu

@@ -1,11 +1,11 @@
 name: RavenEmu Multiplateforme
 # Seule CI de construction du dépôt : le projet tourne autour de la version
-# multiplateforme. Le code hors de `multiplateforme/` (V2 0.8.1) est conservé
+# multiplateforme. Le code hors de `multiplateforme/` (RavenEmu 0.8.1) est conservé
 # en héritage et n'est plus construit ; la règle « la CI ne construit que la
 # version multiplateforme » (multiplateforme/policy) l'impose.
 on:
   push:
-    branches: [main, feature/v3-multiplatform]
+    branches: [main]
     paths:
       - "multiplateforme/**"
       - ".github/workflows/**"
@@ -75,6 +75,21 @@ jobs:
 
       - name: Règles des workflows
         run: ./gradlew -p multiplateforme :policy:test --stacktrace
+
+  native:
+    name: API native (liaison et sauvegardes)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Configurer le test de liaison C
+        run: cmake -S multiplateforme/native -B multiplateforme/native/build-host -DCMAKE_BUILD_TYPE=Release -DRAVENEMU_BRIDGE_TESTS=ON
+      - name: Construire le test
+        run: cmake --build multiplateforme/native/build-host --target ravenemu_bridge_smoke --parallel 2
+      - name: Exécuter le test de liaison et de sauvegarde
+        run: ctest --test-dir multiplateforme/native/build-host --output-on-failure
 
   android:
     name: Android (APK bêta)

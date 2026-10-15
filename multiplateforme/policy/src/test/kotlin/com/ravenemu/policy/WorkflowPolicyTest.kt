@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
  * Règles des workflows GitHub Actions du dépôt.
  *
  * Le projet tourne autour de la version multiplateforme : le code situé hors
- * de `multiplateforme/` (V2 0.8.1) est conservé en héritage et n'est plus
+ * de `multiplateforme/` (RavenEmu 0.8.1) est conservé en héritage et n'est plus
  * construit par la CI. Ces règles le garantissent, et gardent les workflows
  * durcis : actions épinglées, identifiants git non conservés, secrets hors des
  * journaux, permissions déclarées.
@@ -38,7 +38,7 @@ class WorkflowPolicyTest {
     fun `la CI ne construit que la version multiplateforme`() {
         // Gradle et CMake sont les deux portes d'entrée d'une construction.
         // Chaque appel doit viser `multiplateforme/` ; le code hérité de la
-        // V2 ne doit pas revenir dans la CI par un nouveau workflow.
+        // RavenEmu 0.8.1 ne doit pas revenir dans la CI par un nouveau workflow.
         val fautes = workflows.flatMap { file ->
             lines(file).filter { (_, line) ->
                 val code = line.substringBefore(" #").trim()
