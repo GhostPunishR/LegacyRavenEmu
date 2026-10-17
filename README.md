@@ -12,6 +12,8 @@ Pour contribuer, signaler un bug ou proposer une amélioration, utilisez exclusi
 - [Signaler un problème](https://github.com/GhostPunishR/RavenEmu/issues)
 - [Proposer une modification](https://github.com/GhostPunishR/RavenEmu/pulls)
 
+Pour les **cœurs d’émulation**, rendez-vous sur le dépôt [GhostPunishR/RavenCore](https://github.com/GhostPunishR/RavenCore).
+
 Les anciennes sources restent consultables ici sous licence [AGPL-3.0](LICENSE).
 
 ---
@@ -27,5 +29,7 @@ Please use the new repository for all contributions, bug reports and feature req
 - [Contributing guide](https://github.com/GhostPunishR/RavenEmu/blob/main/CONTRIBUTING.md)
 - [Report an issue](https://github.com/GhostPunishR/RavenEmu/issues)
 - [Submit a change](https://github.com/GhostPunishR/RavenEmu/pulls)
+
+For the **emulation cores**, go to the [GhostPunishR/RavenCore repository](https://github.com/GhostPunishR/RavenCore).
 
 The historical source code remains available here under the [AGPL-3.0 license](LICENSE).
